@@ -387,15 +387,27 @@ export const RULE_DOCS: RuleDoc[] = [
   },
   {
     name: 'no-unused-variables',
-    summary: 'Keeps an Examples table and its steps in step with each other.',
+    summary: 'Every column of an Examples table should be used by a step.',
     explanation:
-      'In a Scenario Outline, every column of the Examples table should be used by a ' +
-      'step, and every <placeholder> in a step should have a column. This rule reports ' +
-      'both kinds of mismatch, which are usually a rename that was only half finished.',
+      'A column nothing reads is dead weight, and usually the leftover of a rename that ' +
+      'was only half finished. Switch on no-undeclared-variables as well to catch the ' +
+      'other half: a <placeholder> with no column behind it.',
     config: '{\n  "no-unused-variables": "on"\n}',
     good: 'Feature: Logging in\n\n  Scenario Outline: Logging in as <role>\n    Given I am a <role>\n    Then I see <landing>\n\n    Examples:\n      | role  | landing   |\n      | admin | dashboard |',
     bad: 'Feature: Logging in\n\n  Scenario Outline: Logging in as <role>\n    Given I am a <role>\n\n    Examples:\n      | role  | landing   |\n      | admin | dashboard |',
     message: 'Examples table variable "landing" is not used in any step',
+  },
+  {
+    name: 'no-undeclared-variables',
+    summary: 'Every <placeholder> in a step needs a column to fill it in.',
+    explanation:
+      'A placeholder with no matching column is never substituted. The step runs with the ' +
+      'angle brackets still in the text, which almost never matches a step definition and ' +
+      'is confusing when it does. Usually it is a typo or a column that was renamed.',
+    config: '{\n  "no-undeclared-variables": "on"\n}',
+    good: 'Feature: Logging in\n\n  Scenario Outline: Logging in as <role>\n    Given I am a <role>\n\n    Examples:\n      | role  |\n      | admin |',
+    bad: 'Feature: Logging in\n\n  Scenario Outline: Logging in as <role>\n    Given I am a <rol>\n\n    Examples:\n      | role  |\n      | admin |',
+    message: 'Step variable "rol" does not exist in the examples table',
   },
   {
     name: 'one-space-between-tags',

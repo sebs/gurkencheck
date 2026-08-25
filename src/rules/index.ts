@@ -31,6 +31,7 @@ import noRestrictedTags from './no-restricted-tags.ts';
 import noScenarioOutlinesWithoutExamples from './no-scenario-outlines-without-examples.ts';
 import noSuperfluousTags from './no-superfluous-tags.ts';
 import noTrailingSpaces from './no-trailing-spaces.ts';
+import noUndeclaredVariables from './no-undeclared-variables.ts';
 import noUnnamedFeatures from './no-unnamed-features.ts';
 import noUnnamedScenarios from './no-unnamed-scenarios.ts';
 import noUnusedVariables from './no-unused-variables.ts';
@@ -65,6 +66,7 @@ export const BUILT_IN_RULES: readonly LintRule[] = [
   noScenarioOutlinesWithoutExamples,
   noSuperfluousTags,
   noTrailingSpaces,
+  noUndeclaredVariables,
   noUnnamedFeatures,
   noUnnamedScenarios,
   noUnusedVariables,

@@ -93,6 +93,24 @@ to rely on. It now checks the original line, so `@tag # @other` is caught again.
 tag; gurkencheck removes it and parses again, so problems further down the file are still
 reported.
 
+## New rules
+
+**`no-undeclared-variables`** is the second half of `no-unused-variables`, split out.
+`no-unused-variables` reported both an Examples column no step reads and a
+`<placeholder>` with no column behind it, which are two different mistakes with two
+different fixes. It now reports only the first. If you relied on the second, switch the
+new rule on as well:
+
+```diff
+ {
+-  "no-unused-variables": "on"
++  "no-unused-variables": "on",
++  "no-undeclared-variables": "on"
+ }
+```
+
+The message text is unchanged; only the `rule` name attached to it differs.
+
 ## If you use it as a library
 
 The API is now explicit about loading rules, and nothing writes to the console or exits
