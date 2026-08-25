@@ -4,7 +4,15 @@
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {BUILT_IN_RULES} from './rules/index.ts';
-import type {Configuration, FeatureFile, LintRule, RuleConfig, RuleError, RuleRegistry} from './types.ts';
+import type {
+  Configuration,
+  FeatureFile,
+  LintRule,
+  RuleConfig,
+  RuleError,
+  RuleRegistry,
+  Severity,
+} from './types.ts';
 import type {Feature} from '@cucumber/messages';
 import {globSync} from './util/glob.ts';
 
@@ -70,9 +78,20 @@ export async function loadRules(
   return registry;
 }
 
-/** True when the configuration switches this rule on. */
+/** The state a configuration entry asks for. */
+function stateOf(config: RuleConfig | undefined): string | undefined {
+  return Array.isArray(config) ? config[0] : typeof config === 'string' ? config : undefined;
+}
+
+/** True when the configuration switches this rule on, to warn or to fail. */
 export function isRuleEnabled(config: RuleConfig | undefined): boolean {
-  return Array.isArray(config) ? config[0] === 'on' : config === 'on';
+  const state = stateOf(config);
+  return state === 'on' || state === 'warn';
+}
+
+/** How loudly a rule reports: `warn` only warns, anything else fails the run. */
+export function getRuleSeverity(config: RuleConfig | undefined): Severity {
+  return stateOf(config) === 'warn' ? 'warning' : 'error';
 }
 
 /** The rule's own settings, or `undefined` when only a state was given. */
@@ -107,7 +126,12 @@ export async function runEnabledRules(
     if (!isRuleEnabled(config)) {
       continue;
     }
-    errors.push(...(await rule.run(feature, file, getRuleSettings(config))));
+    const severity = getRuleSeverity(config);
+    for (const error of await rule.run(feature, file, getRuleSettings(config))) {
+      // The configuration decides how loudly a rule reports, so a custom rule
+      // needs no say in it - but one that sets a severity itself is respected.
+      errors.push({severity, ...error});
+    }
   }
 
   return errors;

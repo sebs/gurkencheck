@@ -6,6 +6,10 @@ function position(error: RuleError): string {
   return error.column === undefined ? String(error.line) : `${error.line}:${error.column}`;
 }
 
+function severityOf(error: RuleError): string {
+  return error.severity ?? 'error';
+}
+
 /**
  * Formats one error as `  <position>    <message>    <rule>`, with the columns
  * padded so they line up underneath each other.
@@ -19,9 +23,13 @@ function formatError(
   const indent = '  ';
   const gap = '    ';
   const line = position(error).padEnd(lineWidth);
+  // "warning" is the longer of the two, so both line up at its width.
+  const severity = severityOf(error).padEnd('warning'.length);
   return (
     indent +
     (colorize ? style.gray(line) : line) +
+    gap +
+    (colorize ? style.severity(severityOf(error), severity) : severity) +
     gap +
     error.message.padEnd(messageWidth) +
     gap +

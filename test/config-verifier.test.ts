@@ -28,16 +28,23 @@ test('reports an unknown rule', () => {
   ]);
 });
 
-test('reports a state that is neither on nor off', () => {
+test('reports a state that is not one of the three', () => {
   assert.deepEqual(verify({'no-empty-file': 'yes'} as unknown as Configuration), [
-    'Invalid rule configuration for "no-empty-file" - the config should be "on" or "off"',
+    'Invalid rule configuration for "no-empty-file" - the config should be "on", "warn" or "off"',
   ]);
+});
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/340
+// https://github.com/gherkin-lint/gherkin-lint/issues/21
+test('accepts warn as a state, on its own or with settings', () => {
+  assert.deepEqual(verify({'no-empty-file': 'warn'}), []);
+  assert.deepEqual(verify({'name-length': ['warn', {Feature: 50}]}), []);
 });
 
 test('reports a bad state in the array form', () => {
   const errors = verify({'name-length': ['yes', {Feature: 50}]} as unknown as Configuration);
   assert.deepEqual(errors, [
-    'Invalid rule configuration for "name-length" - the first part of the config should be "on" or "off"',
+    'Invalid rule configuration for "name-length" - the first part of the config should be "on", "warn" or "off"',
   ]);
 });
 
@@ -85,6 +92,6 @@ test('explains that an always-on rule cannot be turned off', () => {
 test('still rejects a nonsense state for an always-on rule', () => {
   const errors = verify({'no-multiline-steps': 'yes'} as unknown as Configuration);
   assert.deepEqual(errors, [
-    'Invalid rule configuration for "no-multiline-steps" - the config should be "on" or "off"',
+    'Invalid rule configuration for "no-multiline-steps" - the config should be "on", "warn" or "off"',
   ]);
 });

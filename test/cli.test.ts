@@ -162,3 +162,23 @@ test('runs when invoked through a symlink, as npm installs it', async () => {
     fs.rmSync(binDirectory, {recursive: true, force: true});
   }
 });
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/340
+// https://github.com/gherkin-lint/gherkin-lint/issues/21
+test('a rule set to warn reports but exits 0', async () => {
+  await withProject(DIRTY_FEATURE, '{"no-unnamed-scenarios": "warn"}', async (cwd) => {
+    const {code, stderr} = await cli(['.'], cwd);
+    assert.equal(code, 0);
+    assert.match(stderr, /Missing Scenario name/u);
+    assert.match(stderr, /warning/u);
+  });
+});
+
+test('an error alongside a warning still exits 1', async () => {
+  const config = '{"no-unnamed-scenarios": "warn", "no-files-without-scenarios": "on"}';
+  await withProject('Feature: A\n\n  A description and nothing else.\n', config, async (cwd) => {
+    const {code, stderr} = await cli(['.'], cwd);
+    assert.equal(code, 1);
+    assert.match(stderr, /error/u);
+  });
+});

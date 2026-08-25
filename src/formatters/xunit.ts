@@ -5,7 +5,8 @@ import {attributes, cdata, escapeXml, indent, XML_DECLARATION} from '../util/xml
 export function printResults(results: readonly FileResult[]): void {
   const testCases = results.map((result) => {
     const failures = result.errors.map((error) => {
-      const open = `<error${attributes({message: error.message, type: 'gurkencheck-error'})}>`;
+      const type = (error.severity ?? 'error') === 'warning' ? 'gurkencheck-warning' : 'gurkencheck-error';
+      const open = `<error${attributes({message: error.message, type})}>`;
       const where =
         error.column === undefined
           ? `${result.filePath}:${error.line}`

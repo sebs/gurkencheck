@@ -24,14 +24,15 @@ test('loads custom rules written as CommonJS, ESM and .mjs', async () => {
       errors: [
         {
           // Proves the built-in rules are still loaded alongside the custom ones.
+          severity: 'error',
           line: 1,
           column: 5,
           message: 'Wrong indentation for "Feature", expected indentation level of 0, but got 4',
           rule: 'indentation',
         },
-        {line: 109, message: 'Another custom-list error', rule: 'another-custom-list'},
-        {line: 123, message: 'Custom error', rule: 'custom'},
-        {line: 456, message: 'Another custom error', rule: 'another-custom'},
+        {severity: 'error', line: 109, message: 'Another custom-list error', rule: 'another-custom-list'},
+        {severity: 'error', line: 123, message: 'Custom error', rule: 'custom'},
+        {severity: 'error', line: 456, message: 'Another custom error', rule: 'another-custom'},
       ],
     },
   ]);
@@ -54,7 +55,12 @@ test('a custom rule may return a promise', async () => {
   const results = await lint([featureFile], {'slow-custom': 'on'}, rules);
 
   assert.deepEqual(results[0]?.errors, [
-    {line: 6, message: 'Checked "This is a Scenario" after waiting', rule: 'slow-custom'},
+    {
+      severity: 'error',
+      line: 6,
+      message: 'Checked "This is a Scenario" after waiting',
+      rule: 'slow-custom',
+    },
   ]);
 });
 

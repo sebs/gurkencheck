@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {test} from 'node:test';
-import {lint} from '../src/linter.ts';
+import {countBySeverity, hasErrors, lint} from '../src/linter.ts';
 import {loadRules} from '../src/rules.ts';
 import type {RuleError} from '../src/types.ts';
 
@@ -89,16 +89,20 @@ test('returns one result per file, in the order given', async () => {
 // https://github.com/gherkin-lint/gherkin-lint/issues/203
 const SUPPRESSION_CONFIG = {'use-and': 'on', 'name-length': ['on', {Scenario: 5}]} as const;
 
-async function errorsForSource(source: string, config: object = SUPPRESSION_CONFIG) {
+async function lintSource(source: string, config: object = SUPPRESSION_CONFIG) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-inline-'));
   const file = path.join(directory, 'Example.feature');
   try {
     fs.writeFileSync(file, source);
-    const results = await lint([file], config as never, rules);
-    return results[0]!.errors;
+    return await lint([file], config as never, rules);
   } finally {
     fs.rmSync(directory, {recursive: true, force: true});
   }
+}
+
+async function errorsForSource(source: string, config: object = SUPPRESSION_CONFIG) {
+  const results = await lintSource(source, config);
+  return results[0]!.errors;
 }
 
 const TWO_PROBLEMS = [
@@ -154,4 +158,36 @@ test('reports a Background written after a Scenario as its own problem', async (
       rule: 'background-before-scenarios',
     },
   ]);
+});
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/340
+// https://github.com/gherkin-lint/gherkin-lint/issues/21
+test('a rule set to warn still reports, marked as a warning', async () => {
+  const errors = await errorsForSource(TWO_PROBLEMS, {
+    'use-and': 'warn',
+    'name-length': ['warn', {Scenario: 5}],
+  });
+  assert.deepEqual(errors.map((error) => error.severity), ['warning', 'warning']);
+});
+
+test('warnings alone do not fail the run', async () => {
+  const warned = await lintSource(TWO_PROBLEMS, {'use-and': 'warn'});
+  assert.ok(!hasErrors(warned));
+
+  const failed = await lintSource(TWO_PROBLEMS, {'use-and': 'on'});
+  assert.ok(hasErrors(failed));
+});
+
+test('one error among warnings still fails the run', async () => {
+  const results = await lintSource(TWO_PROBLEMS, {'use-and': 'warn', 'name-length': ['on', {Scenario: 5}]});
+  assert.ok(hasErrors(results));
+  assert.deepEqual(countBySeverity(results), {errors: 1, warnings: 1});
+});
+
+test('parse errors are always errors, whatever the configuration says', async () => {
+  const results = await lintSource(
+    ['Feature: A', '', '  Scenario: S', '    Given x', '', 'Feature: B', ''].join('\n'),
+    {},
+  );
+  assert.ok(hasErrors(results));
 });

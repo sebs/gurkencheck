@@ -151,6 +151,9 @@ ${codeBlock('npx gurkencheck')}
 <code>${DEFAULT_CONFIG_FILE_NAME}</code> and list the rules you want. A configuration file
 replaces the recommended set rather than adding to it, so every rule is off until you switch
 it on.</p>
+<p>A rule is set to <code>"on"</code>, <code>"warn"</code> or <code>"off"</code>.
+<code>"warn"</code> reports exactly the same findings but does not fail the run, which is
+what you want for a rule the team is working towards rather than enforcing.</p>
 ${codeBlock(`{
   "no-unnamed-features": "on",
   "no-unnamed-scenarios": "on",
@@ -158,8 +161,8 @@ ${codeBlock(`{
   "indentation": ["on", {"Feature": 0, "Scenario": 2, "Step": 4}]
 }`)}
 <p>With no paths given, it searches the current directory for <code>.feature</code> files.
-It exits with <code>0</code> when everything is clean, <code>1</code> when a rule was broken,
-and <code>2</code> when it could not run at all.</p>
+It exits with <code>0</code> when there is nothing worse than a warning, <code>1</code> when
+a rule set to <code>"on"</code> was broken, and <code>2</code> when it could not run at all.</p>
 
 <h2>Sharing a configuration</h2>
 <p>Build on top of another configuration with <code>extends</code>. What your file says wins

@@ -119,6 +119,20 @@ new rule on as well:
 
 The message text is unchanged; only the `rule` name attached to it differs.
 
+## New in the configuration file
+
+**A rule may be set to `"warn"`** as well as `"on"` and `"off"`. It reports the same
+findings but does not fail the run. The stylish output now always carries a severity
+column, so if you match on its shape, that is one more field:
+
+```diff
+-  3:3    Missing Scenario name    no-unnamed-scenarios
++  3:3    error      Missing Scenario name    no-unnamed-scenarios
+```
+
+In the xunit report a warning's `type` is `gurkencheck-warning` rather than
+`gurkencheck-error`.
+
 ## New checks in existing rules
 
 **`indentation` now checks doc strings.** The line opening a doc string (""" or ```) is checked against a new `docstring` setting, which defaults to the

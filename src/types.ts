@@ -25,6 +25,11 @@ export interface RuleError {
    * the end of the file.
    */
   column?: number;
+  /**
+   * How much this finding matters, taken from the rule's state in the
+   * configuration. Absent means `error`; a rule need not set it itself.
+   */
+  severity?: Severity;
 }
 
 /** Everything found in one feature file. */
@@ -33,8 +38,16 @@ export interface FileResult {
   errors: RuleError[];
 }
 
-/** Whether a rule is turned on. */
-export type RuleState = 'on' | 'off';
+/**
+ * Whether a rule is turned on, and how loudly.
+ *
+ * `warn` reports the same findings as `on` but does not fail the run, for
+ * rules a team is working towards rather than enforcing.
+ */
+export type RuleState = 'on' | 'warn' | 'off';
+
+/** How much a finding matters. */
+export type Severity = 'error' | 'warning';
 
 /**
  * A rule's entry in the configuration file: either just a state, or a state

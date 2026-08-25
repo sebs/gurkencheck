@@ -5,7 +5,7 @@
 import {ALWAYS_ON_RULES} from './gherkin/parse.ts';
 import type {Configuration, RuleRegistry} from './types.ts';
 
-const STATES = ['on', 'off'];
+const STATES = ['on', 'warn', 'off'];
 
 function describeAllowed(availableConfigs: unknown): string {
   if (Array.isArray(availableConfigs)) {
@@ -73,7 +73,7 @@ export function verifyConfiguration(configuration: Configuration, rules: RuleReg
             `${prefix}this rule is always on. A file breaking it cannot be parsed at all, so there is nothing to switch off.`,
           );
         } else if (!STATES.includes(state as string)) {
-          errors.push(`${prefix}the config should be "on" or "off"`);
+          errors.push(`${prefix}the config should be "on", "warn" or "off"`);
         }
         continue;
       }
@@ -83,13 +83,13 @@ export function verifyConfiguration(configuration: Configuration, rules: RuleReg
 
     if (!Array.isArray(ruleConfig)) {
       if (!STATES.includes(ruleConfig as string)) {
-        errors.push(`${prefix}the config should be "on" or "off"`);
+        errors.push(`${prefix}the config should be "on", "warn" or "off"`);
       }
       continue;
     }
 
     if (!STATES.includes(ruleConfig[0] as string)) {
-      errors.push(`${prefix}the first part of the config should be "on" or "off"`);
+      errors.push(`${prefix}the first part of the config should be "on", "warn" or "off"`);
     }
     if (ruleConfig.length !== 2) {
       errors.push(`${prefix}the config should have exactly 2 parts: a state and the rule's settings`);

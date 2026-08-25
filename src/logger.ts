@@ -27,6 +27,8 @@ export function boldError(message: string): void {
 /** Text decorations used by the stylish formatter. */
 export const style = {
   gray: (text: string): string => paint(`${ESC}38;5;243m`, text),
-  underline: (text: string): string =>
-    useColor() ? `${ESC}0;4m${text}${ESC}24m` : text,
+  underline: (text: string): string => (useColor() ? `${ESC}0;4m${text}${ESC}24m` : text),
+  /** Red for something that fails the run, yellow for something that does not. */
+  severity: (severity: string, text: string): string =>
+    paint(severity === 'warning' ? `${ESC}33m` : `${ESC}31m`, text),
 };

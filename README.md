@@ -47,9 +47,16 @@ With no paths given it searches the current directory for `.feature` files.
 
 | Exit code | Meaning |
 |---|---|
-| `0` | Nothing to report |
-| `1` | At least one rule was broken |
-| `2` | The linter could not run: bad arguments, or a missing or invalid config |
+| `0` | Nothing worse than a warning |
+| `1` | At least one rule set to `"on"` was broken |
+| `2` | The linter could not run: bad arguments, or an invalid config |
+
+A rule is set to `"on"`, `"warn"` or `"off"`. `"warn"` reports exactly the same findings but
+does not fail the run — for a rule the team is working towards rather than enforcing:
+
+```json
+{"no-unnamed-scenarios": "on", "use-and": "warn"}
+```
 
 ## Command line
 

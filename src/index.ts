@@ -29,11 +29,12 @@ export {ALWAYS_ON_RULES, PARSER_RULES, parseFeature, readAndParseFile} from './g
 export type {ParseResult} from './gherkin/parse.ts';
 export {getNeutralKeyword, getNodeType} from './gherkin/keywords.ts';
 export {backgroundsOf, rulesOf, scenariosOf, stepContainersOf} from './gherkin/traverse.ts';
-export {hasErrors, lint} from './linter.ts';
+export {countBySeverity, hasErrors, lint} from './linter.ts';
 export {readSuppressions} from './suppressions.ts';
 export type {Suppressions} from './suppressions.ts';
 export {
   getRuleSettings,
+  getRuleSeverity,
   isRuleEnabled,
   loadRules,
   resetRules,
@@ -49,4 +50,5 @@ export type {
   RuleError,
   RuleRegistry,
   RuleState,
+  Severity,
 } from './types.ts';

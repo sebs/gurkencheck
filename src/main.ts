@@ -15,7 +15,7 @@ import {loadRules} from './rules.ts';
 
 /** Nothing to report. */
 const EXIT_OK = 0;
-/** At least one rule violation was found. */
+/** At least one finding serious enough to fail the run. Warnings alone do not. */
 const EXIT_LINT_ERRORS = 1;
 /** The linter could not run: bad arguments, missing or invalid config. */
 const EXIT_USAGE = 2;

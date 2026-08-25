@@ -46,7 +46,28 @@ export async function lint(
   return results;
 }
 
-/** True when any file has at least one error. */
+/** True when any file has a finding serious enough to fail the run. */
 export function hasErrors(results: readonly FileResult[]): boolean {
-  return results.some((result) => result.errors.length > 0);
+  return results.some((result) =>
+    result.errors.some((error) => (error.severity ?? 'error') === 'error'),
+  );
+}
+
+/** How many findings there are of each severity. */
+export function countBySeverity(results: readonly FileResult[]): {
+  errors: number;
+  warnings: number;
+} {
+  let errors = 0;
+  let warnings = 0;
+  for (const result of results) {
+    for (const error of result.errors) {
+      if ((error.severity ?? 'error') === 'warning') {
+        warnings++;
+      } else {
+        errors++;
+      }
+    }
+  }
+  return {errors, warnings};
 }
