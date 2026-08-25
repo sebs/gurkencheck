@@ -156,3 +156,44 @@ test('loadFormatter explains a module that is not a formatter', async () => {
     /does not export a formatter/u,
   );
 });
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/95
+test('tap reports one test point per file, with a plan', () => {
+  const output = capture(getFormatter('tap')!, RESULTS);
+  const lines = output.split('\n');
+  assert.equal(lines[0], 'TAP version 13');
+  assert.equal(lines[1], '1..2');
+  assert.match(output, /^not ok 1 - \/features\/Login\.feature$/mu);
+  assert.match(output, /^ok 2 - \/features\/Clean\.feature$/mu);
+});
+
+test('tap carries the findings in a YAML block', () => {
+  const output = capture(getFormatter('tap')!, RESULTS);
+  assert.match(output, /^ {2}---$/mu);
+  assert.match(output, /^ {4}- severity: error$/mu);
+  assert.match(output, /^ {6}message: 'Missing Scenario name'$/mu);
+  assert.match(output, /^ {6}rule: 'no-unnamed-scenarios'$/mu);
+  assert.match(output, /^ {2}\.\.\.$/mu);
+});
+
+test('tap passes a file whose findings are only warnings, and still says why', () => {
+  const output = capture(getFormatter('tap')!, [
+    {
+      filePath: '/a.feature',
+      errors: [{line: 1, message: 'gentle advice', rule: 'use-and', severity: 'warning'}],
+    },
+  ]);
+  assert.match(output, /^ok 1 - \/a\.feature$/mu);
+  assert.match(output, /severity: warning/u);
+});
+
+test('tap quotes a message containing an apostrophe', () => {
+  const output = capture(getFormatter('tap')!, [
+    {filePath: '/a.feature', errors: [{line: 1, message: "it's wrong", rule: 'r'}]},
+  ]);
+  assert.match(output, /message: 'it''s wrong'/u);
+});
+
+test('tap emits an empty plan when there is nothing to report', () => {
+  assert.equal(capture(getFormatter('tap')!, []), 'TAP version 13\n1..0');
+});

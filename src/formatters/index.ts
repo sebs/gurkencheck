@@ -7,6 +7,7 @@ import {pathToFileURL} from 'node:url';
 import type {FileResult} from '../types.ts';
 import {printResults as json} from './json.ts';
 import {printResults as stylish} from './stylish.ts';
+import {printResults as tap} from './tap.ts';
 import {printResults as xunit} from './xunit.ts';
 
 /**
@@ -20,7 +21,7 @@ export type Formatter = (
 ) => void | string | Promise<void | string>;
 
 /** The formats accepted by `--format` without having to be loaded. */
-export const FORMATTERS: Record<string, Formatter> = {stylish, json, xunit};
+export const FORMATTERS: Record<string, Formatter> = {stylish, json, tap, xunit};
 
 export const DEFAULT_FORMAT = 'stylish';
 

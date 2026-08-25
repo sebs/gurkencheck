@@ -66,7 +66,9 @@ does not fail the run — for a rule the team is working towards rather than enf
 ```
 gurkencheck [options] <feature-files>
 
-  -f, --format <format>   output format: stylish, json, xunit (default: stylish)
+  -f, --format <format>   output format: stylish, json, tap, xunit,
+                          or the path to a formatter of your own
+                          (default: stylish)
   -c, --config <path>     configuration file (default: .gurkencheckrc)
   -i, --ignore <globs>    comma separated globs to skip, overriding .gurkencheckignore
   -r, --rulesdir <dir>    directory of custom rules; may be given more than once

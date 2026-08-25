@@ -186,7 +186,7 @@ ${codeBlock(`{
 <div class="wide"><table>
 <thead><tr><th>Option</th><th>What it does</th></tr></thead>
 <tbody>
-<tr><td><code>-f, --format</code></td><td>Output format: <code>stylish</code> (the default), <code>json</code> or <code>xunit</code>.</td></tr>
+<tr><td><code>-f, --format</code></td><td>Output format: <code>stylish</code> (the default), <code>json</code>, <code>tap</code> or <code>xunit</code>, or the path to a formatter of your own.</td></tr>
 <tr><td><code>-c, --config</code></td><td>Path to a configuration file, if it is not <code>${DEFAULT_CONFIG_FILE_NAME}</code> in the current directory.</td></tr>
 <tr><td><code>-i, --ignore</code></td><td>Comma separated globs to skip. Overrides <code>${DEFAULT_IGNORE_FILE_NAME}</code>.</td></tr>
 <tr><td><code>-r, --rulesdir</code></td><td>A directory holding your own rules. May be given more than once.</td></tr>
