@@ -38,3 +38,25 @@ test('still reports blank lines after a doc string has closed', () => {
     {message, line: 12},
   ]);
 });
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/285
+test('max defaults to one blank line', () => {
+  checkRule(rule, 'no-multiple-empty-lines/ThreeInARow.feature', {}, [
+    {message, line: 6},
+    {message, line: 7},
+  ]);
+});
+
+test('max lets two blank lines through and still catches the third', () => {
+  checkRule(rule, 'no-multiple-empty-lines/ThreeInARow.feature', {max: 2}, [
+    {message: 'More than 2 empty lines in a row are not allowed', line: 7},
+  ]);
+});
+
+test('a generous max accepts the file outright', () => {
+  checkRule(rule, 'no-multiple-empty-lines/ThreeInARow.feature', {max: 3}, []);
+});
+
+test('a doc string breaks a run of blank lines rather than joining it up', () => {
+  checkRule(rule, 'no-multiple-empty-lines/DocString.feature', {max: 1}, []);
+});

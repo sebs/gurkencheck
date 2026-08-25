@@ -262,11 +262,23 @@ export const RULE_DOCS: RuleDoc[] = [
   },
   {
     name: 'no-multiple-empty-lines',
-    summary: 'Allows at most one blank line in a row.',
-    explanation: 'One blank line separates things. Several in a row just add scrolling.',
-    config: '{\n  "no-multiple-empty-lines": "on"\n}',
-    good: 'Feature: Logging in\n\n  Scenario: A known user logs in\n    Given I am a known user',
-    bad: 'Feature: Logging in\n\n\n\n  Scenario: A known user logs in\n    Given I am a known user',
+    summary: 'Limits how many blank lines may sit next to each other.',
+    explanation:
+      'One blank line separates things. Several in a row just add scrolling. If your team ' +
+      'likes a wider gap between scenarios, raise the limit rather than switching the rule ' +
+      'off. Blank lines inside a doc string are left alone, because they are part of the ' +
+      'text being quoted.',
+    settings: [
+      {
+        name: 'max',
+        type: 'number of lines',
+        fallback: '1',
+        description: 'How many blank lines may sit next to each other. Each blank line past this is reported.',
+      },
+    ],
+    config: '{\n  "no-multiple-empty-lines": ["on", {"max": 2}]\n}',
+    good: '# With "max" left at 1:\nFeature: Logging in\n\n  Scenario: A known user logs in\n    Given I am a known user',
+    bad: '# With "max" left at 1:\nFeature: Logging in\n\n\n\n  Scenario: A known user logs in\n    Given I am a known user',
     message: 'Multiple empty lines are not allowed',
   },
   {
