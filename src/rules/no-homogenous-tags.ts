@@ -28,6 +28,12 @@ const rule: LintRule = {
       const scenario = child.scenario;
       scenarioTags.push(tagNames(scenario.tags));
 
+      // "Every Examples table has this tag" says nothing when there is only
+      // one of them, and hoisting the tag would change what it means as soon
+      // as a second table is added.
+      if (scenario.examples.length < 2) {
+        continue;
+      }
       for (const tag of intersection(scenario.examples.map((e) => tagNames(e.tags)))) {
         errors.push({
           message:
@@ -37,6 +43,13 @@ const rule: LintRule = {
           line: scenario.location.line,
         });
       }
+    }
+
+    // Likewise, a single scenario's tags are not shared with anything. Tags
+    // that identify one scenario - a ticket reference, say - belong on the
+    // scenario, and moving them to the Feature would be wrong advice.
+    if (scenarioTags.length < 2) {
+      return errors;
     }
 
     for (const tag of intersection(scenarioTags)) {

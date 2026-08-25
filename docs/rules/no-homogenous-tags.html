@@ -28,7 +28,7 @@
 <p class="lede">Moves a tag up when every scenario carries it.</p>
 
 <h2>What it does</h2>
-<p>When every scenario in a file has the same tag, that tag really belongs to the Feature. Writing it once at the top is shorter and stays correct when you add a new scenario. The same goes for a tag repeated on every Examples table of a Scenario Outline. You get one error per tag.</p>
+<p>When every scenario in a file has the same tag, that tag really belongs to the Feature. Writing it once at the top is shorter and stays correct when you add a new scenario. The same goes for a tag repeated on every Examples table of a Scenario Outline. You get one error per tag. A feature with only one scenario is left alone: its single scenario shares nothing with anything, and a tag that identifies that one scenario would be wrong on the Feature.</p>
 
 <h2>Turning it on</h2>
 <p>Add this to your <code>.gurkencheckrc</code>:</p>

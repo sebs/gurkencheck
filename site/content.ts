@@ -255,7 +255,9 @@ export const RULE_DOCS: RuleDoc[] = [
       'When every scenario in a file has the same tag, that tag really belongs to the ' +
       'Feature. Writing it once at the top is shorter and stays correct when you add a ' +
       'new scenario. The same goes for a tag repeated on every Examples table of a ' +
-      'Scenario Outline. You get one error per tag.',
+      'Scenario Outline. You get one error per tag. A feature with only one scenario is ' +
+      'left alone: its single scenario shares nothing with anything, and a tag that ' +
+      'identifies that one scenario would be wrong on the Feature.',
     config: '{\n  "no-homogenous-tags": "on"\n}',
     good: '@smoke\nFeature: Logging in\n\n  Scenario: A known user logs in\n    Given I am a known user\n\n  Scenario: An unknown user is turned away\n    Given I am not a known user',
     bad: 'Feature: Logging in\n\n  @smoke\n  Scenario: A known user logs in\n    Given I am a known user\n\n  @smoke\n  Scenario: An unknown user is turned away\n    Given I am not a known user',
