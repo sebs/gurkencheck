@@ -18,6 +18,9 @@ const rule: LintRule = {
     const errors: RuleError[] = [];
     const scenarioTags: string[][] = [];
 
+    // One error per tag rather than one summary listing them all, so that
+    // each finding points at a single thing to fix, the way every other
+    // rule reports.
     for (const child of feature.children) {
       if (child.scenario === undefined) {
         continue;
@@ -25,24 +28,22 @@ const rule: LintRule = {
       const scenario = child.scenario;
       scenarioTags.push(tagNames(scenario.tags));
 
-      const sharedByEveryExample = intersection(scenario.examples.map((e) => tagNames(e.tags)));
-      if (sharedByEveryExample.length > 0) {
+      for (const tag of intersection(scenario.examples.map((e) => tagNames(e.tags)))) {
         errors.push({
           message:
-            'All Examples of a Scenario Outline have the same tag(s), they should be defined ' +
-            `on the Scenario Outline instead: ${sharedByEveryExample.join(', ')}`,
+            'Every Examples table of this Scenario Outline has the tag ' +
+            `${tag}, it should be defined on the Scenario Outline instead`,
           rule: name,
           line: scenario.location.line,
         });
       }
     }
 
-    const sharedByEveryScenario = intersection(scenarioTags);
-    if (sharedByEveryScenario.length > 0) {
+    for (const tag of intersection(scenarioTags)) {
       errors.push({
         message:
-          'All Scenarios on this Feature have the same tag(s), they should be defined ' +
-          `on the Feature instead: ${sharedByEveryScenario.join(', ')}`,
+          `Every Scenario on this Feature has the tag ${tag}, ` +
+          'it should be defined on the Feature instead',
         rule: name,
         line: feature.location.line,
       });
