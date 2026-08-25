@@ -60,7 +60,7 @@ gurkencheck [options] <feature-files>
 
 ## Rules
 
-There are 32 rules you switch on, covering naming, tags, indentation, structure and size,
+There are 33 rules you switch on, covering naming, tags, indentation, structure and size,
 plus four that are always on because Gherkin itself refuses to read a file that breaks
 them. Each one is documented at
 **[gurkencheck.github.io/gurkencheck](https://gurkencheck.github.io/gurkencheck/)** with a

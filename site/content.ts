@@ -177,6 +177,19 @@ export const RULE_DOCS: RuleDoc[] = [
     message: 'Feature name is already used in: LoggingIn.feature',
   },
   {
+    name: 'no-dupe-file-names',
+    summary: 'No two feature files may share a name.',
+    explanation:
+      'Two files called the same thing in different folders are easy to mix up in a ' +
+      'review or a stack trace. Worse, tools that write one report per feature name it ' +
+      'after the file, so one run quietly overwrites the other and you lose a result ' +
+      'without being told. Only the name is compared, not the folder.',
+    config: '{\n  "no-dupe-file-names": "on"\n}',
+    good: 'features/accounts/Login.feature\nfeatures/admin/AdminLogin.feature',
+    bad: 'features/accounts/Login.feature\nfeatures/admin/Login.feature',
+    message: 'File name is already used in: features/accounts/Login.feature',
+  },
+  {
     name: 'no-dupe-scenario-names',
     summary: 'Makes sure no two scenarios share a name.',
     explanation:

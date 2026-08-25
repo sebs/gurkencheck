@@ -17,6 +17,7 @@ import nameLength from './name-length.ts';
 import newLineAtEof from './new-line-at-eof.ts';
 import noBackgroundOnlyScenario from './no-background-only-scenario.ts';
 import noDupeFeatureNames from './no-dupe-feature-names.ts';
+import noDupeFileNames from './no-dupe-file-names.ts';
 import noDupeScenarioNames from './no-dupe-scenario-names.ts';
 import noDuplicateTags from './no-duplicate-tags.ts';
 import noEmptyBackground from './no-empty-background.ts';
@@ -52,6 +53,7 @@ export const BUILT_IN_RULES: readonly LintRule[] = [
   newLineAtEof,
   noBackgroundOnlyScenario,
   noDupeFeatureNames,
+  noDupeFileNames,
   noDupeScenarioNames,
   noDuplicateTags,
   noEmptyBackground,
