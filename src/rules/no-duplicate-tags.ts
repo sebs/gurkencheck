@@ -3,21 +3,21 @@ import type {LintRule, RuleError} from '../types.ts';
 
 const name = 'no-duplicate-tags';
 
+/**
+ * Reports every repeat of a tag, not just the first. Three copies of a tag
+ * are two mistakes, and being told about one at a time means running the
+ * linter again after each fix.
+ */
 function checkTags(tags: readonly Tag[], errors: RuleError[]): void {
   const seen = new Set<string>();
-  const reported = new Set<string>();
 
   for (const tag of tags) {
-    if (reported.has(tag.name)) {
-      continue;
-    }
     if (seen.has(tag.name)) {
       errors.push({
         message: `Duplicate tags are not allowed: ${tag.name}`,
         rule: name,
         line: tag.location.line,
       });
-      reported.add(tag.name);
     } else {
       seen.add(tag.name);
     }
