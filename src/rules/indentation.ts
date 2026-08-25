@@ -26,6 +26,16 @@ type IndentationConfig = typeof defaultConfig & {
   'feature tag': number;
   'scenario tag': number;
   docstring: number;
+  character: IndentationCharacter;
+};
+
+/** Which character indentation has to be made of, or `any` to not care. */
+type IndentationCharacter = 'any' | 'space' | 'tab';
+
+/** What counts as the wrong character for each setting. */
+const WRONG_CHARACTER: Record<Exclude<IndentationCharacter, 'any'>, RegExp> = {
+  space: /\t/,
+  tab: / /,
 };
 
 const availableConfigs = {
@@ -35,6 +45,8 @@ const availableConfigs = {
   'feature tag': -1,
   'scenario tag': -1,
   docstring: -1,
+  /** One of "any", "space" or "tab". */
+  character: 'any',
 };
 
 function resolveConfig(configuration: Record<string, unknown>): IndentationConfig {
@@ -51,13 +63,17 @@ function resolveConfig(configuration: Record<string, unknown>): IndentationConfi
     typeof configuration['docstring'] === 'number'
       ? configuration['docstring']
       : merged.Step + 2;
+  merged.character =
+    configuration['character'] === 'space' || configuration['character'] === 'tab'
+      ? configuration['character']
+      : 'any';
   return merged;
 }
 
 const rule: LintRule = {
   name,
   availableConfigs,
-  run(feature, _file, configuration) {
+  run(feature, file, configuration) {
     if (feature === undefined) {
       return [];
     }
@@ -66,7 +82,29 @@ const rule: LintRule = {
     const config = resolveConfig(raw);
     const errors: RuleError[] = [];
 
+    // A line can be tested more than once - a tag line groups several tags -
+    // so the character check reports each line at most once.
+    const characterChecked = new Set<number>();
+
+    const testCharacter = (location: Location, type: keyof IndentationConfig): void => {
+      if (config.character === 'any' || characterChecked.has(location.line)) {
+        return;
+      }
+      characterChecked.add(location.line);
+
+      const leading = /^[\t ]*/.exec(file.lines[location.line - 1] ?? '')?.[0] ?? '';
+      if (WRONG_CHARACTER[config.character].test(leading)) {
+        errors.push({
+          message: `Wrong indentation character for "${type}", expected ${config.character}s`,
+          rule: name,
+          ...at(location),
+        });
+      }
+    };
+
     const test = (location: Location, type: keyof IndentationConfig): void => {
+      testCharacter(location, type);
+
       // Columns are 1-based, indentation is counted from 0.
       const actual = (location.column ?? 1) - 1;
       const expected = config[type];

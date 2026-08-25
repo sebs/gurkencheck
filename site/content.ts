@@ -57,7 +57,8 @@ export const RULE_DOCS: RuleDoc[] = [
     explanation:
       'Even indentation makes a feature file readable at a glance. You can set a number ' +
       'for each kind of line. Anything you leave out keeps its default. Tags follow the ' +
-      'node they sit above, and a doc string follows its step, one level further in.',
+      'node they sit above, and a doc string follows its step, one level further in. ' +
+      'Set character to space or tab if your team keeps mixing the two.',
     settings: [
       {name: 'Feature', type: 'number of spaces', fallback: '0', description: 'Indentation of the Feature line.'},
       {name: 'Rule', type: 'number of spaces', fallback: '0', description: 'Indentation of a Rule line.'},
@@ -74,6 +75,7 @@ export const RULE_DOCS: RuleDoc[] = [
       {name: 'feature tag', type: 'number of spaces', fallback: 'the Feature setting', description: 'Indentation of tags above the Feature.'},
       {name: 'scenario tag', type: 'number of spaces', fallback: 'the Scenario setting', description: 'Indentation of tags above a Scenario.'},
       {name: 'docstring', type: 'number of spaces', fallback: 'the Step setting plus 2', description: 'Indentation of the """ or ``` line that opens a doc string under a step.'},
+      {name: 'character', type: 'one of any, space or tab', fallback: 'any', description: 'Which character indentation has to be made of. Leave it at any to accept either.'},
     ],
     config: '{\n  "indentation": ["on", {\n    "Feature": 0,\n    "Scenario": 2,\n    "Step": 4\n  }]\n}',
     good: 'Feature: Logging in\n\n  Scenario: A known user logs in\n    Given I am a known user\n    When I log in\n    Then I see my dashboard',

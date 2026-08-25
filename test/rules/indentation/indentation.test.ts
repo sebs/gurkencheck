@@ -92,3 +92,40 @@ test('docstring indentation can be set on its own', async () => {
     wrong('docstring', 4, 6, 5),
   ]);
 });
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/331
+const wrongCharacter = (element: string, expected: string, line: number): ExpectedError => ({
+  message: `Wrong indentation character for "${element}", expected ${expected}s`,
+  line,
+});
+
+test('character defaults to accepting either', async () => {
+  await checkRule(rule, 'indentation/CorrectIndentationTabs.feature', {}, []);
+  await checkRule(rule, 'indentation/CorrectIndentationSpaces.feature', {}, []);
+});
+
+test('character "space" reports lines indented with tabs', async () => {
+  await checkRule(rule, 'indentation/CorrectIndentationTabs.feature', {character: 'space'}, [
+    wrongCharacter('Step', 'space', 5),
+    wrongCharacter('Step', 'space', 10),
+    wrongCharacter('Step', 'space', 15),
+    wrongCharacter('example', 'space', 17),
+    wrongCharacter('example', 'space', 18),
+    wrongCharacter('example', 'space', 19),
+  ]);
+});
+
+test('character "tab" reports lines indented with spaces', async () => {
+  await checkRule(rule, 'indentation/CorrectIndentationSpaces.feature', {character: 'tab'}, [
+    wrongCharacter('Step', 'tab', 5),
+    wrongCharacter('Step', 'tab', 10),
+    wrongCharacter('Step', 'tab', 15),
+    wrongCharacter('example', 'tab', 17),
+    wrongCharacter('example', 'tab', 18),
+    wrongCharacter('example', 'tab', 19),
+  ]);
+});
+
+test('an unrecognised character setting checks nothing', async () => {
+  await checkRule(rule, 'indentation/CorrectIndentationTabs.feature', {character: 'wibble'}, []);
+});
