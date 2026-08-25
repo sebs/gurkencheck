@@ -186,7 +186,7 @@ ${codeBlock(`{
 <div class="wide"><table>
 <thead><tr><th>Option</th><th>What it does</th></tr></thead>
 <tbody>
-<tr><td><code>-f, --format</code></td><td>Output format: <code>stylish</code> (the default), <code>json</code>, <code>junit</code> or <code>tap</code>, or the path to a formatter of your own.</td></tr>
+<tr><td><code>-f, --format</code></td><td>Output format: <code>stylish</code> (the default), <code>json</code>, <code>junit</code>, <code>sarif</code> or <code>tap</code>, or the path to a formatter of your own.</td></tr>
 <tr><td><code>-c, --config</code></td><td>Path to a configuration file, if it is not <code>${DEFAULT_CONFIG_FILE_NAME}</code> in the current directory.</td></tr>
 <tr><td><code>-i, --ignore</code></td><td>Comma separated globs to skip. Overrides <code>${DEFAULT_IGNORE_FILE_NAME}</code>.</td></tr>
 <tr><td><code>-r, --rulesdir</code></td><td>A directory holding your own rules. May be given more than once.</td></tr>
@@ -215,6 +215,18 @@ and everything else is checked.</p>
 <code>.gitignore</code> and <code>.eslintignore</code> work, so <code>build</code> is enough and
 you do not have to write <code>build/**</code>. Blank lines and lines starting with
 <code>#</code> are ignored.</p>
+
+<h2>Reporting to GitHub code scanning</h2>
+<p><code>--format sarif</code> writes a SARIF 2.1.0 log, which GitHub reads directly. Upload
+it and each finding is shown inline on the pull request that introduced it.</p>
+${codeBlock(`- run: npx gurkencheck --format sarif > gurkencheck.sarif
+  continue-on-error: true
+
+- uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: gurkencheck.sarif`)}
+<p>Paths in the log are relative to the directory gurkencheck ran in, which is what code
+scanning needs in order to match a finding to a file in the repository.</p>
 
 <h2>Switching a rule off for one place</h2>
 <p>Ignoring a whole file is often too blunt: one long step name should not cost you every

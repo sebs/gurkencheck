@@ -7,6 +7,7 @@ import {pathToFileURL} from 'node:url';
 import type {FileResult} from '../types.ts';
 import {printResults as json} from './json.ts';
 import {printResults as junit} from './junit.ts';
+import {printResults as sarif} from './sarif.ts';
 import {printResults as stylish} from './stylish.ts';
 import {printResults as tap} from './tap.ts';
 
@@ -25,6 +26,7 @@ export const FORMATTERS: Record<string, Formatter> = {
   stylish,
   json,
   junit,
+  sarif,
   tap,
   // The name the JUnit report used to go by.
   xunit: junit,

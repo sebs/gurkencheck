@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {DEFAULT_FORMAT, getFormatter, loadFormatter} from '../src/formatters/index.ts';
+import {toSarif} from '../src/formatters/sarif.ts';
 import type {FileResult, Formatter} from '../src/index.ts';
 
 const RESULTS: FileResult[] = [
@@ -282,4 +283,60 @@ test('junit output is well formed XML', () => {
     }
   }
   assert.deepEqual(stack, [], 'every tag should be closed');
+});
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/263
+test('sarif produces a 2.1.0 log naming the tool', () => {
+  const log = toSarif(RESULTS, '/') as {
+    version: string;
+    runs: {tool: {driver: {name: string; version: string; rules: {id: string; helpUri: string}[]}}}[];
+  };
+  assert.equal(log.version, '2.1.0');
+  const driver = log.runs[0]!.tool.driver;
+  assert.equal(driver.name, 'gurkencheck');
+  assert.match(driver.version, /^\d+\.\d+\.\d+/u);
+});
+
+test('sarif lists only the rules that found something, with a link to their page', () => {
+  const log = toSarif(RESULTS, '/') as {runs: {tool: {driver: {rules: {id: string; helpUri: string}[]}}}[]};
+  const rules = log.runs[0]!.tool.driver.rules;
+  assert.deepEqual(rules.map((rule) => rule.id), ['no-trailing-spaces', 'no-unnamed-scenarios']);
+  assert.match(rules[0]!.helpUri, /rules\/no-trailing-spaces\.html$/u);
+});
+
+test('sarif reports paths relative to the working directory', () => {
+  const log = toSarif(RESULTS, '/') as {
+    runs: {results: {locations: {physicalLocation: {artifactLocation: {uri: string}}}[]}[]}[];
+  };
+  const uri = log.runs[0]!.results[0]!.locations[0]!.physicalLocation.artifactLocation.uri;
+  assert.equal(uri, 'features/Login.feature');
+});
+
+test('sarif carries the position as a region, and the severity as a level', () => {
+  const log = toSarif(WITH_COLUMNS, '/') as {
+    runs: {results: {level: string; locations: {physicalLocation: {region?: object}}[]}[]}[];
+  };
+  const [withColumn] = log.runs[0]!.results;
+  assert.equal(withColumn?.level, 'error');
+  assert.deepEqual(withColumn?.locations[0]?.physicalLocation.region, {startLine: 3, startColumn: 5});
+});
+
+test('sarif leaves out the region for a finding about a whole file', () => {
+  const log = toSarif([{filePath: '/a.feature', errors: [{line: 0, message: 'x', rule: 'file-name'}]}], '/') as {
+    runs: {results: {locations: {physicalLocation: {region?: object}}[]}[]}[];
+  };
+  assert.equal(log.runs[0]!.results[0]!.locations[0]!.physicalLocation.region, undefined);
+});
+
+test('sarif marks a warning as a warning', () => {
+  const log = toSarif(
+    [{filePath: '/a.feature', errors: [{line: 1, message: 'x', rule: 'use-and', severity: 'warning'}]}],
+    '/',
+  ) as {runs: {results: {level: string}[]}[]};
+  assert.equal(log.runs[0]!.results[0]!.level, 'warning');
+});
+
+test('sarif is valid JSON when printed', () => {
+  const output = capture(getFormatter('sarif')!, RESULTS);
+  assert.equal((JSON.parse(output) as {version: string}).version, '2.1.0');
 });

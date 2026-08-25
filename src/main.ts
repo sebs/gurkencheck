@@ -3,7 +3,6 @@
  * The gurkencheck command line interface.
  */
 import fs from 'node:fs';
-import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {parseArgs} from 'node:util';
 import {DEFAULT_CONFIG_FILE_NAME, readConfiguration} from './config-parser.ts';
@@ -12,6 +11,7 @@ import {DEFAULT_FORMAT, FORMATTERS, loadFormatter} from './formatters/index.ts';
 import {hasErrors, lint} from './linter.ts';
 import * as logger from './logger.ts';
 import {loadRules} from './rules.ts';
+import {version} from './version.ts';
 
 /** Nothing to report. */
 const EXIT_OK = 0;
@@ -19,12 +19,6 @@ const EXIT_OK = 0;
 const EXIT_LINT_ERRORS = 1;
 /** The linter could not run: bad arguments, missing or invalid config. */
 const EXIT_USAGE = 2;
-
-function readVersion(): string {
-  const packagePath = path.join(import.meta.dirname, '..', 'package.json');
-  const contents = JSON.parse(fs.readFileSync(packagePath, 'utf8')) as {version?: string};
-  return contents.version ?? '0.0.0';
-}
 
 function usage(): string {
   return [
@@ -75,7 +69,7 @@ export async function run(argv: readonly string[]): Promise<number> {
     return EXIT_OK;
   }
   if (values.version === true) {
-    console.log(readVersion());
+    console.log(version());
     return EXIT_OK;
   }
 

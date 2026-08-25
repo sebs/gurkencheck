@@ -66,7 +66,7 @@ does not fail the run — for a rule the team is working towards rather than enf
 ```
 gurkencheck [options] <feature-files>
 
-  -f, --format <format>   output format: stylish, json, junit, tap,
+  -f, --format <format>   output format: stylish, json, junit, sarif, tap,
                           or the path to a formatter of your own
                           (default: stylish)
   -c, --config <path>     configuration file (default: .gurkencheckrc)
@@ -97,6 +97,22 @@ or a state plus that rule's own settings:
 ```
 
 Mistyped rule names and settings are reported before any file is read.
+
+## Reporting to GitHub code scanning
+
+`--format sarif` writes a SARIF 2.1.0 log, which GitHub reads directly:
+
+```yaml
+- run: npx gurkencheck --format sarif > gurkencheck.sarif
+  continue-on-error: true
+
+- uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: gurkencheck.sarif
+```
+
+Paths in the log are relative to the directory gurkencheck ran in, which is what code
+scanning needs to match a finding to a file in the repository.
 
 ## Switching a rule off for one place
 
