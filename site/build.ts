@@ -141,16 +141,22 @@ where they drift from the conventions your team has agreed on.</p>
 ${codeBlock('npm install --save-dev gurkencheck')}
 
 <h2>Get started</h2>
-<p>Create a file called <code>${DEFAULT_CONFIG_FILE_NAME}</code> in your project and list the
-rules you want. Every rule is off until you switch it on.</p>
+<p>Run it. With no configuration file, gurkencheck uses its <strong>recommended</strong>
+rules: the ones that catch a mistake rather than express a preference &mdash; an empty file,
+a scenario with no name, a variable that will never be substituted. Nothing in that set
+depends on how you lay a file out, so it should be quiet on a codebase that has never been
+linted.</p>
+${codeBlock('npx gurkencheck')}
+<p>When you want something different, create a file called
+<code>${DEFAULT_CONFIG_FILE_NAME}</code> and list the rules you want. A configuration file
+replaces the recommended set rather than adding to it, so every rule is off until you switch
+it on.</p>
 ${codeBlock(`{
   "no-unnamed-features": "on",
   "no-unnamed-scenarios": "on",
   "no-trailing-spaces": "on",
   "indentation": ["on", {"Feature": 0, "Scenario": 2, "Step": 4}]
 }`)}
-<p>Then run it:</p>
-${codeBlock('npx gurkencheck')}
 <p>With no paths given, it searches the current directory for <code>.feature</code> files.
 It exits with <code>0</code> when everything is clean, <code>1</code> when a rule was broken,
 and <code>2</code> when it could not run at all.</p>

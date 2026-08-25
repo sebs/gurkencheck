@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import type {Configuration, RuleRegistry} from './types.ts';
 import {verifyConfiguration} from './config-verifier.ts';
+import {RECOMMENDED} from './presets.ts';
 import {stripJsonComments} from './util/json.ts';
 
 /** The configuration file looked for when none is given on the command line. */
@@ -11,7 +12,7 @@ export const DEFAULT_CONFIG_FILE_NAME = '.gurkencheckrc';
 
 /** Either a usable configuration, or the reason there isn't one. */
 export type ConfigurationResult =
-  | {ok: true; configuration: Configuration}
+  | {ok: true; configuration: Configuration; source: string}
   | {ok: false; message: string; details: string[]};
 
 function isConfigurationObject(value: unknown): value is Configuration {
@@ -36,13 +37,10 @@ export function readConfiguration(
     }
   } else {
     if (!fs.existsSync(DEFAULT_CONFIG_FILE_NAME)) {
-      return {
-        ok: false,
-        message:
-          `Could not find default config file "${DEFAULT_CONFIG_FILE_NAME}" in the working directory.\n` +
-          'To use a custom name/path provide the config file using the "-c" arg.',
-        details: [],
-      };
+      // Nothing to read, so fall back to the recommended rules rather than
+      // refusing to run. Writing a configuration file is then a way to change
+      // the defaults, not a hurdle before the first run.
+      return {ok: true, configuration: RECOMMENDED, source: 'the recommended preset'};
     }
     configPath = DEFAULT_CONFIG_FILE_NAME;
   }
@@ -71,5 +69,5 @@ export function readConfiguration(
     return {ok: false, message: 'Error(s) in configuration file:', details: errors};
   }
 
-  return {ok: true, configuration: parsed};
+  return {ok: true, configuration: parsed, source: configPath};
 }

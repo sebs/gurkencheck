@@ -15,6 +15,7 @@
 export {DEFAULT_CONFIG_FILE_NAME, readConfiguration} from './config-parser.ts';
 export type {ConfigurationResult} from './config-parser.ts';
 export {verifyConfiguration} from './config-verifier.ts';
+export {PRESETS, RECOMMENDED} from './presets.ts';
 export {
   DEFAULT_IGNORE_FILE_NAME,
   DEFAULT_IGNORED_PATTERNS,

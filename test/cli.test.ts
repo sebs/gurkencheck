@@ -85,12 +85,19 @@ test('finds the configuration file in the working directory', async () => {
   });
 });
 
-test('exits 2 when the configuration file is missing', async () => {
+// https://github.com/gherkin-lint/gherkin-lint/issues/96
+test('runs on the recommended rules when there is no configuration file', async () => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-cli-'));
   try {
+    fs.writeFileSync(path.join(cwd, 'Example.feature'), CLEAN_FEATURE);
+    const clean = await cli(['.'], cwd);
+    assert.equal(clean.code, 0, clean.stderr);
+
+    // no-unnamed-scenarios is one of the recommended rules
+    fs.writeFileSync(path.join(cwd, 'Example.feature'), DIRTY_FEATURE);
     const {code, stderr} = await cli(['.'], cwd);
-    assert.equal(code, 2);
-    assert.match(stderr, /Could not find default config file/u);
+    assert.equal(code, 1);
+    assert.match(stderr, /Missing Scenario name/u);
   } finally {
     fs.rmSync(cwd, {recursive: true, force: true});
   }
