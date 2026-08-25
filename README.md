@@ -66,7 +66,7 @@ does not fail the run — for a rule the team is working towards rather than enf
 ```
 gurkencheck [options] <feature-files>
 
-  -f, --format <format>   output format: stylish, json, tap, xunit,
+  -f, --format <format>   output format: stylish, json, junit, tap,
                           or the path to a formatter of your own
                           (default: stylish)
   -c, --config <path>     configuration file (default: .gurkencheckrc)

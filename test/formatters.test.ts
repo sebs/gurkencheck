@@ -72,22 +72,6 @@ test('stylish lines up the message column', () => {
   assert.equal(new Set(columns).size, 1, 'rule names should start at the same column');
 });
 
-test('xunit produces one testcase per file and one error per violation', () => {
-  const output = capture(getFormatter('xunit')!, RESULTS);
-  assert.match(output, /^<\?xml version="1\.0" encoding="utf-8"\?>/u);
-  assert.equal(output.match(/<testcase /gu)?.length, 2);
-  assert.equal(output.match(/<error /gu)?.length, 2);
-  assert.match(output, /type="gurkencheck-error"/u);
-  assert.match(output, /<!\[CDATA\[\/features\/Login\.feature:3 \(no-unnamed-scenarios\)/u);
-});
-
-test('xunit escapes reserved characters in messages', () => {
-  const output = capture(getFormatter('xunit')!, [
-    {filePath: '/a.feature', errors: [{line: 1, message: 'a < b & "c"', rule: 'r'}]},
-  ]);
-  assert.match(output, /message="a &lt; b &amp; &quot;c&quot;"/u);
-});
-
 // https://github.com/gherkin-lint/gherkin-lint/issues/211
 const WITH_COLUMNS: FileResult[] = [
   {
@@ -124,8 +108,8 @@ test('json carries the column through', () => {
   assert.deepEqual(JSON.parse(output), WITH_COLUMNS);
 });
 
-test('xunit includes the column in the location it prints', () => {
-  const output = capture(getFormatter('xunit')!, WITH_COLUMNS);
+test('junit includes the column in the location it prints', () => {
+  const output = capture(getFormatter('junit')!, WITH_COLUMNS);
   assert.match(output, /\/features\/Login\.feature:3:5 \(no-unnamed-scenarios\)/u);
   assert.match(output, /\/features\/Login\.feature:12 \(new-line-at-eof\)/u);
 });
@@ -196,4 +180,66 @@ test('tap quotes a message containing an apostrophe', () => {
 
 test('tap emits an empty plan when there is nothing to report', () => {
   assert.equal(capture(getFormatter('tap')!, []), 'TAP version 13\n1..0');
+});
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/240
+test('junit wraps the suites and counts the tests and failures', () => {
+  const output = capture(getFormatter('junit')!, RESULTS);
+  assert.match(output, /^<\?xml version="1\.0" encoding="utf-8"\?>/u);
+  // two findings in Login, one placeholder test for the clean file
+  assert.match(output, /<testsuites name="gurkencheck" tests="3" failures="2" errors="0">/u);
+  assert.equal(output.match(/<testsuite /gu)?.length, 2);
+});
+
+test('junit makes each finding its own test case', () => {
+  const output = capture(getFormatter('junit')!, RESULTS);
+  assert.equal(output.match(/<testcase /gu)?.length, 3);
+  assert.match(output, /<testcase name="no-unnamed-scenarios \(3\)" classname="features\.Login">/u);
+  assert.match(output, /<failure message="Missing Scenario name" type="no-unnamed-scenarios">/u);
+});
+
+test('junit gives a clean file a passing test case', () => {
+  const output = capture(getFormatter('junit')!, RESULTS);
+  assert.match(output, /<testsuite name="\/features\/Clean\.feature" tests="1" failures="0"/u);
+  assert.match(output, /<testcase name="\/features\/Clean\.feature" classname="features\.Clean"\/>/u);
+});
+
+test('junit reports a warning without failing the suite', () => {
+  const output = capture(getFormatter('junit')!, [
+    {
+      filePath: '/a.feature',
+      errors: [{line: 1, message: 'gentle advice', rule: 'use-and', severity: 'warning'}],
+    },
+  ]);
+  assert.match(output, /failures="0"/u);
+  assert.doesNotMatch(output, /<failure/u);
+  assert.match(output, /<system-out>\/a\.feature:1 \(use-and\) gentle advice<\/system-out>/u);
+});
+
+test('xunit is still accepted as a name for the JUnit report', () => {
+  assert.equal(getFormatter('xunit'), getFormatter('junit'));
+});
+
+test('junit escapes reserved characters in messages', () => {
+  const output = capture(getFormatter('junit')!, [
+    {filePath: '/a.feature', errors: [{line: 1, message: 'a < b & "c"', rule: 'r'}]},
+  ]);
+  assert.match(output, /message="a &lt; b &amp; &quot;c&quot;"/u);
+  assert.match(output, /a &lt; b &amp; &quot;c&quot;<\/failure>/u);
+});
+
+test('junit output is well formed XML', () => {
+  // A crude well-formedness check: every opened tag is closed in order.
+  const output = capture(getFormatter('junit')!, RESULTS);
+  const stack: string[] = [];
+  for (const tag of output.matchAll(/<(\/?)([a-z-]+)[^>]*?(\/?)>/gu)) {
+    const [, closing, name, selfClosing] = tag;
+    if (selfClosing === '/' || name === 'xml') continue;
+    if (closing === '/') {
+      assert.equal(stack.pop(), name, `unexpected </${name}>`);
+    } else {
+      stack.push(name!);
+    }
+  }
+  assert.deepEqual(stack, [], 'every tag should be closed');
 });

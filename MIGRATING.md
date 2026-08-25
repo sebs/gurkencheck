@@ -47,8 +47,22 @@ language, so a German feature file reads `"Angenommen", "Wenn", "Dann", "Und" or
 running at all — an unknown option, a missing config file, a mistyped rule name — now
 exit `2` instead of `1`.
 
-**The xunit report is renamed.** The suite is `gurkencheck` and each error's `type` is
-`gurkencheck-error`, replacing `gherkin-lint` and `gherkin-lint-error`.
+**The xunit report is now a real JUnit report, under the name `junit`.** The old output
+had no `<testsuites>` root and no `tests`/`failures` counts, which many CI parsers require,
+and put every finding for a file inside one `<testcase>`. Each finding is now its own test
+case inside a suite per file, so a build shows one failing test per problem:
+
+```xml
+<testsuites name="gurkencheck" tests="2" failures="1" errors="0">
+  <testsuite name="features/Login.feature" tests="1" failures="1" errors="0" skipped="0">
+    <testcase name="no-unnamed-scenarios (3:5)" classname="features.Login">
+      <failure message="Missing Scenario name" type="no-unnamed-scenarios">…</failure>
+    </testcase>
+  </testsuite>
+</testsuites>
+```
+
+`--format xunit` still works and gives you the same JUnit report.
 
 **Results come back in the order you asked for them.** Files were previously processed
 concurrently and collected as they finished, which made the output order — and the file
