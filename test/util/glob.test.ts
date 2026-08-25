@@ -94,3 +94,20 @@ test('matches a single named file', () => {
 test('never returns directories', () => {
   assert.deepEqual(globSync('features/*'), ['features/a.feature', 'features/notes.txt']);
 });
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/172
+test('an ignore pattern matching a directory skips everything under it', () => {
+  assert.deepEqual(globSync('**/*.feature', {ignore: ['features']}), []);
+});
+
+test('an ignore pattern with a wildcard still matches a directory', () => {
+  assert.deepEqual(globSync('**/*.feature', {ignore: ['f*s']}), []);
+  assert.deepEqual(globSync('**/*.feature', {ignore: ['*/nested']}), ['features/a.feature']);
+});
+
+test('an ignore pattern that matches nothing leaves the result alone', () => {
+  assert.deepEqual(globSync('**/*.feature', {ignore: ['elsewhere']}), [
+    'features/a.feature',
+    'features/nested/b.feature',
+  ]);
+});

@@ -140,8 +140,34 @@ function walk(directory: string, onFile: (absolutePath: string) => void): void {
 export interface GlobOptions {
   /** Directory that relative patterns and returned paths are relative to. */
   cwd?: string;
-  /** Patterns whose matches are dropped from the result. */
+  /**
+   * Patterns whose matches are dropped from the result. A pattern matching a
+   * directory drops everything below it, as in .gitignore and .eslintignore.
+   */
   ignore?: readonly string[];
+}
+
+/**
+ * True when the path, or any directory leading to it, matches one of the
+ * patterns.
+ *
+ * Testing the parent directories is what makes an entry like `build` or `o*e`
+ * skip the whole directory rather than only a file of that exact name. Without
+ * it an ignore file has to spell out `build/**` everywhere, which is not how
+ * .gitignore or .eslintignore behave.
+ */
+function isIgnored(relativePath: string, ignores: readonly RegExp[]): boolean {
+  if (ignores.length === 0) {
+    return false;
+  }
+  const segments = relativePath.split('/');
+  for (let depth = 1; depth <= segments.length; depth++) {
+    const prefix = segments.slice(0, depth).join('/');
+    if (ignores.some((ignore) => ignore.test(prefix))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -162,7 +188,7 @@ export function globSync(pattern: string, options: GlobOptions = {}): string[] {
   const consider = (absolutePath: string): void => {
     const relativePath = path.relative(cwd, absolutePath).split(path.sep).join('/');
     if (!matches.test(relativePath)) return;
-    if (ignores.some((ignore) => ignore.test(relativePath))) return;
+    if (isIgnored(relativePath, ignores)) return;
     found.push(relativePath);
   };
 

@@ -172,6 +172,10 @@ and <code>2</code> when it could not run at all.</p>
 <p>Put one glob per line in a <code>${DEFAULT_IGNORE_FILE_NAME}</code> file, or pass
 <code>--ignore</code> on the command line. Without either, <code>node_modules</code> is skipped
 and everything else is checked.</p>
+<p>A pattern that matches a directory skips everything below it, the same way
+<code>.gitignore</code> and <code>.eslintignore</code> work, so <code>build</code> is enough and
+you do not have to write <code>build/**</code>. Blank lines and lines starting with
+<code>#</code> are ignored.</p>
 
 <h2>Rules you switch on</h2>
 <p>These are all off by default. Each page shows an example that passes and one that fails.</p>

@@ -98,3 +98,14 @@ test('the --ignore argument wins over the ignore file', () => {
   fs.writeFileSync(DEFAULT_IGNORE_FILE_NAME, 'build/**\n');
   assert.deepEqual(readIgnorePatterns(['other/**']), ['other/**']);
 });
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/172
+test('a bare directory name in the ignore file skips the whole directory', () => {
+  fs.writeFileSync(DEFAULT_IGNORE_FILE_NAME, 'folder\n');
+  assert.deepEqual(findFeatureFiles([`${FOUND}/**`]).files, []);
+});
+
+test('a wildcard directory pattern in the ignore file skips the whole directory', () => {
+  fs.writeFileSync(DEFAULT_IGNORE_FILE_NAME, 'f*r\n');
+  assert.deepEqual(findFeatureFiles([]).files, []);
+});

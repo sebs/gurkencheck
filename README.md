@@ -85,6 +85,10 @@ Mistyped rule names and settings are reported before any file is read.
 Put one glob per line in a `.gurkencheckignore` file, or pass `--ignore` on the command
 line. Without either, `node_modules` is skipped and everything else is checked.
 
+A pattern that matches a directory skips everything below it, as in `.gitignore` and
+`.eslintignore`, so `build` is enough and you do not have to write `build/**`. Blank lines
+and lines starting with `#` are ignored.
+
 ## Custom rules
 
 Point `--rulesdir` at a directory of your own modules. Each exports an object with a
