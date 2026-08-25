@@ -18,7 +18,11 @@ function order(a: RuleError, b: RuleError): number {
 }
 
 /** Parses a fixture and runs one rule over it. */
-export function runRule(rule: LintRule, fixture: string, configuration?: unknown): RuleError[] {
+export function runRule(
+  rule: LintRule,
+  fixture: string,
+  configuration?: unknown,
+): RuleError[] | Promise<RuleError[]> {
   const relativePath = `${FIXTURE_ROOT}/${fixture}`;
   const {feature, file} = parseFeature(relativePath, readFileSync(relativePath, 'utf8'));
   return rule.run(feature, file, configuration);
@@ -29,13 +33,13 @@ export function runRule(rule: LintRule, fixture: string, configuration?: unknown
  * are compared as a set: the order a rule reports them in is not part of its
  * contract, because the linter sorts them by line before printing.
  */
-export function checkRule(
+export async function checkRule(
   rule: LintRule,
   fixture: string,
   configuration: unknown,
   expected: readonly ExpectedError[],
-): void {
-  const actual = runRule(rule, fixture, configuration);
+): Promise<void> {
+  const actual = await runRule(rule, fixture, configuration);
   const withRuleName = expected.map((error) => ({...error, rule: rule.name}));
   assert.deepEqual([...actual].sort(order), [...withRuleName].sort(order));
 }

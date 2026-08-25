@@ -46,15 +46,15 @@ const EXPECTED: Record<string, Record<string, string>> = {
 };
 
 for (const [style, fixture] of Object.entries(FIXTURES)) {
-  test(`accepts a file already written in ${style}`, () => {
-    checkRule(rule, `file-name/${fixture}.feature`, {style}, []);
+  test(`accepts a file already written in ${style}`, async () => {
+    await checkRule(rule, `file-name/${fixture}.feature`, {style}, []);
   });
 }
 
 for (const [style, cases] of Object.entries(EXPECTED)) {
   for (const [fixtureStyle, corrected] of Object.entries(cases)) {
-    test(`reports a ${fixtureStyle} file name when ${style} is required`, () => {
-      checkRule(rule, `file-name/${FIXTURES[fixtureStyle as keyof typeof FIXTURES]}.feature`, {style}, [
+    test(`reports a ${fixtureStyle} file name when ${style} is required`, async () => {
+      await checkRule(rule, `file-name/${FIXTURES[fixtureStyle as keyof typeof FIXTURES]}.feature`, {style}, [
         {
           message: `File names should be written in ${style} e.g. "${corrected}.feature"`,
           line: 0,
@@ -64,7 +64,7 @@ for (const [style, cases] of Object.entries(EXPECTED)) {
   }
 }
 
-test('rejects a style it does not know', () => {
+test('rejects a style it does not know', async () => {
   assert.throws(
     () => runRule(rule, 'file-name/camelCase.feature', {style: 'SHOUTING'}),
     /style "SHOUTING" is not supported by the file-name rule/u,

@@ -7,12 +7,12 @@ const tooLong = (type: string, actual: number, expected: number, line: number) =
   line,
 });
 
-test('accepts blocks within the default limit', () => {
-  checkRule(rule, 'scenario-size/ExampleFeature.feature', undefined, []);
+test('accepts blocks within the default limit', async () => {
+  await checkRule(rule, 'scenario-size/ExampleFeature.feature', undefined, []);
 });
 
-test('reports blocks over the configured limit', () => {
-  checkRule(
+test('reports blocks over the configured limit', async () => {
+  await checkRule(
     rule,
     'scenario-size/ExampleFeature.feature',
     {'steps-length': {Background: 2, Scenario: 3}},

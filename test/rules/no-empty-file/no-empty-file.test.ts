@@ -4,14 +4,14 @@ import {checkRule} from '../../helpers.ts';
 
 const message = 'Empty feature files are disallowed';
 
-test('accepts a file with a feature in it', () => {
-  checkRule(rule, 'no-empty-file/NoViolations.feature', {}, []);
+test('accepts a file with a feature in it', async () => {
+  await checkRule(rule, 'no-empty-file/NoViolations.feature', {}, []);
 });
 
-test('reports an empty file', () => {
-  checkRule(rule, 'no-empty-file/EmptyFeature.feature', {}, [{message, line: 1}]);
+test('reports an empty file', async () => {
+  await checkRule(rule, 'no-empty-file/EmptyFeature.feature', {}, [{message, line: 1}]);
 });
 
-test('reports a file containing only whitespace', () => {
-  checkRule(rule, 'no-empty-file/OnlyWhitespace.feature', {}, [{message, line: 1}]);
+test('reports a file containing only whitespace', async () => {
+  await checkRule(rule, 'no-empty-file/OnlyWhitespace.feature', {}, [{message, line: 1}]);
 });

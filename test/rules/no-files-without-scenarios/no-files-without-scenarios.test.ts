@@ -10,15 +10,15 @@ for (const fixture of [
   'FeatureWithScenarioOutline',
   'FeatureWithRuleAndScenarioOutline',
 ]) {
-  test(`accepts ${fixture}`, () => {
-    checkRule(rule, `no-files-without-scenarios/${fixture}.feature`, {}, []);
+  test(`accepts ${fixture}`, async () => {
+    await checkRule(rule, `no-files-without-scenarios/${fixture}.feature`, {}, []);
   });
 }
 
-test('reports a feature with no scenarios', () => {
-  checkRule(rule, 'no-files-without-scenarios/Violations.feature', {}, [{message, line: 1}]);
+test('reports a feature with no scenarios', async () => {
+  await checkRule(rule, 'no-files-without-scenarios/Violations.feature', {}, [{message, line: 1}]);
 });
 
-test('reports a feature whose rules have no scenarios', () => {
-  checkRule(rule, 'no-files-without-scenarios/ViolationsWithRule.feature', {}, [{message, line: 1}]);
+test('reports a feature whose rules have no scenarios', async () => {
+  await checkRule(rule, 'no-files-without-scenarios/ViolationsWithRule.feature', {}, [{message, line: 1}]);
 });

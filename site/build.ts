@@ -205,6 +205,10 @@ export default {
       }));
   },
 };`)}
+<p><code>run</code> may also be <code>async</code> and return a promise, for a rule that has
+to wait for something &mdash; reading a file, or asking an issue tracker whether a tag
+refers to a real ticket. Files are checked one after another, so rules see a predictable
+order.</p>
 <p>Then switch it on by name, the same as any built-in rule:</p>
 ${codeBlock('npx gurkencheck --rulesdir ./rules')}
 </main>

@@ -23,18 +23,18 @@ const violations: ExpectedError[] = [
   outOfOrder('Given', 'step43', 'then', 31),
 ];
 
-test('accepts Given, When, Then in order', () => {
-  checkRule(rule, 'keywords-in-logical-order/NoViolations.feature', {}, []);
+test('accepts Given, When, Then in order', async () => {
+  await checkRule(rule, 'keywords-in-logical-order/NoViolations.feature', {}, []);
 });
 
-test('accepts Given, When, Then in order inside rules', () => {
-  checkRule(rule, 'keywords-in-logical-order/NoViolationsUsingRules.feature', {}, []);
+test('accepts Given, When, Then in order inside rules', async () => {
+  await checkRule(rule, 'keywords-in-logical-order/NoViolationsUsingRules.feature', {}, []);
 });
 
-test('reports keywords that go backwards', () => {
-  checkRule(rule, 'keywords-in-logical-order/Violations.feature', {}, violations);
+test('reports keywords that go backwards', async () => {
+  await checkRule(rule, 'keywords-in-logical-order/Violations.feature', {}, violations);
 });
 
-test('reports keywords that go backwards inside rules', () => {
-  checkRule(rule, 'keywords-in-logical-order/ViolationsUsingRules.feature', {}, violations);
+test('reports keywords that go backwards inside rules', async () => {
+  await checkRule(rule, 'keywords-in-logical-order/ViolationsUsingRules.feature', {}, violations);
 });

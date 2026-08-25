@@ -15,8 +15,8 @@ const matched = (
   line,
 });
 
-test('accepts text that matches nothing restricted', () => {
-  checkRule(
+test('accepts text that matches nothing restricted', async () => {
+  await checkRule(
     rule,
     'no-restricted-patterns/NoViolations.feature',
     {Global: ['^.*disallowed.*$']},
@@ -24,8 +24,8 @@ test('accepts text that matches nothing restricted', () => {
   );
 });
 
-test('reports feature names and descriptions', () => {
-  checkRule(
+test('reports feature names and descriptions', async () => {
+  await checkRule(
     rule,
     'no-restricted-patterns/FeatureViolations.feature',
     {Feature: ['^.*disallowed.*$'], Global: GLOBAL},
@@ -37,8 +37,8 @@ test('reports feature names and descriptions', () => {
   );
 });
 
-test('reports background descriptions and steps', () => {
-  checkRule(
+test('reports background descriptions and steps', async () => {
+  await checkRule(
     rule,
     'no-restricted-patterns/BackgroundViolations.feature',
     {Background: ['^.*disallowed.*$'], Global: GLOBAL},
@@ -50,8 +50,8 @@ test('reports background descriptions and steps', () => {
   );
 });
 
-test('reports scenario names, descriptions and steps', () => {
-  checkRule(
+test('reports scenario names, descriptions and steps', async () => {
+  await checkRule(
     rule,
     'no-restricted-patterns/ScenarioViolations.feature',
     {Scenario: ['^.*disallowed.*$'], Global: GLOBAL},
@@ -64,8 +64,8 @@ test('reports scenario names, descriptions and steps', () => {
   );
 });
 
-test('reports scenario outline names, descriptions and steps', () => {
-  checkRule(
+test('reports scenario outline names, descriptions and steps', async () => {
+  await checkRule(
     rule,
     'no-restricted-patterns/ScenarioOutlineViolations.feature',
     {ScenarioOutline: ['^.*disallowed.*$'], Global: GLOBAL},
@@ -78,8 +78,8 @@ test('reports scenario outline names, descriptions and steps', () => {
   );
 });
 
-test('reports rule names and descriptions', () => {
-  checkRule(
+test('reports rule names and descriptions', async () => {
+  await checkRule(
     rule,
     'no-restricted-patterns/RuleViolations.feature',
     {Rule: ['^.*disallowed.*$'], Global: GLOBAL},
@@ -90,8 +90,8 @@ test('reports rule names and descriptions', () => {
   );
 });
 
-test('steps inside a rule still use the Scenario patterns', () => {
-  checkRule(
+test('steps inside a rule still use the Scenario patterns', async () => {
+  await checkRule(
     rule,
     'no-restricted-patterns/RuleViolations.feature',
     {Scenario: ['^.*disallowed.*$']},

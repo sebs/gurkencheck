@@ -45,3 +45,32 @@ test('keeps the built-in rules alongside the custom ones', async () => {
 test('rejects a directory holding a module that is not a rule', async () => {
   await assert.rejects(() => loadRules(['test/rulesdir/not-rules']), /does not export a rule/u);
 });
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/342
+test('a custom rule may return a promise', async () => {
+  const rules = await loadRules(['test/rulesdir/async_rules']);
+  const featureFile = 'test/linter/NoViolations.feature';
+  const results = await lint([featureFile], {'slow-custom': 'on'}, rules);
+
+  assert.deepEqual(results[0]?.errors, [
+    {line: 6, message: 'Checked "This is a Scenario" after waiting', rule: 'slow-custom'},
+  ]);
+});
+
+test('an async rule that rejects surfaces the error rather than being swallowed', async () => {
+  const rules = new Map([
+    [
+      'exploding',
+      {
+        name: 'exploding',
+        run: async () => {
+          throw new Error('the issue tracker is down');
+        },
+      },
+    ],
+  ]);
+  await assert.rejects(
+    () => lint(['test/linter/NoViolations.feature'], {exploding: 'on'}, rules),
+    /the issue tracker is down/u,
+  );
+});

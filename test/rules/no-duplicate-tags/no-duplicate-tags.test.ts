@@ -7,12 +7,12 @@ const duplicate = (tag: string, line: number) => ({
   line,
 });
 
-test('accepts a file where every tag appears once per node', () => {
-  checkRule(rule, 'no-duplicate-tags/NoViolations.feature', {}, []);
+test('accepts a file where every tag appears once per node', async () => {
+  await checkRule(rule, 'no-duplicate-tags/NoViolations.feature', {}, []);
 });
 
-test('reports repeated tags on features, scenarios, outlines and examples', () => {
-  checkRule(rule, 'no-duplicate-tags/Violations.feature', {}, [
+test('reports repeated tags on features, scenarios, outlines and examples', async () => {
+  await checkRule(rule, 'no-duplicate-tags/Violations.feature', {}, [
     duplicate('@featuretag', 1),
     // @scenariotag appears three times on line 7: two repeats, two errors.
     duplicate('@scenariotag', 7),
@@ -23,8 +23,8 @@ test('reports repeated tags on features, scenarios, outlines and examples', () =
 });
 
 // https://github.com/gherkin-lint/gherkin-lint/issues/173
-test('reports every repeat, so three copies of a tag are two errors', () => {
-  checkRule(rule, 'no-duplicate-tags/RepeatedThreeTimes.feature', {}, [
+test('reports every repeat, so three copies of a tag are two errors', async () => {
+  await checkRule(rule, 'no-duplicate-tags/RepeatedThreeTimes.feature', {}, [
     duplicate('@bar', 3),
     duplicate('@bar', 3),
   ]);

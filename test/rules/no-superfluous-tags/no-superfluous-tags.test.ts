@@ -7,12 +7,12 @@ const duplicated = (child: string, parent: string, tag: string, line: number) =>
   line,
 });
 
-test('accepts tags that are not repeated on a parent', () => {
-  checkRule(rule, 'no-superfluous-tags/NoViolations.feature', {}, []);
+test('accepts tags that are not repeated on a parent', async () => {
+  await checkRule(rule, 'no-superfluous-tags/NoViolations.feature', {}, []);
 });
 
-test('reports tags repeated from a parent node', () => {
-  checkRule(rule, 'no-superfluous-tags/Violations.feature', {}, [
+test('reports tags repeated from a parent node', async () => {
+  await checkRule(rule, 'no-superfluous-tags/Violations.feature', {}, [
     duplicated('Scenario', 'Feature', '@superfluoustag1', 7),
     duplicated('Scenario Outline', 'Feature', '@superfluoustag1', 11),
     duplicated('Scenario Outline', 'Feature', '@superfluoustag2', 11),

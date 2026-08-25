@@ -120,6 +120,10 @@ npx gurkencheck --rulesdir ./rules
 
 A custom rule may reuse a built-in rule's name to replace it.
 
+`run` may also be `async` and return a promise, for a rule that has to wait for
+something — reading a file, or asking an issue tracker whether a tag refers to a real
+ticket. Files are checked one after another, so rules see a predictable order.
+
 ## Using it as a library
 
 ```ts

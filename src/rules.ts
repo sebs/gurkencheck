@@ -87,13 +87,19 @@ export function resetRules(rules: RuleRegistry): void {
   }
 }
 
-/** Runs every enabled rule against one feature file. */
-export function runEnabledRules(
+/**
+ * Runs every enabled rule against one feature file.
+ *
+ * Rules are awaited one at a time. Most return an array outright, in which
+ * case awaiting costs nothing; a rule that needs to wait for something can
+ * return a promise instead.
+ */
+export async function runEnabledRules(
   feature: Feature | undefined,
   file: FeatureFile,
   configuration: Configuration,
   rules: RuleRegistry,
-): RuleError[] {
+): Promise<RuleError[]> {
   const errors: RuleError[] = [];
 
   for (const rule of rules.values()) {
@@ -101,7 +107,7 @@ export function runEnabledRules(
     if (!isRuleEnabled(config)) {
       continue;
     }
-    errors.push(...rule.run(feature, file, getRuleSettings(config)));
+    errors.push(...(await rule.run(feature, file, getRuleSettings(config))));
   }
 
   return errors;

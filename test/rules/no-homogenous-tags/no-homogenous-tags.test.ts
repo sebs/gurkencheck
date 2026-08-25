@@ -12,13 +12,13 @@ const onOutline = (tag: string, line: number) => ({
   line,
 });
 
-test('accepts tags that differ between scenarios', () => {
-  checkRule(rule, 'no-homogenous-tags/NoViolations.feature', {}, []);
+test('accepts tags that differ between scenarios', async () => {
+  await checkRule(rule, 'no-homogenous-tags/NoViolations.feature', {}, []);
 });
 
 // https://github.com/gherkin-lint/gherkin-lint/issues/170
-test('reports one error per shared tag, not one summary for all of them', () => {
-  checkRule(rule, 'no-homogenous-tags/Violations.feature', {}, [
+test('reports one error per shared tag, not one summary for all of them', async () => {
+  await checkRule(rule, 'no-homogenous-tags/Violations.feature', {}, [
     onFeature('@tag1', 1),
     onFeature('@tag2', 1),
     onOutline('@tag5', 11),
@@ -27,10 +27,10 @@ test('reports one error per shared tag, not one summary for all of them', () => 
 
 // https://github.com/gherkin-lint/gherkin-lint/issues/231
 // https://github.com/gherkin-lint/gherkin-lint/issues/257
-test('says nothing about a feature holding a single scenario', () => {
-  checkRule(rule, 'no-homogenous-tags/SingleScenario.feature', {}, []);
+test('says nothing about a feature holding a single scenario', async () => {
+  await checkRule(rule, 'no-homogenous-tags/SingleScenario.feature', {}, []);
 });
 
-test('says nothing about a scenario outline with a single examples table', () => {
-  checkRule(rule, 'no-homogenous-tags/SingleExamplesTable.feature', {}, []);
+test('says nothing about a scenario outline with a single examples table', async () => {
+  await checkRule(rule, 'no-homogenous-tags/SingleExamplesTable.feature', {}, []);
 });

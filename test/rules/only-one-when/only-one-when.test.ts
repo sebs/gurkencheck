@@ -16,18 +16,18 @@ const violations: ExpectedError[] = [
   tooMany('Given, When, Then, When, And', 3, 39),
 ];
 
-test('accepts scenarios with a single When', () => {
-  checkRule(rule, 'only-one-when/NoViolations.feature', {}, []);
+test('accepts scenarios with a single When', async () => {
+  await checkRule(rule, 'only-one-when/NoViolations.feature', {}, []);
 });
 
-test('accepts scenarios with a single When inside rules', () => {
-  checkRule(rule, 'only-one-when/NoViolationsUsingRules.feature', {}, []);
+test('accepts scenarios with a single When inside rules', async () => {
+  await checkRule(rule, 'only-one-when/NoViolationsUsingRules.feature', {}, []);
 });
 
-test('reports scenarios with more than one When', () => {
-  checkRule(rule, 'only-one-when/Violations.feature', {}, violations);
+test('reports scenarios with more than one When', async () => {
+  await checkRule(rule, 'only-one-when/Violations.feature', {}, violations);
 });
 
-test('reports scenarios with more than one When inside rules', () => {
-  checkRule(rule, 'only-one-when/ViolationsUsingRules.feature', {}, violations);
+test('reports scenarios with more than one When inside rules', async () => {
+  await checkRule(rule, 'only-one-when/ViolationsUsingRules.feature', {}, violations);
 });

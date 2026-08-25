@@ -7,12 +7,12 @@ const shouldUseAnd = (keyword: string, text: string, line: number) => ({
   line,
 });
 
-test('accepts repeated steps written with And', () => {
-  checkRule(rule, 'use-and/NoViolations.feature', {}, []);
+test('accepts repeated steps written with And', async () => {
+  await checkRule(rule, 'use-and/NoViolations.feature', {}, []);
 });
 
-test('reports a keyword repeated instead of And', () => {
-  checkRule(rule, 'use-and/Violations.feature', {}, [
+test('reports a keyword repeated instead of And', async () => {
+  await checkRule(rule, 'use-and/Violations.feature', {}, [
     shouldUseAnd('Given ', 'step5', 5),
     shouldUseAnd('When ', 'step8', 8),
     shouldUseAnd('Then ', 'step11', 11),

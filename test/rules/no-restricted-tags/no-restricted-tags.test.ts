@@ -8,12 +8,12 @@ const forbidden = (tag: string, nodeType: string, line: number) => ({
   line,
 });
 
-test('allows tags that are neither listed nor matching a pattern', () => {
-  checkRule(rule, 'no-restricted-tags/NoViolations.feature', config, []);
+test('allows tags that are neither listed nor matching a pattern', async () => {
+  await checkRule(rule, 'no-restricted-tags/NoViolations.feature', config, []);
 });
 
-test('reports forbidden tags wherever they appear', () => {
-  checkRule(rule, 'no-restricted-tags/Violations.feature', config, [
+test('reports forbidden tags wherever they appear', async () => {
+  await checkRule(rule, 'no-restricted-tags/Violations.feature', config, [
     forbidden('@badTag', 'Feature', 1),
     forbidden('@anotherBadTag', 'Feature', 1),
     forbidden('@badTag', 'Scenario', 7),

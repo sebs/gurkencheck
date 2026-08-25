@@ -25,24 +25,24 @@ const englishViolations: ExpectedError[] = [
   wrong('Step', 2, 3, 15),
 ];
 
-test('accepts correctly indented files using spaces', () => {
-  checkRule(rule, 'indentation/CorrectIndentationSpaces.feature', {}, []);
+test('accepts correctly indented files using spaces', async () => {
+  await checkRule(rule, 'indentation/CorrectIndentationSpaces.feature', {}, []);
 });
 
-test('accepts correctly indented files using tabs', () => {
-  checkRule(rule, 'indentation/CorrectIndentationTabs.feature', {}, []);
+test('accepts correctly indented files using tabs', async () => {
+  await checkRule(rule, 'indentation/CorrectIndentationTabs.feature', {}, []);
 });
 
-test('reports wrong indentation with spaces', () => {
-  checkRule(rule, 'indentation/WrongIndentationSpaces.feature', {}, englishViolations);
+test('reports wrong indentation with spaces', async () => {
+  await checkRule(rule, 'indentation/WrongIndentationSpaces.feature', {}, englishViolations);
 });
 
-test('reports wrong indentation with tabs', () => {
-  checkRule(rule, 'indentation/WrongIndentationTabs.feature', {}, englishViolations);
+test('reports wrong indentation with tabs', async () => {
+  await checkRule(rule, 'indentation/WrongIndentationTabs.feature', {}, englishViolations);
 });
 
-test('reports wrong indentation in other languages', () => {
-  checkRule(rule, 'indentation/WrongIndentationDifferentLanguage.feature', {}, [
+test('reports wrong indentation in other languages', async () => {
+  await checkRule(rule, 'indentation/WrongIndentationDifferentLanguage.feature', {}, [
     wrong('Feature', 0, 4, 3),
     wrong('feature tag', 0, 4, 2),
     wrong('Background', 0, 4, 5),
@@ -61,8 +61,8 @@ test('reports wrong indentation in other languages', () => {
   ]);
 });
 
-test('tag indentation follows the node it belongs to when not set', () => {
-  checkRule(
+test('tag indentation follows the node it belongs to when not set', async () => {
+  await checkRule(
     rule,
     'indentation/CorrectIndentationWithFeatureAndScenarioOverrides.feature',
     {Feature: 1, Scenario: 3},
@@ -70,8 +70,8 @@ test('tag indentation follows the node it belongs to when not set', () => {
   );
 });
 
-test('tag indentation can be set on its own', () => {
-  checkRule(
+test('tag indentation can be set on its own', async () => {
+  await checkRule(
     rule,
     'indentation/CorrectIndentationWithScenarioTagOverrides.feature',
     {'scenario tag': 3},

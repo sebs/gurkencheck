@@ -2,12 +2,12 @@ import {test} from 'node:test';
 import rule from '../../../src/rules/no-unused-variables.ts';
 import {checkRule} from '../../helpers.ts';
 
-test('accepts variables that are both declared and used', () => {
-  checkRule(rule, 'no-unused-variables/NoViolations.feature', {}, []);
+test('accepts variables that are both declared and used', async () => {
+  await checkRule(rule, 'no-unused-variables/NoViolations.feature', {}, []);
 });
 
-test('reports step variables missing from the examples table', () => {
-  checkRule(
+test('reports step variables missing from the examples table', async () => {
+  await checkRule(
     rule,
     'no-unused-variables/UnusedStepVariables.feature',
     {},
@@ -18,8 +18,8 @@ test('reports step variables missing from the examples table', () => {
   );
 });
 
-test('reports examples columns that no step uses', () => {
-  checkRule(
+test('reports examples columns that no step uses', async () => {
+  await checkRule(
     rule,
     'no-unused-variables/UnusedExampleVariables.feature',
     {},
@@ -31,8 +31,8 @@ test('reports examples columns that no step uses', () => {
 });
 
 // https://github.com/gherkin-lint/gherkin-lint/issues/175
-test('reports every line a problem variable appears on', () => {
-  checkRule(rule, 'no-unused-variables/RepeatedVariables.feature', {}, [
+test('reports every line a problem variable appears on', async () => {
+  await checkRule(rule, 'no-unused-variables/RepeatedVariables.feature', {}, [
     {message: 'Step variable "b" does not exist in the examples table', line: 5},
     {message: 'Step variable "b" does not exist in the examples table', line: 6},
     {message: 'Step variable "b" does not exist in the examples table', line: 7},

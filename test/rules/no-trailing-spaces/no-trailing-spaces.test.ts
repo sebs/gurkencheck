@@ -4,12 +4,12 @@ import {checkRule} from '../../helpers.ts';
 
 const message = 'Trailing spaces are not allowed';
 
-test('accepts lines with no trailing whitespace', () => {
-  checkRule(rule, 'no-trailing-spaces/NoViolations.feature', {}, []);
+test('accepts lines with no trailing whitespace', async () => {
+  await checkRule(rule, 'no-trailing-spaces/NoViolations.feature', {}, []);
 });
 
-test('reports trailing spaces', () => {
-  checkRule(
+test('reports trailing spaces', async () => {
+  await checkRule(
     rule,
     'no-trailing-spaces/TrailingSpaces.feature',
     {},
@@ -17,6 +17,6 @@ test('reports trailing spaces', () => {
   );
 });
 
-test('reports trailing tabs', () => {
-  checkRule(rule, 'no-trailing-spaces/TrailingTabs.feature', {}, [{message, line: 4}]);
+test('reports trailing tabs', async () => {
+  await checkRule(rule, 'no-trailing-spaces/TrailingTabs.feature', {}, [{message, line: 4}]);
 });

@@ -7,32 +7,32 @@ const tooMany = (count: number) => ({
   line: 0,
 });
 
-test('accepts files within the limit', () => {
+test('accepts files within the limit', async () => {
   for (const fixture of ['CorrectNumber', 'CorrectNumberExamples', 'CorrectNumberMixed']) {
-    checkRule(rule, `max-scenarios-per-file/${fixture}.feature`, {maxScenarios: 10}, []);
+    await checkRule(rule, `max-scenarios-per-file/${fixture}.feature`, {maxScenarios: 10}, []);
   }
 });
 
-test('reports files with too many scenarios', () => {
-  checkRule(rule, 'max-scenarios-per-file/TooManyScenarios.feature', {maxScenarios: 10}, [
+test('reports files with too many scenarios', async () => {
+  await checkRule(rule, 'max-scenarios-per-file/TooManyScenarios.feature', {maxScenarios: 10}, [
     tooMany(11),
   ]);
 });
 
-test('counts every examples row when countOutlineExamples is on', () => {
-  checkRule(rule, 'max-scenarios-per-file/TooManyExamples.feature', {maxScenarios: 10}, [
+test('counts every examples row when countOutlineExamples is on', async () => {
+  await checkRule(rule, 'max-scenarios-per-file/TooManyExamples.feature', {maxScenarios: 10}, [
     tooMany(11),
   ]);
 });
 
-test('counts an outline once when countOutlineExamples is off', () => {
-  checkRule(
+test('counts an outline once when countOutlineExamples is off', async () => {
+  await checkRule(
     rule,
     'max-scenarios-per-file/TooManyExamples.feature',
     {maxScenarios: 10, countOutlineExamples: false},
     [],
   );
-  checkRule(
+  await checkRule(
     rule,
     'max-scenarios-per-file/TooManyScenarios.feature',
     {maxScenarios: 10, countOutlineExamples: false},

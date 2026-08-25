@@ -21,18 +21,21 @@ export async function lint(
   resetRules(rules);
 
   const parsed = await Promise.all(files.map((file) => readAndParseFile(file)));
+  const results: FileResult[] = [];
 
-  return parsed.map((result) => {
+  for (const result of parsed) {
     const errors =
       result.errors.length > 0
         ? result.errors
-        : runEnabledRules(result.feature, result.file, configuration, rules);
+        : await runEnabledRules(result.feature, result.file, configuration, rules);
 
-    return {
+    results.push({
       filePath: path.resolve(result.file.relativePath),
       errors: sortBy(errors, (error) => error.line),
-    };
-  });
+    });
+  }
+
+  return results;
 }
 
 /** True when any file has at least one error. */

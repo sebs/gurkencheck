@@ -7,8 +7,8 @@ const missing = (tag: string, nodeType: string, line: number) => ({
   line,
 });
 
-test('accepts scenarios carrying a matching tag', () => {
-  checkRule(
+test('accepts scenarios carrying a matching tag', async () => {
+  await checkRule(
     rule,
     'required-tags/NoViolations.feature',
     {tags: ['@requiredscenariotag', '@required-scenario-tag', '@required-scenario-tag-\\d+']},
@@ -16,8 +16,8 @@ test('accepts scenarios carrying a matching tag', () => {
   );
 });
 
-test('reports scenarios and outlines missing a required tag', () => {
-  checkRule(
+test('reports scenarios and outlines missing a required tag', async () => {
+  await checkRule(
     rule,
     'required-tags/Violations.feature',
     {tags: ['@requiredscenariotag', '@requiredScenarioTag', '@required-scenario-tag-\\d+']},
@@ -30,8 +30,8 @@ test('reports scenarios and outlines missing a required tag', () => {
   );
 });
 
-test('reports untagged scenarios when ignoreUntagged is off', () => {
-  checkRule(
+test('reports untagged scenarios when ignoreUntagged is off', async () => {
+  await checkRule(
     rule,
     'required-tags/Violations.feature',
     {tags: ['@requiredscenariotag'], ignoreUntagged: false},

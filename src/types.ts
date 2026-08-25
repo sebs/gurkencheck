@@ -54,7 +54,15 @@ export interface LintRule {
    * An array lists the allowed values; an object lists the allowed keys.
    */
   readonly availableConfigs?: unknown;
-  run(feature: Feature | undefined, file: FeatureFile, configuration: unknown): RuleError[];
+  /**
+   * Returns the violations found in this file. A rule that needs to wait for
+   * something - reading a file, asking a service - may return a promise.
+   */
+  run(
+    feature: Feature | undefined,
+    file: FeatureFile,
+    configuration: unknown,
+  ): RuleError[] | Promise<RuleError[]>;
   /**
    * Clears any state kept between files. Implemented by the rules that look
    * for duplicates across a whole run; called once before each lint run.

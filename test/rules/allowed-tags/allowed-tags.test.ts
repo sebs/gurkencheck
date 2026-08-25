@@ -8,12 +8,12 @@ const notAllowed = (tag: string, nodeType: string, line: number) => ({
   line,
 });
 
-test('allows tags on the list and tags matching a pattern', () => {
-  checkRule(rule, 'allowed-tags/NoViolations.feature', config, []);
+test('allows tags on the list and tags matching a pattern', async () => {
+  await checkRule(rule, 'allowed-tags/NoViolations.feature', config, []);
 });
 
-test('reports tags on features, scenarios, outlines and examples', () => {
-  checkRule(rule, 'allowed-tags/Violations.feature', config, [
+test('reports tags on features, scenarios, outlines and examples', async () => {
+  await checkRule(rule, 'allowed-tags/Violations.feature', config, [
     notAllowed('@featuretag1', 'Feature', 1),
     notAllowed('@anothertag', 'Feature', 1),
     notAllowed('@scenariotag1', 'Scenario', 7),
