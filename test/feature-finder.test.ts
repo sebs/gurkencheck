@@ -60,6 +60,18 @@ test('searches a directory recursively when given its path', () => {
   assert.deepEqual(findFeatureFiles([`${FOUND}/`]).files, bothFeatures);
 });
 
+test('finds a file named by an absolute path', () => {
+  // A pattern is matched against paths relative to the working directory, so
+  // an absolute one used to match nothing at all and report a clean run.
+  assert.deepEqual(findFeatureFiles([path.resolve(`${FOUND}/a.feature`)]).files, [
+    `${FOUND}/a.feature`,
+  ]);
+});
+
+test('searches a directory named by an absolute path', () => {
+  assert.deepEqual(findFeatureFiles([path.resolve(FOUND)]).files, bothFeatures);
+});
+
 test('never returns the same file twice', () => {
   assert.deepEqual(findFeatureFiles([`${FOUND}/**`, 'path/to/fake/**']).files, bothFeatures);
 });

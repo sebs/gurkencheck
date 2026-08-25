@@ -185,9 +185,15 @@ export function globSync(pattern: string, options: GlobOptions = {}): string[] {
   const searchRoot = path.resolve(cwd, staticPrefix(normalisedPattern));
   const found: string[] = [];
 
+  // An absolute pattern is matched against absolute paths: comparing it with
+  // a path relative to cwd can never match, and the search would come back
+  // empty rather than wrong, which reads as "nothing to report".
+  const absolutePattern = path.isAbsolute(normalisedPattern);
+
   const consider = (absolutePath: string): void => {
     const relativePath = path.relative(cwd, absolutePath).split(path.sep).join('/');
-    if (!matches.test(relativePath)) return;
+    const candidate = absolutePattern ? absolutePath.split(path.sep).join('/') : relativePath;
+    if (!matches.test(candidate)) return;
     if (isIgnored(relativePath, ignores)) return;
     found.push(relativePath);
   };
