@@ -40,8 +40,14 @@ const LANGUAGE_HEADER = /^\s*#\s*language\s*:\s*([\w-]+)\s*$/;
  * Reads the `# language: xx` header from the top of a feature file. Only the
  * leading comment and blank lines are inspected, which is where Gherkin
  * itself expects the header to be.
+ *
+ * A file with no header is read in `fallback`, which lets a project written
+ * entirely in one language set it once instead of in every file.
  */
-export function detectLanguage(lines: readonly string[]): string {
+export function detectLanguage(
+  lines: readonly string[],
+  fallback: string = DEFAULT_LANGUAGE,
+): string {
   for (const line of lines) {
     const trimmed = line.trim();
     if (trimmed === '') {
@@ -55,5 +61,5 @@ export function detectLanguage(lines: readonly string[]): string {
       return header[1];
     }
   }
-  return DEFAULT_LANGUAGE;
+  return isKnownLanguage(fallback) ? fallback : DEFAULT_LANGUAGE;
 }

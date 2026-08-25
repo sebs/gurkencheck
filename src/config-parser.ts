@@ -16,9 +16,12 @@ export const DEFAULT_CONFIG_FILE_NAME = '.gurkencheckrc';
 /** The key naming the configurations to build on top of. */
 const EXTENDS = 'extends';
 
+/** The key setting the dialect for files with no `# language:` header. */
+const LANGUAGE = 'language';
+
 /** Either a usable configuration, or the reason there isn't one. */
 export type ConfigurationResult =
-  | {ok: true; configuration: Configuration; source: string}
+  | {ok: true; configuration: Configuration; source: string; language?: string}
   | {ok: false; message: string; details: string[]};
 
 class ConfigurationError extends Error {}
@@ -171,9 +174,9 @@ export async function readConfiguration(
     configPath = DEFAULT_CONFIG_FILE_NAME;
   }
 
-  let configuration: Configuration;
+  let flattened: Configuration;
   try {
-    configuration = await flatten(parseFile(configPath), configPath, new Set());
+    flattened = await flatten(parseFile(configPath), configPath, new Set());
   } catch (thrown) {
     if (thrown instanceof ConfigurationError) {
       return {
@@ -185,10 +188,24 @@ export async function readConfiguration(
     throw thrown;
   }
 
+  // "language" is a setting rather than a rule, so it is taken out before the
+  // rest is checked against the rule list.
+  const {[LANGUAGE]: language, ...configuration} = flattened as Configuration & {
+    language?: unknown;
+  };
+
+  if (language !== undefined && typeof language !== 'string') {
+    return {
+      ok: false,
+      message: `Could not read config file "${configPath}"`,
+      details: [`"${LANGUAGE}" must be a language code, such as "fr".`],
+    };
+  }
+
   const errors = verifyConfiguration(configuration, rules);
   if (errors.length > 0) {
     return {ok: false, message: 'Error(s) in configuration file:', details: errors};
   }
 
-  return {ok: true, configuration, source: configPath};
+  return {ok: true, configuration, source: configPath, ...(language === undefined ? {} : {language})};
 }

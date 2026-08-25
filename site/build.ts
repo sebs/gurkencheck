@@ -164,6 +164,19 @@ ${codeBlock(`{
 It exits with <code>0</code> when there is nothing worse than a warning, <code>1</code> when
 a rule set to <code>"on"</code> was broken, and <code>2</code> when it could not run at all.</p>
 
+<h2>Feature files in another language</h2>
+<p>Gherkin is translated into dozens of languages. A file says which one it is written in
+with a header on its first line:</p>
+${codeBlock(`# language: fr
+Fonctionnalité: Se déconnecter
+
+  Scénario: Se déconnecter
+    Quand Ulrick se déconnecte`)}
+<p>If every file in your project is written in the same language, set it once instead, with
+<code>--language fr</code> or a <code>language</code> key in your configuration file. A header
+in a file always wins over that setting, so a project can be mostly one language with
+exceptions.</p>
+
 <h2>Sharing a configuration</h2>
 <p>Build on top of another configuration with <code>extends</code>. What your file says wins
 over what it extends, and later entries in a list win over earlier ones.</p>
@@ -190,6 +203,7 @@ ${codeBlock(`{
 <tr><td><code>-c, --config</code></td><td>Path to a configuration file, if it is not <code>${DEFAULT_CONFIG_FILE_NAME}</code> in the current directory.</td></tr>
 <tr><td><code>-i, --ignore</code></td><td>Comma separated globs to skip. Overrides <code>${DEFAULT_IGNORE_FILE_NAME}</code>.</td></tr>
 <tr><td><code>-r, --rulesdir</code></td><td>A directory holding your own rules. May be given more than once.</td></tr>
+<tr><td><code>-l, --language</code></td><td>The dialect to read files in when they carry no <code>#&nbsp;language:</code> header.</td></tr>
 <tr><td><code>-h, --help</code></td><td>Show the options.</td></tr>
 <tr><td><code>-v, --version</code></td><td>Show the version number.</td></tr>
 </tbody>

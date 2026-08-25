@@ -72,6 +72,7 @@ gurkencheck [options] <feature-files>
   -c, --config <path>     configuration file (default: .gurkencheckrc)
   -i, --ignore <globs>    comma separated globs to skip, overriding .gurkencheckignore
   -r, --rulesdir <dir>    directory of custom rules; may be given more than once
+  -l, --language <code>   dialect for files with no "# language:" header
   -h, --help              show this message
   -v, --version           show the version number
 ```
@@ -140,6 +141,23 @@ Name the rules you mean, separated by commas or spaces; a directive naming no ru
 all of them. Comments inside a doc string are text and are left alone. The four always-on
 rules cannot be switched off this way — a file that breaks one of them cannot be read at
 all, so hiding the message would leave nothing in its place.
+
+## Feature files in another language
+
+Gherkin is translated into dozens of languages. A file says which one it is written in with
+a header on its first line:
+
+```gherkin
+# language: fr
+Fonctionnalité: Se déconnecter
+
+  Scénario: Se déconnecter
+    Quand Ulrick se déconnecte
+```
+
+If every file in your project is written in the same language, set it once instead — with
+`--language fr` or a `language` key in your configuration file. A header in a file always
+wins over that setting, so a project can be mostly one language with exceptions.
 
 ## Sharing a configuration
 

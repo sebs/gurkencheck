@@ -8,6 +8,7 @@ import {parseArgs} from 'node:util';
 import {DEFAULT_CONFIG_FILE_NAME, readConfiguration} from './config-parser.ts';
 import {DEFAULT_IGNORE_FILE_NAME, findFeatureFiles} from './feature-finder.ts';
 import {DEFAULT_FORMAT, FORMATTERS, loadFormatter} from './formatters/index.ts';
+import {isKnownLanguage} from './gherkin/dialects.ts';
 import {hasErrors, lint} from './linter.ts';
 import * as logger from './logger.ts';
 import {loadRules} from './rules.ts';
@@ -33,6 +34,7 @@ function usage(): string {
     `  -c, --config <path>     configuration file (default: ${DEFAULT_CONFIG_FILE_NAME})`,
     `  -i, --ignore <globs>    comma separated globs to skip, overriding ${DEFAULT_IGNORE_FILE_NAME}`,
     '  -r, --rulesdir <dir>    directory of custom rules; may be given more than once',
+    '  -l, --language <code>   dialect for files with no "# language:" header',
     '  -h, --help              show this message',
     '  -v, --version           show the version number',
     '',
@@ -51,6 +53,7 @@ export async function run(argv: readonly string[]): Promise<number> {
         config: {type: 'string', short: 'c'},
         ignore: {type: 'string', short: 'i'},
         rulesdir: {type: 'string', short: 'r', multiple: true},
+        language: {type: 'string', short: 'l'},
         help: {type: 'boolean', short: 'h'},
         version: {type: 'boolean', short: 'v'},
       },
@@ -110,7 +113,13 @@ export async function run(argv: readonly string[]): Promise<number> {
     return EXIT_USAGE;
   }
 
-  const results = await lint(files, configuration.configuration, rules);
+  const language = values.language ?? configuration.language;
+  if (language !== undefined && !isKnownLanguage(language)) {
+    logger.boldError(`Unknown language "${language}". Use a Gherkin language code, such as "fr".`);
+    return EXIT_USAGE;
+  }
+
+  const results = await lint(files, configuration.configuration, rules, {language});
 
   // A formatter may print the output itself or hand it back as a string.
   const output = await formatter(results);

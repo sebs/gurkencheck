@@ -14,7 +14,7 @@ import type {Feature} from '@cucumber/messages';
 import {readFile} from 'node:fs/promises';
 import type {FeatureFile, RuleError} from '../types.ts';
 import type {Dialect} from './dialects.ts';
-import {detectLanguage, getDialect} from './dialects.ts';
+import {DEFAULT_LANGUAGE, detectLanguage, getDialect} from './dialects.ts';
 
 /**
  * Rules the parser enforces on every file. They cannot be turned off, but
@@ -59,8 +59,11 @@ const UNEXPECTED_EOF = /^\((\d+):(\d+)\): unexpected end of file, expected: (.*)
 /** How many times a tag-on-background may be stripped before giving up. */
 const MAX_TAG_RECOVERIES = 20;
 
-function newParser(): Parser<unknown> {
-  return new Parser(new AstBuilder(IdGenerator.uuid()), new GherkinClassicTokenMatcher());
+function newParser(defaultLanguage: string): Parser<unknown> {
+  return new Parser(
+    new AstBuilder(IdGenerator.uuid()),
+    new GherkinClassicTokenMatcher(defaultLanguage),
+  );
 }
 
 function toComplaint(error: unknown): ParserComplaint {
@@ -98,9 +101,12 @@ function toComplaint(error: unknown): ParserComplaint {
   };
 }
 
-function parseSource(source: string): {feature: Feature | undefined; complaints: ParserComplaint[]} {
+function parseSource(
+  source: string,
+  defaultLanguage: string,
+): {feature: Feature | undefined; complaints: ParserComplaint[]} {
   try {
-    const document = newParser().parse(source);
+    const document = newParser(defaultLanguage).parse(source);
     return {feature: document.feature ?? undefined, complaints: []};
   } catch (thrown) {
     const nested = (thrown as {errors?: unknown[]}).errors;
@@ -236,17 +242,25 @@ export function toLines(source: string): string[] {
 /**
  * Parses feature file source. When the parser rejects the file, the returned
  * `feature` is `undefined` and `errors` describes what went wrong.
+ *
+ * `defaultLanguage` is the dialect to read a file in when it carries no
+ * `# language:` header of its own, for projects written entirely in one
+ * language.
  */
-export function parseFeature(relativePath: string, source: string): ParseResult {
+export function parseFeature(
+  relativePath: string,
+  source: string,
+  defaultLanguage: string = DEFAULT_LANGUAGE,
+): ParseResult {
   const lines = toLines(source);
   const file: FeatureFile = {relativePath, lines};
-  const dialect = getDialect(detectLanguage(lines));
+  const dialect = getDialect(detectLanguage(lines, defaultLanguage));
 
   const errors: RuleError[] = [];
   let workingLines: readonly string[] = lines;
 
   for (let attempt = 0; attempt <= MAX_TAG_RECOVERIES; attempt++) {
-    const {feature, complaints} = parseSource(workingLines.join('\n'));
+    const {feature, complaints} = parseSource(workingLines.join('\n'), defaultLanguage);
 
     if (complaints.length === 0) {
       return {file, feature: errors.length > 0 ? undefined : feature, errors};
@@ -286,7 +300,10 @@ export function parseFeature(relativePath: string, source: string): ParseResult 
 }
 
 /** Reads a feature file from disk and parses it. */
-export async function readAndParseFile(relativePath: string): Promise<ParseResult> {
+export async function readAndParseFile(
+  relativePath: string,
+  defaultLanguage?: string,
+): Promise<ParseResult> {
   const source = await readFile(relativePath, 'utf8');
-  return parseFeature(relativePath, source);
+  return parseFeature(relativePath, source, defaultLanguage);
 }

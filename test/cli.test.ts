@@ -216,3 +216,39 @@ test('an unknown format names the built-ins and mentions custom ones', async () 
   assert.match(stderr, /Unsupported format "yaml"/u);
   assert.match(stderr, /formatter of your own/u);
 });
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/265
+const FRENCH_FEATURE = [
+  "Fonctionnalité: Se déconnecter de l'application",
+  '',
+  '  Scénario: Se déconnecter',
+  '    Quand Ulrick se déconnecte',
+  '',
+].join('\n');
+
+test('--language reads files that carry no language header', async () => {
+  await withProject(FRENCH_FEATURE, '{"no-unnamed-scenarios": "on"}', async (cwd) => {
+    const withoutLanguage = await cli(['.'], cwd);
+    assert.equal(withoutLanguage.code, 1);
+    assert.match(withoutLanguage.stdout, /unexpected-error/u);
+
+    const {code, stdout} = await cli(['--language', 'fr', '.'], cwd);
+    assert.equal(code, 0, stdout);
+  });
+});
+
+test('the language may be set in the configuration file', async () => {
+  const config = '{"language": "fr", "no-unnamed-scenarios": "on"}';
+  await withProject(FRENCH_FEATURE, config, async (cwd) => {
+    const {code, stdout} = await cli(['.'], cwd);
+    assert.equal(code, 0, stdout);
+  });
+});
+
+test('an unknown language is reported rather than silently ignored', async () => {
+  await withProject(FRENCH_FEATURE, CONFIG, async (cwd) => {
+    const {code, stderr} = await cli(['--language', 'klingon', '.'], cwd);
+    assert.equal(code, 2);
+    assert.match(stderr, /Unknown language "klingon"/u);
+  });
+});

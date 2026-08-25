@@ -8,6 +8,14 @@ import {readSuppressions} from './suppressions.ts';
 import type {Configuration, FileResult, RuleRegistry} from './types.ts';
 import {sortBy} from './util/collections.ts';
 
+export interface LintOptions {
+  /**
+   * The dialect to read a file in when it carries no `# language:` header,
+   * for projects written entirely in one language.
+   */
+  language?: string;
+}
+
 /**
  * Lints every file and returns one result per file, in the order given.
  *
@@ -18,10 +26,13 @@ export async function lint(
   files: readonly string[],
   configuration: Configuration,
   rules: RuleRegistry,
+  options: LintOptions = {},
 ): Promise<FileResult[]> {
   resetRules(rules);
 
-  const parsed = await Promise.all(files.map((file) => readAndParseFile(file)));
+  const parsed = await Promise.all(
+    files.map((file) => readAndParseFile(file, options.language)),
+  );
   const results: FileResult[] = [];
 
   for (const result of parsed) {

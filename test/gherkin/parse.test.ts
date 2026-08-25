@@ -145,3 +145,33 @@ test('recognises a misplaced Background in another language', () => {
   ].join('\n');
   assert.equal(parseFeature('x.feature', source).errors[0]?.rule, 'background-before-scenarios');
 });
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/265
+test('a file with no header can be read in a chosen language', () => {
+  const french = [
+    "Fonctionnalité: Se déconnecter de l'application",
+    '',
+    '  Scénario: Se déconnecter',
+    '    Quand Ulrick se déconnecte',
+    '',
+  ].join('\n');
+
+  const asEnglish = parseFeature('x.feature', french);
+  assert.ok(asEnglish.errors.length > 0, 'English cannot read it');
+
+  const asFrench = parseFeature('x.feature', french, 'fr');
+  assert.deepEqual(asFrench.errors, []);
+  assert.equal(asFrench.feature?.language, 'fr');
+});
+
+test('a header in the file wins over the chosen language', () => {
+  const german = ['# language: de', 'Funktionalität: A', '', '  Szenario: S', '    Dann etwas', ''].join('\n');
+  const parsed = parseFeature('x.feature', german, 'fr');
+  assert.deepEqual(parsed.errors, []);
+  assert.equal(parsed.feature?.language, 'de');
+});
+
+test('an unknown default language falls back to English', () => {
+  assert.equal(detectLanguage(['Feature: A'], 'klingon'), 'en');
+  assert.equal(detectLanguage(['Feature: A'], 'fr'), 'fr');
+});
