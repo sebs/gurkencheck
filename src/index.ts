@@ -23,7 +23,7 @@ export {
   readIgnorePatterns,
 } from './feature-finder.ts';
 export type {FeatureSearch} from './feature-finder.ts';
-export {DEFAULT_FORMAT, FORMATTERS, getFormatter} from './formatters/index.ts';
+export {DEFAULT_FORMAT, FORMATTERS, getFormatter, loadFormatter} from './formatters/index.ts';
 export type {Formatter} from './formatters/index.ts';
 export {ALWAYS_ON_RULES, PARSER_RULES, parseFeature, readAndParseFile} from './gherkin/parse.ts';
 export type {ParseResult} from './gherkin/parse.ts';

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {DEFAULT_FORMAT, getFormatter} from '../src/formatters/index.ts';
+import {DEFAULT_FORMAT, getFormatter, loadFormatter} from '../src/formatters/index.ts';
 import type {FileResult, Formatter} from '../src/index.ts';
 
 const RESULTS: FileResult[] = [
@@ -128,4 +128,31 @@ test('xunit includes the column in the location it prints', () => {
   const output = capture(getFormatter('xunit')!, WITH_COLUMNS);
   assert.match(output, /\/features\/Login\.feature:3:5 \(no-unnamed-scenarios\)/u);
   assert.match(output, /\/features\/Login\.feature:12 \(new-line-at-eof\)/u);
+});
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/114
+test('loadFormatter returns a built-in by name', async () => {
+  assert.equal(await loadFormatter('json'), getFormatter('json'));
+  assert.equal(await loadFormatter(undefined), getFormatter(DEFAULT_FORMAT));
+});
+
+test('loadFormatter loads a formatter from a path', async () => {
+  const formatter = await loadFormatter('./test/formatters/count.mjs');
+  assert.equal(await formatter(RESULTS), '2 findings in 2 files');
+});
+
+test('loadFormatter accepts a CommonJS module exporting printResults', async () => {
+  const formatter = await loadFormatter('./test/formatters/legacy.cjs');
+  assert.match(capture(formatter as Formatter, RESULTS), /legacy formatter saw 2 files/u);
+});
+
+test('loadFormatter explains an unknown format', async () => {
+  await assert.rejects(() => loadFormatter('yaml'), /Unsupported format "yaml"/u);
+});
+
+test('loadFormatter explains a module that is not a formatter', async () => {
+  await assert.rejects(
+    () => loadFormatter('./test/rulesdir/not-rules/notarule.mjs'),
+    /does not export a formatter/u,
+  );
 });

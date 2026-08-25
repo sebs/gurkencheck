@@ -151,6 +151,27 @@ A pattern that matches a directory skips everything below it, as in `.gitignore`
 `.eslintignore`, so `build` is enough and you do not have to write `build/**`. Blank lines
 and lines starting with `#` are ignored.
 
+## Custom formatters
+
+Pass a path or a package name to `--format`. The module exports a function taking the
+results; it may print the output itself, or return a string and let gurkencheck print it.
+
+```js
+// count.mjs
+export default function count(results) {
+  const findings = results.reduce((total, file) => total + file.errors.length, 0);
+  return `${findings} findings in ${results.length} files`;
+}
+```
+
+```sh
+npx gurkencheck --format ./count.mjs
+```
+
+Each result is `{filePath, errors}`, and each error is
+`{message, rule, line, column, severity}`. A default export, a `printResults` export, or a
+module that is itself the function all work.
+
 ## Custom rules
 
 Point `--rulesdir` at a directory of your own modules. Each exports an object with a

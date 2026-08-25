@@ -249,6 +249,20 @@ ${ruleList(configurable)}
 so a file that breaks one of them cannot be checked at all.</p>
 ${ruleList(alwaysOn)}
 
+<h2>Writing your own formatter</h2>
+<p>Pass a path or a package name to <code>--format</code>. The module exports a function
+taking the results; it may print the output itself, or return it as a string and let
+gurkencheck print it.</p>
+${codeBlock(`// count.mjs
+export default function count(results) {
+  const findings = results.reduce((total, file) => total + file.errors.length, 0);
+  return \`\${findings} findings in \${results.length} files\`;
+}`)}
+${codeBlock('npx gurkencheck --format ./count.mjs')}
+<p>Each result is <code>{filePath, errors}</code>, and each error is
+<code>{message, rule, line, column, severity}</code>. A default export, a
+<code>printResults</code> export, or a module that is itself the function all work.</p>
+
 <h2>Writing your own rule</h2>
 <p>Point <code>--rulesdir</code> at a directory of your own modules. Each one exports an object
 with a <code>name</code> and a <code>run</code> function, and gets called once per file.</p>

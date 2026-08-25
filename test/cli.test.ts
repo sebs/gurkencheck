@@ -112,13 +112,7 @@ test('exits 2 when a rule name is unknown', async () => {
   });
 });
 
-test('exits 2 for an unsupported output format', async () => {
-  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
-    const {code, stderr} = await cli(['--format', 'yaml', '.'], cwd);
-    assert.equal(code, 2);
-    assert.match(stderr, /supported formats are stylish, json, xunit/u);
-  });
-});
+
 
 test('exits 2 for an unknown option', async () => {
   const {code, stderr} = await cli(['--nonsense']);
@@ -199,4 +193,26 @@ test('a problem that stops the linter still goes to stderr', async () => {
     assert.equal(stdout, '');
     assert.match(stderr, /does not exist/u);
   });
+});
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/114
+test('--format accepts a path to a formatter of your own', async () => {
+  await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
+    const formatter = path.join(cwd, 'count.mjs');
+    fs.writeFileSync(
+      formatter,
+      'export default (results) =>\n' +
+        '  `${results.reduce((n, r) => n + r.errors.length, 0)} findings`;\n',
+    );
+    const {code, stdout} = await cli(['--format', './count.mjs', '.'], cwd);
+    assert.equal(code, 1);
+    assert.equal(stdout.trim(), '1 findings');
+  });
+});
+
+test('an unknown format names the built-ins and mentions custom ones', async () => {
+  const {code, stderr} = await cli(['--format', 'yaml', '.']);
+  assert.equal(code, 2);
+  assert.match(stderr, /Unsupported format "yaml"/u);
+  assert.match(stderr, /formatter of your own/u);
 });

@@ -8,7 +8,7 @@ import {pathToFileURL} from 'node:url';
 import {parseArgs} from 'node:util';
 import {DEFAULT_CONFIG_FILE_NAME, readConfiguration} from './config-parser.ts';
 import {DEFAULT_IGNORE_FILE_NAME, findFeatureFiles} from './feature-finder.ts';
-import {DEFAULT_FORMAT, FORMATTERS, getFormatter} from './formatters/index.ts';
+import {DEFAULT_FORMAT, FORMATTERS, loadFormatter} from './formatters/index.ts';
 import {hasErrors, lint} from './linter.ts';
 import * as logger from './logger.ts';
 import {loadRules} from './rules.ts';
@@ -33,7 +33,9 @@ function usage(): string {
     'Lints Gherkin feature files against the rules in your configuration file.',
     '',
     'Options:',
-    `  -f, --format <format>   output format: ${Object.keys(FORMATTERS).join(', ')} (default: ${DEFAULT_FORMAT})`,
+    `  -f, --format <format>   output format: ${Object.keys(FORMATTERS).join(', ')},`,
+    '                          or the path to a formatter of your own',
+    `                          (default: ${DEFAULT_FORMAT})`,
     `  -c, --config <path>     configuration file (default: ${DEFAULT_CONFIG_FILE_NAME})`,
     `  -i, --ignore <globs>    comma separated globs to skip, overriding ${DEFAULT_IGNORE_FILE_NAME}`,
     '  -r, --rulesdir <dir>    directory of custom rules; may be given more than once',
@@ -77,14 +79,6 @@ export async function run(argv: readonly string[]): Promise<number> {
     return EXIT_OK;
   }
 
-  const formatter = getFormatter(values.format);
-  if (formatter === undefined) {
-    logger.boldError(
-      `Unsupported format "${values.format}". The supported formats are ${Object.keys(FORMATTERS).join(', ')}.`,
-    );
-    return EXIT_USAGE;
-  }
-
   const additionalRulesDirs = values.rulesdir ?? [];
   let rules;
   try {
@@ -114,8 +108,21 @@ export async function run(argv: readonly string[]): Promise<number> {
     return EXIT_USAGE;
   }
 
+  let formatter;
+  try {
+    formatter = await loadFormatter(values.format);
+  } catch (thrown) {
+    logger.boldError(thrown instanceof Error ? thrown.message : String(thrown));
+    return EXIT_USAGE;
+  }
+
   const results = await lint(files, configuration.configuration, rules);
-  formatter(results);
+
+  // A formatter may print the output itself or hand it back as a string.
+  const output = await formatter(results);
+  if (typeof output === 'string' && output !== '') {
+    console.log(output);
+  }
 
   return hasErrors(results) ? EXIT_LINT_ERRORS : EXIT_OK;
 }
