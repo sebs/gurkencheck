@@ -47,6 +47,21 @@ language, so a German feature file reads `"Angenommen", "Wenn", "Dann", "Und" or
 running at all — an unknown option, a missing config file, a mistyped rule name — now
 exit `2` instead of `1`.
 
+**The `json` format now matches eslint's.** The `errors` array is `messages`, `rule` is
+`ruleId`, severity is eslint's number (2 error, 1 warning), and each file carries
+`errorCount` and `warningCount`. Anything already built around eslint's JSON — report
+viewers, annotation actions, dashboards — now reads gurkencheck output without a converter.
+
+```diff
+-[{"filePath": "a.feature", "errors": [{"message": "...", "rule": "use-and", "line": 3}]}]
++[{"filePath": "a.feature",
++  "messages": [{"ruleId": "use-and", "severity": 2, "message": "...", "line": 3}],
++  "errorCount": 1, "warningCount": 0}]
+```
+
+The library's `lint()` still returns the readable `{filePath, errors}` shape; only the
+`json` formatter changed. `toJson()` is exported if you want the eslint shape from code.
+
 **The xunit report is now a real JUnit report, under the name `junit`.** The old output
 had no `<testsuites>` root and no `tests`/`failures` counts, which many CI parsers require,
 and put every finding for a file inside one `<testcase>`. Each finding is now its own test

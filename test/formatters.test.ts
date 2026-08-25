@@ -50,9 +50,47 @@ test('an unknown format has no formatter', () => {
   assert.equal(getFormatter('yaml'), undefined);
 });
 
-test('json prints the results as a single JSON document', () => {
+// https://github.com/gherkin-lint/gherkin-lint/issues/81
+test('json uses the shape eslint uses', () => {
   const output = capture(getFormatter('json')!, RESULTS);
-  assert.deepEqual(JSON.parse(output), RESULTS);
+  assert.deepEqual(JSON.parse(output), [
+    {
+      filePath: '/features/Login.feature',
+      messages: [
+        {
+          ruleId: 'no-unnamed-scenarios',
+          severity: 2,
+          message: 'Missing Scenario name',
+          line: 3,
+        },
+        {
+          ruleId: 'no-trailing-spaces',
+          severity: 2,
+          message: 'Trailing spaces are not allowed',
+          line: 12,
+        },
+      ],
+      errorCount: 2,
+      warningCount: 0,
+    },
+    {filePath: '/features/Clean.feature', messages: [], errorCount: 0, warningCount: 0},
+  ]);
+});
+
+test('json counts warnings separately from errors', () => {
+  const output = capture(getFormatter('json')!, [
+    {
+      filePath: '/a.feature',
+      errors: [
+        {line: 1, message: 'advice', rule: 'use-and', severity: 'warning'},
+        {line: 2, message: 'a real problem', rule: 'no-empty-file'},
+      ],
+    },
+  ]);
+  const [file] = JSON.parse(output) as {errorCount: number; warningCount: number; messages: {severity: number}[]}[];
+  assert.equal(file?.errorCount, 1);
+  assert.equal(file?.warningCount, 1);
+  assert.deepEqual(file?.messages.map((m) => m.severity), [1, 2]);
 });
 
 test('stylish lists each file with errors and skips clean ones', () => {
@@ -103,9 +141,11 @@ test('stylish still lines the columns up when only some errors have one', () => 
   assert.equal(new Set(starts).size, 1, 'messages should start at the same column');
 });
 
-test('json carries the column through', () => {
+test('json carries the column through, and leaves it out when there is none', () => {
   const output = capture(getFormatter('json')!, WITH_COLUMNS);
-  assert.deepEqual(JSON.parse(output), WITH_COLUMNS);
+  const [file] = JSON.parse(output) as {messages: {column?: number}[]}[];
+  assert.equal(file?.messages[0]?.column, 5);
+  assert.ok(!('column' in (file?.messages[1] ?? {})));
 });
 
 test('junit includes the column in the location it prints', () => {

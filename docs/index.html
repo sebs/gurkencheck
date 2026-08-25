@@ -87,7 +87,8 @@ report.</p>
 Both numbers start at 1, so an editor can underline exactly the right text. A finding about a
 whole file or a whole line &mdash; a missing new line at the end of the file, say &mdash; shows
 the line on its own. The <code>json</code> format carries the same <code>line</code> and
-<code>column</code> fields.</p>
+<code>column</code> fields, in the same shape eslint's JSON formatter uses, so tools built
+around that already understand it.</p>
 
 <h2>Skipping files</h2>
 <p>Put one glob per line in a <code>.gurkencheckignore</code> file, or pass

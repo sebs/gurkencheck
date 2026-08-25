@@ -132,8 +132,8 @@ test('--format json prints machine readable output', async () => {
   await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
     const {code, stdout} = await cli(['--format', 'json', '.'], cwd);
     assert.equal(code, 1);
-    const results = JSON.parse(stdout) as {errors: {rule: string}[]}[];
-    assert.equal(results[0]?.errors[0]?.rule, 'no-unnamed-scenarios');
+    const results = JSON.parse(stdout) as {messages: {ruleId: string}[]}[];
+    assert.equal(results[0]?.messages[0]?.ruleId, 'no-unnamed-scenarios');
   });
 });
 
