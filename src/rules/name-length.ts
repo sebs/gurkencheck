@@ -5,7 +5,7 @@ import {mergeDefaults} from '../util/collections.ts';
 
 const name = 'name-length';
 
-/** Maximum number of characters allowed in each kind of name. */
+/** Maximum number of characters allowed in each kind of name; 0 means no limit. */
 const availableConfigs = {
   Feature: 70,
   Rule: 70,
@@ -28,7 +28,9 @@ const rule: LintRule = {
 
     const test = (text: string, location: Location, type: keyof NameLengthConfig): void => {
       const maximum = config[type];
-      if (text !== '' && text.length > maximum) {
+      // A limit of 0 turns the check off for that kind of name, for teams that
+      // want a limit on scenario names but not on step text, or the reverse.
+      if (maximum > 0 && text !== '' && text.length > maximum) {
         errors.push({
           message: `${type} name is too long. Length of ${text.length} is longer than the maximum allowed: ${maximum}`,
           rule: name,

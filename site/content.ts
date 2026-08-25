@@ -120,14 +120,15 @@ export const RULE_DOCS: RuleDoc[] = [
     summary: 'Stops names and steps from growing too long.',
     explanation:
       'A very long name is usually a sign that too much is being described at once. ' +
-      'You can set a separate limit for each kind of name.',
+      'You can set a separate limit for each kind of name, and set any of them to 0 to ' +
+      'stop checking that kind. Steps are often the one people want to leave alone.',
     settings: [
-      {name: 'Feature', type: 'number of characters', fallback: '70', description: 'Longest allowed Feature name.'},
-      {name: 'Rule', type: 'number of characters', fallback: '70', description: 'Longest allowed Rule name.'},
-      {name: 'Scenario', type: 'number of characters', fallback: '70', description: 'Longest allowed Scenario name.'},
-      {name: 'Step', type: 'number of characters', fallback: '70', description: 'Longest allowed step text.'},
+      {name: 'Feature', type: 'number of characters, or 0 for no limit', fallback: '70', description: 'Longest allowed Feature name.'},
+      {name: 'Rule', type: 'number of characters, or 0 for no limit', fallback: '70', description: 'Longest allowed Rule name.'},
+      {name: 'Scenario', type: 'number of characters, or 0 for no limit', fallback: '70', description: 'Longest allowed Scenario name.'},
+      {name: 'Step', type: 'number of characters, or 0 for no limit', fallback: '70', description: 'Longest allowed step text. Set to 0 to stop checking step length.'},
     ],
-    config: '{\n  "name-length": ["on", {\n    "Feature": 70,\n    "Scenario": 70,\n    "Step": 70\n  }]\n}',
+    config: '{\n  "name-length": ["on", {\n    "Feature": 70,\n    "Scenario": 70,\n    "Step": 0\n  }]\n}',
     good: 'Feature: Logging in\n\n  Scenario: A known user logs in\n    Given I am a known user',
     bad: 'Feature: Logging in\n\n  Scenario: A known user who has already confirmed their email address and accepted the terms logs in\n    Given I am a known user',
     message: 'Scenario name is too long. Length of 95 is longer than the maximum allowed: 70',

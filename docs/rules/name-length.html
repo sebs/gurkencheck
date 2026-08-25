@@ -28,7 +28,7 @@
 <p class="lede">Stops names and steps from growing too long.</p>
 
 <h2>What it does</h2>
-<p>A very long name is usually a sign that too much is being described at once. You can set a separate limit for each kind of name.</p>
+<p>A very long name is usually a sign that too much is being described at once. You can set a separate limit for each kind of name, and set any of them to 0 to stop checking that kind. Steps are often the one people want to leave alone.</p>
 
 <h2>Turning it on</h2>
 <p>Add this to your <code>.gurkencheckrc</code>:</p>
@@ -36,7 +36,7 @@
   &quot;name-length&quot;: [&quot;on&quot;, {
     &quot;Feature&quot;: 70,
     &quot;Scenario&quot;: 70,
-    &quot;Step&quot;: 70
+    &quot;Step&quot;: 0
   }]
 }</code></pre>
 
@@ -46,27 +46,27 @@
 <tbody>
 <tr id="setting-name-length-Feature">
 <td><code>Feature</code></td>
-<td>number of characters</td>
+<td>number of characters, or 0 for no limit</td>
 <td><code>70</code></td>
 <td>Longest allowed Feature name.</td>
 </tr>
 <tr id="setting-name-length-Rule">
 <td><code>Rule</code></td>
-<td>number of characters</td>
+<td>number of characters, or 0 for no limit</td>
 <td><code>70</code></td>
 <td>Longest allowed Rule name.</td>
 </tr>
 <tr id="setting-name-length-Scenario">
 <td><code>Scenario</code></td>
-<td>number of characters</td>
+<td>number of characters, or 0 for no limit</td>
 <td><code>70</code></td>
 <td>Longest allowed Scenario name.</td>
 </tr>
 <tr id="setting-name-length-Step">
 <td><code>Step</code></td>
-<td>number of characters</td>
+<td>number of characters, or 0 for no limit</td>
 <td><code>70</code></td>
-<td>Longest allowed step text.</td>
+<td>Longest allowed step text. Set to 0 to stop checking step length.</td>
 </tr>
 </tbody>
 </table></div>
