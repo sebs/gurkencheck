@@ -119,6 +119,16 @@ new rule on as well:
 
 The message text is unchanged; only the `rule` name attached to it differs.
 
+## New checks in existing rules
+
+**`indentation` now checks doc strings.** The line opening a doc string (""" or ```) is checked against a new `docstring` setting, which defaults to the
+`Step` indentation plus two, the conventional layout. If your files indent doc strings
+level with their step, either move them in or set `docstring` to match `Step`:
+
+```json
+{"indentation": ["on", {"Step": 4, "docstring": 4}]}
+```
+
 ## If you use it as a library
 
 The API is now explicit about loading rules, and nothing writes to the console or exits

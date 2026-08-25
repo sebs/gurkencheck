@@ -28,7 +28,7 @@
 <p class="lede">Checks how far each line is indented.</p>
 
 <h2>What it does</h2>
-<p>Even indentation makes a feature file readable at a glance. You can set a number for each kind of line. Anything you leave out keeps its default.</p>
+<p>Even indentation makes a feature file readable at a glance. You can set a number for each kind of line. Anything you leave out keeps its default. Tags follow the node they sit above, and a doc string follows its step, one level further in.</p>
 
 <h2>Turning it on</h2>
 <p>Add this to your <code>.gurkencheckrc</code>:</p>
@@ -127,6 +127,12 @@
 <td>number of spaces</td>
 <td><code>the Scenario setting</code></td>
 <td>Indentation of tags above a Scenario.</td>
+</tr>
+<tr id="setting-indentation-docstring">
+<td><code>docstring</code></td>
+<td>number of spaces</td>
+<td><code>the Step setting plus 2</code></td>
+<td>Indentation of the &quot;&quot;&quot; or ``` line that opens a doc string under a step.</td>
 </tr>
 </tbody>
 </table></div>

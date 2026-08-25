@@ -25,14 +25,16 @@ const defaultConfig = {
 type IndentationConfig = typeof defaultConfig & {
   'feature tag': number;
   'scenario tag': number;
+  docstring: number;
 };
 
 const availableConfigs = {
   ...defaultConfig,
-  // Tag indentation falls back to the node the tags belong to, so these have
-  // no fixed default of their own.
+  // These fall back to the node they belong to rather than to a fixed
+  // number, so they have no default of their own.
   'feature tag': -1,
   'scenario tag': -1,
+  docstring: -1,
 };
 
 function resolveConfig(configuration: Record<string, unknown>): IndentationConfig {
@@ -43,6 +45,12 @@ function resolveConfig(configuration: Record<string, unknown>): IndentationConfi
     typeof configuration['scenario tag'] === 'number'
       ? configuration['scenario tag']
       : merged.Scenario;
+  // A doc string belongs to its step and is conventionally indented one level
+  // further in, so it follows the Step setting unless it is set on its own.
+  merged.docstring =
+    typeof configuration['docstring'] === 'number'
+      ? configuration['docstring']
+      : merged.Step + 2;
   return merged;
 }
 
@@ -71,11 +79,19 @@ const rule: LintRule = {
       }
     };
 
-    const testStep = (step: {keyword: string; location: Location}): void => {
+    const testStep = (step: {
+      keyword: string;
+      location: Location;
+      docString?: {location: Location};
+    }): void => {
       const keyword = getNeutralKeyword(step, feature.language);
       // A step only uses its own keyword's setting when the user set one.
       const type = keyword !== '' && keyword in raw ? (keyword as keyof IndentationConfig) : 'Step';
       test(step.location, type);
+
+      if (step.docString !== undefined) {
+        test(step.docString.location, 'docstring');
+      }
     };
 
     const testTags = (tags: readonly Tag[], type: 'feature tag' | 'scenario tag'): void => {

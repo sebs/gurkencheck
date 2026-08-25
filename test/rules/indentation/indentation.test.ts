@@ -78,3 +78,17 @@ test('tag indentation can be set on its own', async () => {
     [],
   );
 });
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/140
+test('a doc string follows the Step setting, one level further in', async () => {
+  await checkRule(rule, 'indentation/DocStrings.feature', {Scenario: 2, Step: 4}, [
+    wrong('docstring', 6, 4, 12),
+    wrong('docstring', 6, 4, 19),
+  ]);
+});
+
+test('docstring indentation can be set on its own', async () => {
+  await checkRule(rule, 'indentation/DocStrings.feature', {Scenario: 2, Step: 4, docstring: 4}, [
+    wrong('docstring', 4, 6, 5),
+  ]);
+});
