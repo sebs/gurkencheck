@@ -1,6 +1,7 @@
 /**
  * The little bit of HTML templating the documentation site needs.
  */
+import {version} from '../src/version.ts';
 
 /** Escapes text so it can be dropped into HTML content or an attribute. */
 export function escapeHtml(value: string): string {
@@ -46,7 +47,7 @@ export function page({title, description, depth, body}: PageOptions): string {
 <a class="skip" href="#main">Skip to content</a>
 ${body}
 <footer>
-<p>gurkencheck is free software under the ISC licence.
+<p>gurkencheck ${escapeHtml(version())} &middot; free software under the ISC licence &middot;
 <a href="https://github.com/sebs/gurkencheck">Source on GitHub</a></p>
 </footer>
 </body>

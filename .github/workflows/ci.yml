@@ -1,0 +1,47 @@
+name: CI
+
+# Every branch and every pull request. Tags are handled by release.yml, so
+# they are left out here rather than building the same commit twice.
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest supported release, the current LTS, and the current line.
+        node: ['22.x', '24.x', '26.x']
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      # Tests run straight off the TypeScript sources, using node's own type
+      # stripping, so there is no build step needed before testing.
+      - name: Test
+        run: npm test
+
+      # Covers src, test, site and scripts.
+      - name: Type-check
+        run: npm run typecheck
+
+      # Proves the published output compiles.
+      - name: Build
+        run: npm run build
+
+      # Proves the documentation site still generates.
+      - name: Build the site
+        run: npm run docs

@@ -1,6 +1,6 @@
 # gurkencheck
 
-[![Test](https://github.com/sebs/gurkencheck/actions/workflows/test.yml/badge.svg)](https://github.com/sebs/gurkencheck/actions/workflows/test.yml)
+[![CI](https://github.com/sebs/gurkencheck/actions/workflows/ci.yml/badge.svg)](https://github.com/sebs/gurkencheck/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/gurkencheck.svg)](https://www.npmjs.com/package/gurkencheck)
 
 A linter for Gherkin feature files. It reads your `.feature` files and tells you where
@@ -281,6 +281,32 @@ npm run build         # compile src into dist
 npm run docs          # regenerate the documentation site into docs/
 npm run demo          # lint the deliberately broken files in examples/
 ```
+
+### Releasing
+
+Versions are bumped and tagged locally; everything after that is a workflow.
+
+```sh
+npm version patch        # bumps package.json, commits, and tags v0.0.4
+git push --follow-tags
+```
+
+Pushing the tag runs two workflows:
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| **Release** | the tag | Checks the tag matches `package.json`, runs the tests, builds, and creates the GitHub release with the npm tarball attached |
+| **Pages** | the tag | Builds the documentation site from that version and deploys it |
+
+Publishing to npm is deliberately a separate step, so a release can be looked at before it
+goes out. Run the **Publish** workflow by hand and give it the version — it checks out that
+tag, re-runs the tests, and publishes with provenance. There is no `NPM_TOKEN` in the
+repository: npm Trusted Publishing mints a short-lived credential for the run.
+
+The site is not committed. `docs/` is generated during the Pages run, so the published site
+always matches the version it was built from. Run the Pages workflow by hand with a version
+to re-publish or to roll the site back; leave the version empty to publish from the branch
+you run it on, which is useful for previewing a docs change.
 
 ### Adding a rule
 

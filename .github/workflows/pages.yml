@@ -1,0 +1,71 @@
+name: Pages
+
+# Publishes the documentation site to GitHub Pages.
+#
+# The policy is that the site describes a released version. It deploys
+# automatically when a version tag is pushed, so the site and the newest
+# release stay in step, and it can be run by hand against any released version
+# to re-publish or to roll the site back.
+#
+# Nothing is committed: docs/ is generated from site/ during the run and
+# uploaded as a Pages artifact.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Released version to publish the site from, e.g. 0.0.4. Leave empty to publish from the branch you run this on.'
+        required: false
+        type: string
+
+# Least privilege for publishing to Pages over OIDC.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time, and never cancel one that is already going out.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.version && format('v{0}', inputs.version) || github.ref }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - run: npm ci
+
+      # The site carries the version it was built from, so a reader can tell
+      # which release they are looking at.
+      - name: Build the site
+        run: npm run docs
+
+      - name: Upload the Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

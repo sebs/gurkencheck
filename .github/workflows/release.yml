@@ -1,46 +1,70 @@
 name: Release
 
+# Fires when a version tag is pushed. Bump and tag locally:
+#
+#   npm version patch      # bumps package.json, commits, tags v0.0.4
+#   git push --follow-tags
+#
+# This builds the tag, checks it, and creates the GitHub release with the npm
+# tarball attached. Publishing that release to npm is a separate, manual step:
+# see publish.yml.
 on:
-  workflow_dispatch:
-    inputs:
-      bump:
-        description: Which part of the version to raise
-        required: true
-        default: patch
-        type: choice
-        options: [patch, minor, major]
+  push:
+    tags:
+      - 'v*'
+
+# Needed by softprops/action-gh-release to create the release.
+permissions:
+  contents: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
 
     steps:
-      - uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
-          node-version: '24.x'
+          node-version: 24.x
           cache: npm
-          registry-url: https://registry.npmjs.org
+
+      - name: Read the version from package.json
+        id: package
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      # `npm version` keeps these in step; a hand-made tag might not.
+      - name: Check the tag matches package.json
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="${{ steps.package.outputs.version }}"
+          if [ "$tag" != "$pkg" ]; then
+            echo "::error::Tag '$GITHUB_REF_NAME' does not match package.json version '$pkg'."
+            exit 1
+          fi
 
       - run: npm ci
-      - run: npm test
-      - run: npm run typecheck
-      - run: npm run build
 
-      - name: Raise the version and tag it
+      # A release is a gate: nothing broken gets a tag people can install.
+      - name: Test
+        run: npm test
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      # The npm-native tarball, so the release can be installed straight from
+      # GitHub and so there is a record of exactly what was published.
+      - name: Pack the npm tarball
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          npm version ${{ inputs.bump }}
-          git push --follow-tags
+          mkdir -p release-artifacts
+          npm pack --pack-destination release-artifacts
+          ls -la release-artifacts
 
-      - name: Publish to npm
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Create the GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: release-artifacts/*.tgz
+          generate_release_notes: true

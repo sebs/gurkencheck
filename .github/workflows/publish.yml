@@ -1,0 +1,70 @@
+name: Publish
+
+# Publishes an already-released version to npm. Run it by hand, after the
+# release.yml run for that tag has gone green.
+#
+# Authentication is npm Trusted Publishing (OIDC): GitHub mints a short-lived
+# token for this run and npm checks it against the trusted publisher configured
+# for the package, so there is no long-lived NPM_TOKEN in the repository.
+#
+# One-time setup on npmjs.com: package `gurkencheck` -> Settings ->
+# Trusted Publisher -> GitHub Actions, repository `sebs/gurkencheck`,
+# workflow `publish.yml`.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Released version to publish, e.g. 0.0.4'
+        required: true
+        type: string
+
+# OIDC needs an id-token; provenance is attached from this workflow run.
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Publish exactly the tagged source, not whatever the branch has moved on to.
+      - uses: actions/checkout@v7
+        with:
+          ref: v${{ inputs.version }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm 11.5.1 or newer, which is ahead of the
+      # version bundled with node.
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      - name: Check package.json matches the requested version
+        run: |
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "$pkg" != "${{ inputs.version }}" ]; then
+            echo "::error::package.json is '$pkg', not the requested '${{ inputs.version }}'."
+            exit 1
+          fi
+
+      - run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # No NPM_TOKEN: OIDC supplies the credential and provenance is generated
+      # from this run.
+      - name: Publish to npm
+        run: npm publish --provenance --access public
