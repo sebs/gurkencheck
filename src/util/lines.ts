@@ -15,3 +15,41 @@ export function contentLines(file: FeatureFile): string[] {
   const {lines} = file;
   return lines.at(-1) === '' ? lines.slice(0, -1) : [...lines];
 }
+
+/** The delimiters that open and close a doc string. */
+const DOC_STRING_DELIMITERS = ['"""', '```'];
+
+/**
+ * Marks which lines sit inside a doc string, delimiters included.
+ *
+ * Text inside a doc string is data belonging to the step, not part of the
+ * layout of the file, so rules about formatting have to leave it alone.
+ *
+ * This reads the raw lines rather than the parsed document so that it still
+ * works on a file the parser rejected.
+ */
+export function markDocStrings(lines: readonly string[]): boolean[] {
+  const inside = new Array<boolean>(lines.length).fill(false);
+  let openDelimiter: string | undefined;
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+
+    if (openDelimiter === undefined) {
+      // An opening delimiter may be followed by a content type, e.g. """json
+      const delimiter = DOC_STRING_DELIMITERS.find((candidate) => trimmed.startsWith(candidate));
+      if (delimiter !== undefined) {
+        openDelimiter = delimiter;
+        inside[index] = true;
+      }
+      return;
+    }
+
+    inside[index] = true;
+    if (trimmed.startsWith(openDelimiter)) {
+      openDelimiter = undefined;
+    }
+  });
+
+  return inside;
+}

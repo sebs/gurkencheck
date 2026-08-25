@@ -27,3 +27,14 @@ test('never reports a line past the end of the file', () => {
 test('reports a genuine blank line at the end of the file, on a line that exists', () => {
   checkRule(rule, 'no-multiple-empty-lines/TrailingEmptyLines.feature', {}, [{message, line: 7}]);
 });
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/143
+test('ignores blank lines inside a doc string', () => {
+  checkRule(rule, 'no-multiple-empty-lines/DocString.feature', {}, []);
+});
+
+test('still reports blank lines after a doc string has closed', () => {
+  checkRule(rule, 'no-multiple-empty-lines/DocStringAndRealViolation.feature', {}, [
+    {message, line: 12},
+  ]);
+});
