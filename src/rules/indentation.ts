@@ -1,4 +1,4 @@
-import type {Location, Tag} from '@cucumber/messages';
+import type {FeatureChild, Location, RuleChild, Tag} from '@cucumber/messages';
 import {getNeutralKeyword} from '../gherkin/keywords.ts';
 import type {LintRule, RuleError} from '../types.ts';
 import {groupBy, mergeDefaults, sortBy} from '../util/collections.ts';
@@ -24,6 +24,7 @@ const defaultConfig = {
 
 type IndentationConfig = typeof defaultConfig & {
   'feature tag': number;
+  'rule tag': number;
   'scenario tag': number;
   docstring: number;
   character: IndentationCharacter;
@@ -43,6 +44,7 @@ const availableConfigs = {
   // These fall back to the node they belong to rather than to a fixed
   // number, so they have no default of their own.
   'feature tag': -1,
+  'rule tag': -1,
   'scenario tag': -1,
   docstring: -1,
   /** One of "any", "space" or "tab". */
@@ -53,6 +55,8 @@ function resolveConfig(configuration: Record<string, unknown>): IndentationConfi
   const merged = mergeDefaults(defaultConfig, configuration) as IndentationConfig;
   merged['feature tag'] =
     typeof configuration['feature tag'] === 'number' ? configuration['feature tag'] : merged.Feature;
+  merged['rule tag'] =
+    typeof configuration['rule tag'] === 'number' ? configuration['rule tag'] : merged.Rule;
   merged['scenario tag'] =
     typeof configuration['scenario tag'] === 'number'
       ? configuration['scenario tag']
@@ -132,7 +136,10 @@ const rule: LintRule = {
       }
     };
 
-    const testTags = (tags: readonly Tag[], type: 'feature tag' | 'scenario tag'): void => {
+    const testTags = (
+      tags: readonly Tag[],
+      type: 'feature tag' | 'rule tag' | 'scenario tag',
+    ): void => {
       for (const [, tagsOnLine] of groupBy(tags, (tag) => tag.location.line)) {
         const first = sortBy(tagsOnLine, (tag) => tag.location.column ?? 0)[0];
         if (first !== undefined) {
@@ -141,13 +148,10 @@ const rule: LintRule = {
       }
     };
 
-    test(feature.location, 'Feature');
-    testTags(feature.tags, 'feature tag');
-
-    for (const child of feature.children) {
-      if (child.rule !== undefined) {
-        test(child.rule.location, 'Rule');
-      } else if (child.background !== undefined) {
+    // Backgrounds and Scenarios appear both directly under the Feature and
+    // inside a Rule, and are indented against the same settings either way.
+    const testChild = (child: FeatureChild | RuleChild): void => {
+      if (child.background !== undefined) {
         test(child.background.location, 'Background');
         child.background.steps.forEach(testStep);
       } else if (child.scenario !== undefined) {
@@ -164,6 +168,19 @@ const rule: LintRule = {
             }
           }
         }
+      }
+    };
+
+    test(feature.location, 'Feature');
+    testTags(feature.tags, 'feature tag');
+
+    for (const child of feature.children) {
+      if (child.rule !== undefined) {
+        test(child.rule.location, 'Rule');
+        testTags(child.rule.tags, 'rule tag');
+        child.rule.children.forEach(testChild);
+      } else {
+        testChild(child);
       }
     }
 

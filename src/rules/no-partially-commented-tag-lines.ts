@@ -1,4 +1,5 @@
 import type {Tag} from '@cucumber/messages';
+import {taggedNodesOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
 import {atLineColumn} from '../util/location.ts';
 
@@ -27,16 +28,8 @@ const rule: LintRule = {
     }
 
     const tagLines = new Set<number>();
-    collectTagLines(feature.tags, tagLines);
-
-    for (const child of feature.children) {
-      if (child.scenario === undefined) {
-        continue;
-      }
-      collectTagLines(child.scenario.tags, tagLines);
-      for (const examples of child.scenario.examples) {
-        collectTagLines(examples.tags, tagLines);
-      }
+    for (const {node} of taggedNodesOf(feature)) {
+      collectTagLines(node.tags, tagLines);
     }
 
     const errors: RuleError[] = [];

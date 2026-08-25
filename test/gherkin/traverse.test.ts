@@ -6,6 +6,7 @@ import {
   rulesOf,
   scenariosOf,
   stepContainersOf,
+  taggedNodesOf,
 } from '../../src/gherkin/traverse.ts';
 
 /** A feature with a background and scenario both outside and inside a Rule. */
@@ -69,4 +70,46 @@ test('a feature with no Rules yields no Rules', () => {
   assert.ok(plain);
   assert.deepEqual([...rulesOf(plain)], []);
   assert.deepEqual([...backgroundsOf(plain)], []);
+});
+
+test('taggedNodesOf yields every node a tag can be written on', () => {
+  const tagged = parseFeature(
+    'z.feature',
+    [
+      '@feature-tag',
+      'Feature: A',
+      '',
+      '  @outline-tag',
+      '  Scenario Outline: top level outline',
+      '    Given <thing>',
+      '',
+      '    @examples-tag',
+      '    Examples: top level examples',
+      '      | thing |',
+      '      | one   |',
+      '',
+      '  @rule-tag',
+      '  Rule: a rule',
+      '',
+      '    @scenario-tag',
+      '    Scenario: rule scenario',
+      '      Given something',
+      '',
+    ].join('\n'),
+  ).feature;
+  assert.ok(tagged);
+
+  assert.deepEqual(
+    [...taggedNodesOf(tagged)].map(({node, ancestors}) => [
+      node.tags.map((tag) => tag.name).join(),
+      ancestors.map((ancestor) => ancestor.keyword),
+    ]),
+    [
+      ['@feature-tag', []],
+      ['@outline-tag', ['Feature']],
+      ['@examples-tag', ['Scenario Outline', 'Feature']],
+      ['@rule-tag', ['Feature']],
+      ['@scenario-tag', ['Rule', 'Feature']],
+    ],
+  );
 });

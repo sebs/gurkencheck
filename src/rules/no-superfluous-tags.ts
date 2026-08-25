@@ -1,15 +1,10 @@
-import type {Tag} from '@cucumber/messages';
 import {getNodeType} from '../gherkin/keywords.ts';
+import {type TaggableNode, taggedNodesOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
 import {intersectionBy} from '../util/collections.ts';
 import {at} from '../util/location.ts';
 
 const name = 'no-superfluous-tags';
-
-interface TaggedNode {
-  keyword: string;
-  tags: readonly Tag[];
-}
 
 const rule: LintRule = {
   name,
@@ -21,7 +16,7 @@ const rule: LintRule = {
     const errors: RuleError[] = [];
     const language = feature.language;
 
-    const check = (child: TaggedNode, parent: TaggedNode): void => {
+    const check = (child: TaggableNode, parent: TaggableNode): void => {
       const duplicated = intersectionBy(child.tags, parent.tags, (tag) => tag.name);
       if (duplicated.length === 0) {
         return;
@@ -37,20 +32,11 @@ const rule: LintRule = {
       }
     };
 
-    for (const child of feature.children) {
-      const node = child.rule ?? child.background ?? child.scenario;
-      if (node === undefined) {
-        continue;
-      }
-      // Backgrounds carry no tags, so this is a no-op for them.
-      const tagged: TaggedNode = {keyword: node.keyword, tags: 'tags' in node ? node.tags : []};
-      check(tagged, feature);
-
-      if (child.scenario !== undefined) {
-        for (const examples of child.scenario.examples) {
-          check(examples, feature);
-          check(examples, tagged);
-        }
+    // A node inherits the tags of everything it sits inside, so a tag repeated
+    // on any ancestor is superfluous - not only one repeated on the nearest.
+    for (const {node, ancestors} of taggedNodesOf(feature)) {
+      for (const ancestor of ancestors) {
+        check(node, ancestor);
       }
     }
 

@@ -6,7 +6,7 @@
  * rules do not each have to remember that Rules exist - several of the
  * original rules did not, and crashed on any feature file using `Rule:`.
  */
-import type {Background, Feature, Rule, Scenario} from '@cucumber/messages';
+import type {Background, Examples, Feature, Rule, Scenario} from '@cucumber/messages';
 
 /** A Background or Scenario, together with the Rule containing it, if any. */
 export interface StepContainer {
@@ -75,6 +75,48 @@ export function* stepContainersOf(feature: Feature): Generator<StepContainer> {
         }
         if (grandchild.scenario !== undefined) {
           yield {node: grandchild.scenario, rule: child.rule};
+        }
+      }
+    }
+  }
+}
+
+/** Anything a tag may be written on. */
+export type TaggableNode = Feature | Rule | Scenario | Examples;
+
+/** A tagged node, with the nodes it sits inside, nearest ancestor first. */
+export interface TaggedNode {
+  node: TaggableNode;
+  /** Feature, and the Rule and Scenario Outline containing it, if any. */
+  ancestors: TaggableNode[];
+}
+
+/**
+ * Every node that can carry tags: the Feature, its Rules, every Scenario -
+ * inside a Rule or not - and every Examples table.
+ *
+ * Each one comes with its ancestors, so that a rule comparing a node's tags
+ * with the ones it inherits does not have to walk the tree itself.
+ */
+export function* taggedNodesOf(feature: Feature): Generator<TaggedNode> {
+  yield {node: feature, ancestors: []};
+
+  function* scenarios(scenario: Scenario, ancestors: TaggableNode[]): Generator<TaggedNode> {
+    yield {node: scenario, ancestors};
+    for (const examples of scenario.examples) {
+      yield {node: examples, ancestors: [scenario, ...ancestors]};
+    }
+  }
+
+  for (const child of feature.children) {
+    if (child.scenario !== undefined) {
+      yield* scenarios(child.scenario, [feature]);
+    }
+    if (child.rule !== undefined) {
+      yield {node: child.rule, ancestors: [feature]};
+      for (const grandchild of child.rule.children) {
+        if (grandchild.scenario !== undefined) {
+          yield* scenarios(grandchild.scenario, [child.rule, feature]);
         }
       }
     }

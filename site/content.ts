@@ -73,6 +73,7 @@ export const RULE_DOCS: RuleDoc[] = [
       {name: 'and', type: 'number of spaces', fallback: 'the Step setting', description: 'Indentation of And steps only.'},
       {name: 'but', type: 'number of spaces', fallback: 'the Step setting', description: 'Indentation of But steps only.'},
       {name: 'feature tag', type: 'number of spaces', fallback: 'the Feature setting', description: 'Indentation of tags above the Feature.'},
+      {name: 'rule tag', type: 'number of spaces', fallback: 'the Rule setting', description: 'Indentation of tags above a Rule.'},
       {name: 'scenario tag', type: 'number of spaces', fallback: 'the Scenario setting', description: 'Indentation of tags above a Scenario.'},
       {name: 'docstring', type: 'number of spaces', fallback: 'the Step setting plus 2', description: 'Indentation of the """ or ``` line that opens a doc string under a step.'},
       {name: 'character', type: 'one of any, space or tab', fallback: 'any', description: 'Which character indentation has to be made of. Leave it at any to accept either.'},

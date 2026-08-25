@@ -1,5 +1,5 @@
-import type {Tag} from '@cucumber/messages';
 import {getNodeType} from '../gherkin/keywords.ts';
+import {taggedNodesOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
 import {mergeDefaults} from '../util/collections.ts';
 import {at} from '../util/location.ts';
@@ -15,11 +15,6 @@ interface AllowedTagsConfig {
 
 const availableConfigs: AllowedTagsConfig = {tags: [], patterns: []};
 
-interface TaggedNode {
-  keyword: string;
-  tags: readonly Tag[];
-}
-
 const rule: LintRule = {
   name,
   availableConfigs,
@@ -33,7 +28,7 @@ const rule: LintRule = {
     const allowedPatterns = config.patterns.map((pattern) => new RegExp(pattern));
     const errors: RuleError[] = [];
 
-    const check = (node: TaggedNode): void => {
+    for (const {node} of taggedNodesOf(feature)) {
       for (const tag of node.tags) {
         const allowed =
           allowedTags.has(tag.name) || allowedPatterns.some((pattern) => pattern.test(tag.name));
@@ -44,17 +39,6 @@ const rule: LintRule = {
             ...at(tag.location),
           });
         }
-      }
-    };
-
-    check(feature);
-    for (const child of feature.children) {
-      if (child.scenario === undefined) {
-        continue;
-      }
-      check(child.scenario);
-      for (const examples of child.scenario.examples) {
-        check(examples);
       }
     }
     return errors;

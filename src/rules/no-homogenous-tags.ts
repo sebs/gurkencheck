@@ -1,4 +1,5 @@
 import type {Tag} from '@cucumber/messages';
+import {scenariosOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
 import {intersection} from '../util/collections.ts';
 import {at} from '../util/location.ts';
@@ -22,11 +23,7 @@ const rule: LintRule = {
     // One error per tag rather than one summary listing them all, so that
     // each finding points at a single thing to fix, the way every other
     // rule reports.
-    for (const child of feature.children) {
-      if (child.scenario === undefined) {
-        continue;
-      }
-      const scenario = child.scenario;
+    for (const {scenario} of scenariosOf(feature)) {
       scenarioTags.push(tagNames(scenario.tags));
 
       // "Every Examples table has this tag" says nothing when there is only

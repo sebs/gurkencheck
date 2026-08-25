@@ -1,4 +1,5 @@
 import {getNodeType} from '../gherkin/keywords.ts';
+import {scenariosOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
 import {mergeDefaults} from '../util/collections.ts';
 import {at} from '../util/location.ts';
@@ -25,11 +26,7 @@ const rule: LintRule = {
     const config = mergeDefaults(availableConfigs, configuration);
     const errors: RuleError[] = [];
 
-    for (const child of feature.children) {
-      const scenario = child.scenario;
-      if (scenario === undefined) {
-        continue;
-      }
+    for (const {scenario} of scenariosOf(feature)) {
       if (config.ignoreUntagged && scenario.tags.length === 0) {
         continue;
       }
