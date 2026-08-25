@@ -1,6 +1,7 @@
 import {getNeutralKeyword} from '../gherkin/keywords.ts';
 import {stepContainersOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
+import {at} from '../util/location.ts';
 
 const name = 'use-and';
 
@@ -25,7 +26,7 @@ const rule: LintRule = {
           errors.push({
             message: `Step "${step.keyword}${step.text}" should use And instead of ${step.keyword}`,
             rule: name,
-            line: step.location.line,
+            ...at(step.location),
           });
         }
         previousKeyword = keyword;

@@ -1,6 +1,7 @@
 import {getNeutralKeyword} from '../gherkin/keywords.ts';
 import {stepContainersOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
+import {at} from '../util/location.ts';
 
 const name = 'keywords-in-logical-order';
 
@@ -31,7 +32,7 @@ const rule: LintRule = {
           errors.push({
             message: `Step "${step.keyword}${step.text}" should not appear after step using keyword ${ORDER[furthest]}`,
             rule: name,
-            line: step.location.line,
+            ...at(step.location),
           });
         }
         furthest = Math.max(furthest, position);

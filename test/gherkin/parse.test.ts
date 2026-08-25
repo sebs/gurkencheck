@@ -68,6 +68,7 @@ test('recognises a localised keyword when classifying a parse failure', () => {
   assert.deepEqual(errors, [
     {
       line: 7,
+      column: 1,
       message: 'Multiple "Feature" definitions in the same file are disallowed',
       rule: 'one-feature-per-file',
     },

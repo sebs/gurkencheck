@@ -16,6 +16,7 @@ test('reports a second Background in one file', async () => {
   assert.deepEqual(await errorsFor('MultipleBackgrounds'), [
     {
       line: 9,
+      column: 1,
       message: 'Multiple "Background" definitions in the same file are disallowed',
       rule: 'up-to-one-background-per-file',
     },
@@ -24,7 +25,7 @@ test('reports a second Background in one file', async () => {
 
 test('reports a tag on a Background', async () => {
   assert.deepEqual(await errorsFor('TagOnBackground'), [
-    {line: 4, message: 'Tags on Backgrounds are disallowed', rule: 'no-tags-on-backgrounds'},
+    {line: 4, column: 1, message: 'Tags on Backgrounds are disallowed', rule: 'no-tags-on-backgrounds'},
   ]);
 });
 
@@ -32,6 +33,7 @@ test('reports a second Feature in one file', async () => {
   assert.deepEqual(await errorsFor('MultipleFeatures'), [
     {
       line: 7,
+      column: 1,
       message: 'Multiple "Feature" definitions in the same file are disallowed',
       rule: 'one-feature-per-file',
     },
@@ -45,21 +47,25 @@ const multilineStep = {
 };
 
 test('reports a step continued onto the next line', async () => {
-  assert.deepEqual(await errorsFor('MultilineStep'), [{...multilineStep, line: 9}]);
+  assert.deepEqual(await errorsFor('MultilineStep'), [{...multilineStep, line: 9, column: 6}]);
 });
 
 test('reports a multiline step in a Background', async () => {
-  assert.deepEqual(await errorsFor('MultilineBackgroundStep'), [{...multilineStep, line: 5}]);
+  assert.deepEqual(await errorsFor('MultilineBackgroundStep'), [
+    {...multilineStep, line: 5, column: 5},
+  ]);
 });
 
 test('reports a multiline step in a Scenario Outline', async () => {
-  assert.deepEqual(await errorsFor('MultilineScenarioOutlineStep'), [{...multilineStep, line: 9}]);
+  assert.deepEqual(await errorsFor('MultilineScenarioOutlineStep'), [
+    {...multilineStep, line: 9, column: 6},
+  ]);
 });
 
 test('keeps looking after a tag on a Background hides other problems', async () => {
   assert.deepEqual(await errorsFor('MultipleViolations'), [
-    {line: 4, message: 'Tags on Backgrounds are disallowed', rule: 'no-tags-on-backgrounds'},
-    {...multilineStep, line: 13},
+    {line: 4, column: 3, message: 'Tags on Backgrounds are disallowed', rule: 'no-tags-on-backgrounds'},
+    {...multilineStep, line: 13, column: 6},
   ]);
 });
 

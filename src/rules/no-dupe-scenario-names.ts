@@ -1,5 +1,6 @@
 import {scenariosOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
+import {at} from '../util/location.ts';
 
 const name = 'no-dupe-scenario-names';
 
@@ -44,7 +45,7 @@ const rule: LintRule = {
       errors.push({
         message: `Scenario name is already used in: ${where}`,
         rule: name,
-        line: scenario.location.line,
+        ...at(scenario.location),
       });
     }
 

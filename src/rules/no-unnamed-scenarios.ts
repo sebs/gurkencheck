@@ -1,4 +1,5 @@
 import type {LintRule, RuleError} from '../types.ts';
+import {at} from '../util/location.ts';
 
 const name = 'no-unnamed-scenarios';
 
@@ -11,7 +12,7 @@ const rule: LintRule = {
         errors.push({
           message: 'Missing Scenario name',
           rule: name,
-          line: child.scenario.location.line,
+          ...at(child.scenario.location),
         });
       }
     }

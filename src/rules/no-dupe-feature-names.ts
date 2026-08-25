@@ -1,4 +1,5 @@
 import type {LintRule} from '../types.ts';
+import {at} from '../util/location.ts';
 
 const name = 'no-dupe-feature-names';
 
@@ -23,7 +24,7 @@ const rule: LintRule = {
 
     const message = `Feature name is already used in: ${previous.join(', ')}`;
     previous.push(file.relativePath);
-    return [{message, rule: name, line: feature.location.line}];
+    return [{message, rule: name, ...at(feature.location)}];
   },
 };
 

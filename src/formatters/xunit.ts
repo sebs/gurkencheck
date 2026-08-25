@@ -6,7 +6,11 @@ export function printResults(results: readonly FileResult[]): void {
   const testCases = results.map((result) => {
     const failures = result.errors.map((error) => {
       const open = `<error${attributes({message: error.message, type: 'gurkencheck-error'})}>`;
-      const detail = cdata(`${result.filePath}:${error.line} (${error.rule}) ${error.message}`);
+      const where =
+        error.column === undefined
+          ? `${result.filePath}:${error.line}`
+          : `${result.filePath}:${error.line}:${error.column}`;
+      const detail = cdata(`${where} (${error.rule}) ${error.message}`);
       return indent(`${open}${detail}</error>`, 2);
     });
 

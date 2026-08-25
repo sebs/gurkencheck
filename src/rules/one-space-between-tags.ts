@@ -1,6 +1,7 @@
 import type {Tag} from '@cucumber/messages';
 import type {LintRule, RuleError} from '../types.ts';
 import {groupBy, sortBy} from '../util/collections.ts';
+import {at} from '../util/location.ts';
 
 const name = 'one-space-between-tags';
 
@@ -15,7 +16,7 @@ function checkTags(tags: readonly Tag[], errors: RuleError[]): void {
         errors.push({
           message: `There is more than one space between the tags ${current.name} and ${next.name}`,
           rule: name,
-          line: current.location.line,
+          ...at(current.location),
         });
       }
     }

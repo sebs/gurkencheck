@@ -1,4 +1,5 @@
 import type {LintRule, RuleError} from '../types.ts';
+import {at} from '../util/location.ts';
 
 const name = 'no-empty-background';
 
@@ -11,7 +12,7 @@ const rule: LintRule = {
         errors.push({
           message: 'Empty backgrounds are not allowed.',
           rule: name,
-          line: child.background.location.line,
+          ...at(child.background.location),
         });
       }
     }

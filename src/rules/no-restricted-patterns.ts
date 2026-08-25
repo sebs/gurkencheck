@@ -3,6 +3,7 @@ import {getNeutralKeyword, getNodeType} from '../gherkin/keywords.ts';
 import {rulesOf, stepContainersOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
 import {mergeDefaults} from '../util/collections.ts';
+import {at} from '../util/location.ts';
 
 const name = 'no-restricted-patterns';
 
@@ -89,7 +90,7 @@ const rule: LintRule = {
             errors.push({
               message: `${type} ${property}: "${text}" matches restricted pattern "${pattern}"`,
               rule: name,
-              line: node.location.line,
+              ...at(node.location),
             });
           }
         }

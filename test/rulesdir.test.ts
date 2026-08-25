@@ -25,6 +25,7 @@ test('loads custom rules written as CommonJS, ESM and .mjs', async () => {
         {
           // Proves the built-in rules are still loaded alongside the custom ones.
           line: 1,
+          column: 5,
           message: 'Wrong indentation for "Feature", expected indentation level of 0, but got 4',
           rule: 'indentation',
         },

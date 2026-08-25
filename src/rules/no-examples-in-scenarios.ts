@@ -1,6 +1,7 @@
 import {getNodeType} from '../gherkin/keywords.ts';
 import {scenariosOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
+import {at} from '../util/location.ts';
 
 const name = 'no-examples-in-scenarios';
 
@@ -18,7 +19,7 @@ const rule: LintRule = {
         errors.push({
           message: 'Cannot use "Examples" in a "Scenario", use a "Scenario Outline" instead',
           rule: name,
-          line: scenario.location.line,
+          ...at(scenario.location),
         });
       }
     }

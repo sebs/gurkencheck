@@ -29,9 +29,13 @@ export function runRule(
 }
 
 /**
- * Runs a rule over a fixture and asserts on the errors it produces. Errors
- * are compared as a set: the order a rule reports them in is not part of its
- * contract, because the linter sorts them by line before printing.
+ * Runs a rule over a fixture and asserts on the errors it produces.
+ *
+ * Only the message, rule name and line are compared; columns are covered on
+ * their own in test/rules/columns.test.ts so that every other expectation
+ * stays about the thing the rule is actually checking. Errors are compared as
+ * a set, because the order a rule reports them in is not part of its
+ * contract - the linter sorts them by line before printing.
  */
 export async function checkRule(
   rule: LintRule,
@@ -40,6 +44,7 @@ export async function checkRule(
   expected: readonly ExpectedError[],
 ): Promise<void> {
   const actual = await runRule(rule, fixture, configuration);
+  const lineOnly = actual.map(({message, rule: ruleName, line}) => ({message, rule: ruleName, line}));
   const withRuleName = expected.map((error) => ({...error, rule: rule.name}));
-  assert.deepEqual([...actual].sort(order), [...withRuleName].sort(order));
+  assert.deepEqual([...lineOnly].sort(order), [...withRuleName].sort(order));
 }

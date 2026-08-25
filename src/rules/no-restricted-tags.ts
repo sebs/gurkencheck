@@ -2,6 +2,7 @@ import type {Tag} from '@cucumber/messages';
 import {getNodeType} from '../gherkin/keywords.ts';
 import type {LintRule, RuleError} from '../types.ts';
 import {mergeDefaults} from '../util/collections.ts';
+import {at} from '../util/location.ts';
 
 const name = 'no-restricted-tags';
 
@@ -41,7 +42,7 @@ const rule: LintRule = {
           errors.push({
             message: `Forbidden tag ${tag.name} on ${nodeType}`,
             rule: name,
-            line: tag.location.line,
+            ...at(tag.location),
           });
         }
       }

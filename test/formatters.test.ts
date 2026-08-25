@@ -72,3 +72,45 @@ test('xunit escapes reserved characters in messages', () => {
   ]);
   assert.match(output, /message="a &lt; b &amp; &quot;c&quot;"/u);
 });
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/211
+const WITH_COLUMNS: FileResult[] = [
+  {
+    filePath: '/features/Login.feature',
+    errors: [
+      {line: 3, column: 5, message: 'Missing Scenario name', rule: 'no-unnamed-scenarios'},
+      {line: 12, message: 'New line at EOF(end of file) is required', rule: 'new-line-at-eof'},
+    ],
+  },
+];
+
+test('stylish shows line:column when the rule knows a column', () => {
+  const output = capture(getFormatter('stylish')!, WITH_COLUMNS);
+  assert.match(output, /\s3:5\s/u);
+});
+
+test('stylish shows the line alone when there is no column', () => {
+  const output = capture(getFormatter('stylish')!, WITH_COLUMNS);
+  assert.match(output, /\s12\s/u);
+  assert.doesNotMatch(output, /12:/u);
+});
+
+test('stylish still lines the columns up when only some errors have one', () => {
+  const output = capture(getFormatter('stylish')!, WITH_COLUMNS);
+  const starts = output
+    .split('\n')
+    .filter((line) => line.includes('no-') || line.includes('new-line'))
+    .map((line) => line.indexOf('Missing') + line.indexOf('New line') + 1);
+  assert.equal(new Set(starts).size, 1, 'messages should start at the same column');
+});
+
+test('json carries the column through', () => {
+  const output = capture(getFormatter('json')!, WITH_COLUMNS);
+  assert.deepEqual(JSON.parse(output), WITH_COLUMNS);
+});
+
+test('xunit includes the column in the location it prints', () => {
+  const output = capture(getFormatter('xunit')!, WITH_COLUMNS);
+  assert.match(output, /\/features\/Login\.feature:3:5 \(no-unnamed-scenarios\)/u);
+  assert.match(output, /\/features\/Login\.feature:12 \(new-line-at-eof\)/u);
+});

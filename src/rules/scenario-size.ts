@@ -2,6 +2,7 @@ import {getNodeType} from '../gherkin/keywords.ts';
 import {stepContainersOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
 import {mergeDefaults} from '../util/collections.ts';
+import {at} from '../util/location.ts';
 
 const name = 'scenario-size';
 
@@ -31,7 +32,7 @@ const rule: LintRule = {
         errors.push({
           message: `Element ${getNodeType(node, feature.language)} too long: actual ${node.steps.length}, expected ${maximum}`,
           rule: name,
-          line: node.location.line,
+          ...at(node.location),
         });
       }
     }

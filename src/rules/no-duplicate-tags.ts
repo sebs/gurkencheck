@@ -1,5 +1,6 @@
 import type {Tag} from '@cucumber/messages';
 import type {LintRule, RuleError} from '../types.ts';
+import {at} from '../util/location.ts';
 
 const name = 'no-duplicate-tags';
 
@@ -16,7 +17,7 @@ function checkTags(tags: readonly Tag[], errors: RuleError[]): void {
       errors.push({
         message: `Duplicate tags are not allowed: ${tag.name}`,
         rule: name,
-        line: tag.location.line,
+        ...at(tag.location),
       });
     } else {
       seen.add(tag.name);

@@ -138,6 +138,10 @@ if (config.ok) {
 }
 ```
 
+Each error carries `message`, `rule`, `line` and, where the rule knows one, `column` —
+both 1-based, so an editor can underline exactly the right text. Errors about a whole file
+or a whole line, such as a missing new line at the end of the file, have no `column`.
+
 Nothing in the library writes to the console or exits the process; that is the command
 line's job.
 

@@ -2,6 +2,7 @@ import type {Location} from '@cucumber/messages';
 import {rulesOf, stepContainersOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
 import {mergeDefaults} from '../util/collections.ts';
+import {at} from '../util/location.ts';
 
 const name = 'name-length';
 
@@ -34,7 +35,7 @@ const rule: LintRule = {
         errors.push({
           message: `${type} name is too long. Length of ${text.length} is longer than the maximum allowed: ${maximum}`,
           rule: name,
-          line: location.line,
+          ...at(location),
         });
       }
     };

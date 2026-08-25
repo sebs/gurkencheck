@@ -1,6 +1,7 @@
 import type {Feature, Rule as GherkinRule} from '@cucumber/messages';
 import {backgroundsOf, scenariosOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
+import {at} from '../util/location.ts';
 
 const name = 'no-background-only-scenario';
 
@@ -38,7 +39,7 @@ const rule: LintRule = {
         errors.push({
           message: 'Backgrounds are not allowed when there is just one scenario.',
           rule: name,
-          line: background.location.line,
+          ...at(background.location),
         });
       }
     }

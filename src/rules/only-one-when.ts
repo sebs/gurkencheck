@@ -1,6 +1,7 @@
 import {getNeutralKeyword} from '../gherkin/keywords.ts';
 import {scenariosOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
+import {at} from '../util/location.ts';
 
 const name = 'only-one-when';
 
@@ -16,7 +17,7 @@ const rule: LintRule = {
     for (const {scenario} of scenariosOf(feature)) {
       let lastRealKeyword = '';
       let whenCount = 0;
-      let firstViolationLine = 0;
+      let firstViolation: {line: number; column?: number} = {line: 0};
 
       for (const step of scenario.steps) {
         const keyword = getNeutralKeyword(step, feature.language);
@@ -24,8 +25,8 @@ const rule: LintRule = {
         if (keyword === 'when' || (keyword === 'and' && lastRealKeyword === 'when')) {
           lastRealKeyword = 'when';
           whenCount++;
-          if (whenCount > 1 && firstViolationLine === 0) {
-            firstViolationLine = step.location.line;
+          if (whenCount > 1 && firstViolation.line === 0) {
+            firstViolation = at(step.location);
           }
         } else {
           lastRealKeyword = keyword;
@@ -36,7 +37,7 @@ const rule: LintRule = {
         errors.push({
           message: `Scenario "${scenario.name}" contains ${whenCount} When statements (max 1)`,
           rule: name,
-          line: firstViolationLine,
+          ...firstViolation,
         });
       }
     }

@@ -1,5 +1,6 @@
 import type {Tag} from '@cucumber/messages';
 import type {LintRule, RuleError} from '../types.ts';
+import {atLineColumn} from '../util/location.ts';
 
 const name = 'no-partially-commented-tag-lines';
 
@@ -40,8 +41,14 @@ const rule: LintRule = {
 
     const errors: RuleError[] = [];
     for (const line of [...tagLines].sort((a, b) => a - b)) {
-      if (file.lines[line - 1]?.includes('#') === true) {
-        errors.push({message: 'Partially commented tag lines not allowed', rule: name, line});
+      const comment = file.lines[line - 1]?.indexOf('#') ?? -1;
+      if (comment !== -1) {
+        errors.push({
+          message: 'Partially commented tag lines not allowed',
+          rule: name,
+          // Point at the '#' itself: that is the character to remove.
+          ...atLineColumn(line, comment + 1),
+        });
       }
     }
     return errors;

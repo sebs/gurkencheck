@@ -1,6 +1,7 @@
 import type {Tag} from '@cucumber/messages';
 import type {LintRule, RuleError} from '../types.ts';
 import {intersection} from '../util/collections.ts';
+import {at} from '../util/location.ts';
 
 const name = 'no-homogenous-tags';
 
@@ -40,7 +41,7 @@ const rule: LintRule = {
             'Every Examples table of this Scenario Outline has the tag ' +
             `${tag}, it should be defined on the Scenario Outline instead`,
           rule: name,
-          line: scenario.location.line,
+          ...at(scenario.location),
         });
       }
     }
@@ -58,7 +59,7 @@ const rule: LintRule = {
           `Every Scenario on this Feature has the tag ${tag}, ` +
           'it should be defined on the Feature instead',
         rule: name,
-        line: feature.location.line,
+        ...at(feature.location),
       });
     }
 

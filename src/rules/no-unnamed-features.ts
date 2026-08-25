@@ -1,4 +1,5 @@
 import type {LintRule} from '../types.ts';
+import {at} from '../util/location.ts';
 
 const name = 'no-unnamed-features';
 
@@ -12,7 +13,7 @@ const rule: LintRule = {
       {
         message: 'Missing Feature name',
         rule: name,
-        line: feature?.location.line ?? 0,
+        ...(feature === undefined ? {line: 0} : at(feature.location)),
       },
     ];
   },

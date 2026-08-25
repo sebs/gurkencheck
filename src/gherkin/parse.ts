@@ -168,6 +168,7 @@ function classify(complaint: ParserComplaint, dialect: Dialect): RuleError {
         message: 'Multiple "Background" definitions in the same file are disallowed',
         rule: 'up-to-one-background-per-file',
         line: complaint.line,
+        column: complaint.column,
       };
     }
     if (startsWithKeyword(complaint.got, dialect.feature)) {
@@ -175,6 +176,7 @@ function classify(complaint: ParserComplaint, dialect: Dialect): RuleError {
         message: 'Multiple "Feature" definitions in the same file are disallowed',
         rule: 'one-feature-per-file',
         line: complaint.line,
+        column: complaint.column,
       };
     }
     if (complaint.expected.includes('#StepLine') && complaint.expected.includes('#DocStringSeparator')) {
@@ -185,10 +187,16 @@ function classify(complaint: ParserComplaint, dialect: Dialect): RuleError {
         message: `Steps should begin with ${list}. Multiline steps are disallowed`,
         rule: 'no-multiline-steps',
         line: complaint.line,
+        column: complaint.column,
       };
     }
   }
-  return {message: complaint.raw, rule: 'unexpected-error', line: complaint.line};
+  return {
+    message: complaint.raw,
+    rule: 'unexpected-error',
+    line: complaint.line,
+    column: complaint.column,
+  };
 }
 
 /** Splits source text into lines, accepting any of the three line endings. */
@@ -223,6 +231,7 @@ export function parseFeature(relativePath: string, source: string): ParseResult 
           message: 'Tags on Backgrounds are disallowed',
           rule: 'no-tags-on-backgrounds',
           line: first.line,
+          column: first.column,
         });
         workingLines = recovered;
         continue;

@@ -1,8 +1,13 @@
 import {style} from '../logger.ts';
 import type {FileResult, RuleError} from '../types.ts';
 
+/** `12:5` when the rule knows a column, `12` when it does not. */
+function position(error: RuleError): string {
+  return error.column === undefined ? String(error.line) : `${error.line}:${error.column}`;
+}
+
 /**
- * Formats one error as `  <line>    <message>    <rule>`, with the columns
+ * Formats one error as `  <position>    <message>    <rule>`, with the columns
  * padded so they line up underneath each other.
  */
 function formatError(
@@ -13,7 +18,7 @@ function formatError(
 ): string {
   const indent = '  ';
   const gap = '    ';
-  const line = String(error.line).padEnd(lineWidth);
+  const line = position(error).padEnd(lineWidth);
   return (
     indent +
     (colorize ? style.gray(line) : line) +
@@ -25,7 +30,7 @@ function formatError(
 }
 
 function widestLineNumber(result: FileResult): number {
-  return result.errors.reduce((widest, error) => Math.max(widest, String(error.line).length), 0);
+  return result.errors.reduce((widest, error) => Math.max(widest, position(error).length), 0);
 }
 
 /**

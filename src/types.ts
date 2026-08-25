@@ -19,6 +19,12 @@ export interface RuleError {
   rule: string;
   /** 1-based line the error points at, or 0 when it concerns the whole file. */
   line: number;
+  /**
+   * 1-based column the error points at, when the rule knows one. Absent for
+   * errors about a whole file or a whole line, such as a missing new line at
+   * the end of the file.
+   */
+  column?: number;
 }
 
 /** Everything found in one feature file. */
