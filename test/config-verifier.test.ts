@@ -61,3 +61,30 @@ test('reports settings given as something other than an object', () => {
   const errors = verify({'name-length': ['on', 70]});
   assert.match(errors[0]!, /should be an object/u);
 });
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/264
+test('accepts the always-on rules being listed in the configuration', () => {
+  assert.deepEqual(
+    verify({
+      'one-feature-per-file': 'on',
+      'up-to-one-background-per-file': 'on',
+      'no-multiline-steps': 'on',
+      'no-tags-on-backgrounds': 'on',
+    } as Configuration),
+    [],
+  );
+});
+
+test('explains that an always-on rule cannot be turned off', () => {
+  const errors = verify({'one-feature-per-file': 'off'} as Configuration);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0]!, /always on/u);
+  assert.match(errors[0]!, /nothing to switch off/u);
+});
+
+test('still rejects a nonsense state for an always-on rule', () => {
+  const errors = verify({'no-multiline-steps': 'yes'} as unknown as Configuration);
+  assert.deepEqual(errors, [
+    'Invalid rule configuration for "no-multiline-steps" - the config should be "on" or "off"',
+  ]);
+});

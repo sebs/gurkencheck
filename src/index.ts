@@ -24,7 +24,7 @@ export {
 export type {FeatureSearch} from './feature-finder.ts';
 export {DEFAULT_FORMAT, FORMATTERS, getFormatter} from './formatters/index.ts';
 export type {Formatter} from './formatters/index.ts';
-export {PARSER_RULES, parseFeature, readAndParseFile} from './gherkin/parse.ts';
+export {ALWAYS_ON_RULES, PARSER_RULES, parseFeature, readAndParseFile} from './gherkin/parse.ts';
 export type {ParseResult} from './gherkin/parse.ts';
 export {getNeutralKeyword, getNodeType} from './gherkin/keywords.ts';
 export {backgroundsOf, rulesOf, scenariosOf, stepContainersOf} from './gherkin/traverse.ts';

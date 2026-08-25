@@ -2,6 +2,7 @@
  * Checking a configuration file before anything is linted, so that a typo in
  * a rule name is reported once and clearly rather than silently ignored.
  */
+import {ALWAYS_ON_RULES} from './gherkin/parse.ts';
 import type {Configuration, RuleRegistry} from './types.ts';
 
 const STATES = ['on', 'off'];
@@ -59,12 +60,26 @@ export function verifyConfiguration(configuration: Configuration, rules: RuleReg
 
   for (const [ruleName, ruleConfig] of Object.entries(configuration)) {
     const rule = rules.get(ruleName);
+    const prefix = `Invalid rule configuration for "${ruleName}" - `;
+
     if (rule === undefined) {
+      // The rules the parser enforces are documented alongside the rest, so
+      // people reasonably list them. Naming one is harmless; asking for it to
+      // be off is the only thing worth saying something about.
+      if ((ALWAYS_ON_RULES as readonly string[]).includes(ruleName)) {
+        const state = Array.isArray(ruleConfig) ? ruleConfig[0] : ruleConfig;
+        if (state === 'off') {
+          errors.push(
+            `${prefix}this rule is always on. A file breaking it cannot be parsed at all, so there is nothing to switch off.`,
+          );
+        } else if (!STATES.includes(state as string)) {
+          errors.push(`${prefix}the config should be "on" or "off"`);
+        }
+        continue;
+      }
       errors.push(`Rule "${ruleName}" does not exist`);
       continue;
     }
-
-    const prefix = `Invalid rule configuration for "${ruleName}" - `;
 
     if (!Array.isArray(ruleConfig)) {
       if (!STATES.includes(ruleConfig as string)) {

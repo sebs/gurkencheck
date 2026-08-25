@@ -16,14 +16,20 @@ import type {FeatureFile, RuleError} from '../types.ts';
 import type {Dialect} from './dialects.ts';
 import {detectLanguage, getDialect} from './dialects.ts';
 
-/** Rules that are enforced by the parser and cannot be turned off. */
-export const PARSER_RULES = [
+/**
+ * Rules the parser enforces on every file. They cannot be turned off, but
+ * they may be named in a configuration file, because they are documented
+ * alongside the rules that can.
+ */
+export const ALWAYS_ON_RULES = [
   'no-tags-on-backgrounds',
   'one-feature-per-file',
   'up-to-one-background-per-file',
   'no-multiline-steps',
-  'unexpected-error',
 ] as const;
+
+/** The rule names parse errors are reported under. */
+export const PARSER_RULES = [...ALWAYS_ON_RULES, 'unexpected-error'] as const;
 
 /** The outcome of reading and parsing one feature file. */
 export interface ParseResult {

@@ -471,7 +471,7 @@ export const RULE_DOCS: RuleDoc[] = [
       'A Background runs before every scenario in its Feature, so a tag on it would have ' +
       'no meaning. Gherkin does not allow it, and a file with one cannot be read at all.',
     alwaysOn: true,
-    config: '# Always on. There is nothing to configure.',
+    config: '// Always on. Listing it is accepted and does nothing;\n// asking for it to be off is an error.\n{\n  "no-tags-on-backgrounds": "on"\n}',
     good: 'Feature: Logging in\n\n  Background:\n    Given I am a known user\n\n  Scenario: Logging in works\n    When I log in\n\n  Scenario: Logging out works\n    When I log out',
     bad: 'Feature: Logging in\n\n  @setup\n  Background:\n    Given I am a known user\n\n  Scenario: Logging in works\n    When I log in',
     message: 'Tags on Backgrounds are disallowed',
@@ -483,7 +483,7 @@ export const RULE_DOCS: RuleDoc[] = [
       'Gherkin allows a single Feature in a file. A second one cannot be read, so the ' +
       'whole file fails to parse.',
     alwaysOn: true,
-    config: '# Always on. There is nothing to configure.',
+    config: '// Always on. Listing it is accepted and does nothing;\n// asking for it to be off is an error.\n{\n  "one-feature-per-file": "on"\n}',
     good: 'Feature: Logging in\n\n  Scenario: A known user logs in\n    Given I am a known user',
     bad: 'Feature: Logging in\n\n  Scenario: A known user logs in\n    Given I am a known user\n\nFeature: Logging out\n\n  Scenario: A known user logs out\n    Given I am logged in',
     message: 'Multiple "Feature" definitions in the same file are disallowed',
@@ -495,7 +495,7 @@ export const RULE_DOCS: RuleDoc[] = [
       'A Background is the shared setup for the whole Feature, so there can only be one ' +
       'of them. A second Background stops the file being read.',
     alwaysOn: true,
-    config: '# Always on. There is nothing to configure.',
+    config: '// Always on. Listing it is accepted and does nothing;\n// asking for it to be off is an error.\n{\n  "up-to-one-background-per-file": "on"\n}',
     good: 'Feature: Logging in\n\n  Background:\n    Given I am a known user\n\n  Scenario: Logging in works\n    When I log in\n\n  Scenario: Logging out works\n    When I log out',
     bad: 'Feature: Logging in\n\n  Background:\n    Given I am a known user\n\n  Background:\n    Given I am on the login page\n\n  Scenario: Logging in works\n    When I log in',
     message: 'Multiple "Background" definitions in the same file are disallowed',
@@ -508,7 +508,7 @@ export const RULE_DOCS: RuleDoc[] = [
       'continue it - the parser stops there. If a step needs more text, use a doc string ' +
       'or a data table underneath it.',
     alwaysOn: true,
-    config: '# Always on. There is nothing to configure.',
+    config: '// Always on. Listing it is accepted and does nothing;\n// asking for it to be off is an error.\n{\n  "no-multiline-steps": "on"\n}',
     good: 'Feature: Logging in\n\n  Scenario: A known user sees a welcome message\n    Given I am a known user\n    Then I see the message:\n      """\n      Welcome back. You last signed in\n      three days ago.\n      """',
     bad: 'Feature: Logging in\n\n  Scenario: A known user sees a welcome message\n    Given I am a known user\n    Then I see the message Welcome back, you last\n      signed in three days ago',
     message: 'Steps should begin with "Given", "When", "Then", "And" or "But". Multiline steps are disallowed',
