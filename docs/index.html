@@ -79,6 +79,10 @@ over what it extends, and later entries in a list win over earlier ones.</p>
 </table></div>
 
 <h2>Reading the output</h2>
+<p>Findings go to <strong>stdout</strong>, so <code>gurkencheck &gt; report.json</code> and
+<code>gurkencheck | less</code> work. Anything that stops the linter running &mdash; a bad
+option, an invalid configuration &mdash; goes to stderr, so it never lands in a redirected
+report.</p>
 <p>Each finding is printed as <code>line:column&nbsp;&nbsp;&nbsp;&nbsp;message&nbsp;&nbsp;&nbsp;&nbsp;rule</code>.
 Both numbers start at 1, so an editor can underline exactly the right text. A finding about a
 whole file or a whole line &mdash; a missing new line at the end of the file, say &mdash; shows

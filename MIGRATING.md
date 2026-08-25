@@ -119,6 +119,17 @@ new rule on as well:
 
 The message text is unchanged; only the `rule` name attached to it differs.
 
+## Findings now go to stdout
+
+Results were written to stderr, which made `gherkin-lint > report.json` produce an empty
+file and mixed findings in with anything else on that stream. They now go to stdout;
+messages about the linter itself not being able to run stay on stderr.
+
+```diff
+-gherkin-lint --format json 2> report.json
++gurkencheck --format json > report.json
+```
+
 ## New in the configuration file
 
 **A rule may be set to `"warn"`** as well as `"on"` and `"off"`. It reports the same

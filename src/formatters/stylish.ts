@@ -56,7 +56,12 @@ function messageColumnWidth(result: FileResult, lineWidth: number, consoleWidth:
   }, 0);
 }
 
-/** Human readable output, one block per file with errors. */
+/**
+ * Human readable output, one block per file with findings.
+ *
+ * Results go to stdout so they can be redirected or piped. Anything that
+ * stops the linter running is written to stderr instead.
+ */
 export function printResults(results: readonly FileResult[]): void {
   const consoleWidth = process.stdout.isTTY ? process.stdout.columns : Infinity;
 
@@ -68,10 +73,10 @@ export function printResults(results: readonly FileResult[]): void {
     const lineWidth = widestLineNumber(result);
     const messageWidth = messageColumnWidth(result, lineWidth, consoleWidth);
 
-    console.error(style.underline(result.filePath));
+    console.log(style.underline(result.filePath));
     for (const error of result.errors) {
-      console.error(formatError(error, lineWidth, messageWidth, true));
+      console.log(formatError(error, lineWidth, messageWidth, true));
     }
-    console.error('\n');
+    console.log('\n');
   }
 }

@@ -14,18 +14,33 @@ const RESULTS: FileResult[] = [
   {filePath: '/features/Clean.feature', errors: []},
 ];
 
-/** Runs a formatter and returns everything it wrote to stderr. */
+/** Runs a formatter and returns everything it wrote to stdout. */
 function capture(formatter: Formatter, results: FileResult[]): string {
-  const original = console.error;
+  const original = console.log;
   const lines: string[] = [];
-  console.error = (...args: unknown[]) => lines.push(args.map(String).join(' '));
+  console.log = (...args: unknown[]) => lines.push(args.map(String).join(' '));
   try {
     formatter(results);
   } finally {
-    console.error = original;
+    console.log = original;
   }
   return lines.join('\n');
 }
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/117
+// https://github.com/gherkin-lint/gherkin-lint/issues/80
+test('results go to stdout, not stderr', () => {
+  const wroteToStderr: string[] = [];
+  const originalError = console.error;
+  console.error = (...args: unknown[]) => wroteToStderr.push(args.map(String).join(' '));
+  try {
+    const output = capture(getFormatter('stylish')!, RESULTS);
+    assert.notEqual(output, '');
+  } finally {
+    console.error = originalError;
+  }
+  assert.deepEqual(wroteToStderr, []);
+});
 
 test('the default format is stylish', () => {
   assert.equal(getFormatter(undefined), getFormatter(DEFAULT_FORMAT));

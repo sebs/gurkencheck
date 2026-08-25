@@ -26,7 +26,7 @@ export function printResults(results: readonly FileResult[]): void {
     '</testsuite>',
   ].join('\n');
 
-  console.error(`${XML_DECLARATION}\n${suite}`);
+  console.log(`${XML_DECLARATION}\n${suite}`);
 }
 
 export {escapeXml};

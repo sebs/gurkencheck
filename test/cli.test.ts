@@ -63,18 +63,19 @@ test('--version prints the package version', async () => {
 
 test('exits 0 when there is nothing to report', async () => {
   await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
-    const {code, stderr} = await cli(['.'], cwd);
+    const {code, stdout, stderr} = await cli(['.'], cwd);
     assert.equal(code, 0);
+    assert.equal(stdout, '');
     assert.equal(stderr, '');
   });
 });
 
 test('exits 1 and prints the violation when a rule fails', async () => {
   await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
-    const {code, stderr} = await cli(['.'], cwd);
+    const {code, stdout} = await cli(['.'], cwd);
     assert.equal(code, 1);
-    assert.match(stderr, /Missing Scenario name/u);
-    assert.match(stderr, /no-unnamed-scenarios/u);
+    assert.match(stdout, /Missing Scenario name/u);
+    assert.match(stdout, /no-unnamed-scenarios/u);
   });
 });
 
@@ -95,9 +96,9 @@ test('runs on the recommended rules when there is no configuration file', async 
 
     // no-unnamed-scenarios is one of the recommended rules
     fs.writeFileSync(path.join(cwd, 'Example.feature'), DIRTY_FEATURE);
-    const {code, stderr} = await cli(['.'], cwd);
+    const {code, stdout} = await cli(['.'], cwd);
     assert.equal(code, 1);
-    assert.match(stderr, /Missing Scenario name/u);
+    assert.match(stdout, /Missing Scenario name/u);
   } finally {
     fs.rmSync(cwd, {recursive: true, force: true});
   }
@@ -135,9 +136,9 @@ test('exits 2 for a path that names nothing', async () => {
 
 test('--format json prints machine readable output', async () => {
   await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
-    const {code, stderr} = await cli(['--format', 'json', '.'], cwd);
+    const {code, stdout} = await cli(['--format', 'json', '.'], cwd);
     assert.equal(code, 1);
-    const results = JSON.parse(stderr) as {errors: {rule: string}[]}[];
+    const results = JSON.parse(stdout) as {errors: {rule: string}[]}[];
     assert.equal(results[0]?.errors[0]?.rule, 'no-unnamed-scenarios');
   });
 });
@@ -167,18 +168,35 @@ test('runs when invoked through a symlink, as npm installs it', async () => {
 // https://github.com/gherkin-lint/gherkin-lint/issues/21
 test('a rule set to warn reports but exits 0', async () => {
   await withProject(DIRTY_FEATURE, '{"no-unnamed-scenarios": "warn"}', async (cwd) => {
-    const {code, stderr} = await cli(['.'], cwd);
+    const {code, stdout} = await cli(['.'], cwd);
     assert.equal(code, 0);
-    assert.match(stderr, /Missing Scenario name/u);
-    assert.match(stderr, /warning/u);
+    assert.match(stdout, /Missing Scenario name/u);
+    assert.match(stdout, /warning/u);
   });
 });
 
 test('an error alongside a warning still exits 1', async () => {
   const config = '{"no-unnamed-scenarios": "warn", "no-files-without-scenarios": "on"}';
   await withProject('Feature: A\n\n  A description and nothing else.\n', config, async (cwd) => {
-    const {code, stderr} = await cli(['.'], cwd);
+    const {code, stdout} = await cli(['.'], cwd);
     assert.equal(code, 1);
-    assert.match(stderr, /error/u);
+    assert.match(stdout, /error/u);
+  });
+});
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/80
+test('findings can be redirected without dragging diagnostics along', async () => {
+  await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
+    const {stdout, stderr} = await cli(['.'], cwd);
+    assert.match(stdout, /Missing Scenario name/u);
+    assert.equal(stderr, '', 'nothing on stderr when the linter ran fine');
+  });
+});
+
+test('a problem that stops the linter still goes to stderr', async () => {
+  await withProject(CLEAN_FEATURE, '{"not-a-rule": "on"}', async (cwd) => {
+    const {stdout, stderr} = await cli(['.'], cwd);
+    assert.equal(stdout, '');
+    assert.match(stderr, /does not exist/u);
   });
 });

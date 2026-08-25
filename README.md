@@ -51,6 +51,9 @@ With no paths given it searches the current directory for `.feature` files.
 | `1` | At least one rule set to `"on"` was broken |
 | `2` | The linter could not run: bad arguments, or an invalid config |
 
+Findings go to **stdout**, so `gurkencheck > report.json` and `gurkencheck | less` work.
+Anything that stops the linter running — a bad option, an invalid config — goes to stderr.
+
 A rule is set to `"on"`, `"warn"` or `"off"`. `"warn"` reports exactly the same findings but
 does not fail the run — for a rule the team is working towards rather than enforcing:
 
