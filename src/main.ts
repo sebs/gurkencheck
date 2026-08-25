@@ -39,7 +39,7 @@ function usage(): string {
     '  -v, --version           show the version number',
     '',
     'With no files given, the working directory is searched recursively.',
-    'Documentation: https://gurkencheck.github.io/gurkencheck/',
+    'Documentation: https://sebs.github.io/gurkencheck/',
   ].join('\n');
 }
 

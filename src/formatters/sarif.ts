@@ -13,7 +13,7 @@ import {version} from '../version.ts';
 
 const SCHEMA = 'https://json.schemastore.org/sarif-2.1.0.json';
 const SARIF_VERSION = '2.1.0';
-const DOCUMENTATION = 'https://gurkencheck.github.io/gurkencheck/';
+const DOCUMENTATION = 'https://sebs.github.io/gurkencheck/';
 
 /** SARIF's levels, which happen to line up with ours. */
 const LEVEL = {error: 'error', warning: 'warning'} as const;

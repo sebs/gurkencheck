@@ -1,12 +1,12 @@
 # gurkencheck
 
-[![Test](https://github.com/gurkencheck/gurkencheck/actions/workflows/test.yml/badge.svg)](https://github.com/gurkencheck/gurkencheck/actions/workflows/test.yml)
+[![Test](https://github.com/sebs/gurkencheck/actions/workflows/test.yml/badge.svg)](https://github.com/sebs/gurkencheck/actions/workflows/test.yml)
 [![npm](https://img.shields.io/npm/v/gurkencheck.svg)](https://www.npmjs.com/package/gurkencheck)
 
 A linter for Gherkin feature files. It reads your `.feature` files and tells you where
 they drift from the conventions your team has agreed on.
 
-**[Documentation](https://gurkencheck.github.io/gurkencheck/)** — every rule has its own
+**[Documentation](https://sebs.github.io/gurkencheck/)** — every rule has its own
 page with an example that passes and one that fails.
 
 ## Install
@@ -82,7 +82,7 @@ gurkencheck [options] <feature-files>
 There are 33 rules you switch on, covering naming, tags, indentation, structure and size,
 plus four that are always on because Gherkin itself refuses to read a file that breaks
 them. Each one is documented at
-**[gurkencheck.github.io/gurkencheck](https://gurkencheck.github.io/gurkencheck/)** with a
+**[sebs.github.io/gurkencheck](https://sebs.github.io/gurkencheck/)** with a
 good and a bad example.
 
 The configuration file is JSON and may contain comments. A rule is either a state:

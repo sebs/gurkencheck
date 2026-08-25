@@ -15,11 +15,11 @@
   "author": "Vasiliki Siakka",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gurkencheck/gurkencheck.git"
+    "url": "git+https://github.com/sebs/gurkencheck.git"
   },
-  "homepage": "https://gurkencheck.github.io/gurkencheck/",
+  "homepage": "https://sebs.github.io/gurkencheck/",
   "bugs": {
-    "url": "https://github.com/gurkencheck/gurkencheck/issues"
+    "url": "https://github.com/sebs/gurkencheck/issues"
   },
   "type": "module",
   "main": "./dist/index.js",

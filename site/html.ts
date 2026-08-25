@@ -47,7 +47,7 @@ export function page({title, description, depth, body}: PageOptions): string {
 ${body}
 <footer>
 <p>gurkencheck is free software under the ISC licence.
-<a href="https://github.com/gurkencheck/gurkencheck">Source on GitHub</a></p>
+<a href="https://github.com/sebs/gurkencheck">Source on GitHub</a></p>
 </footer>
 </body>
 </html>
