@@ -28,7 +28,7 @@
 <p class="lede">Drops a Background that only one scenario uses.</p>
 
 <h2>What it does</h2>
-<p>A Background exists to share setup between scenarios. With only one scenario in the file there is nothing to share, and the steps read better inside the scenario.</p>
+<p>A Background exists to share setup between scenarios. With only one scenario in the file there is nothing to share, and the steps read better inside the scenario. A Background inside a Rule is judged against that Rule's scenarios. A Background with no scenarios at all is left to no-files-without-scenarios to report.</p>
 
 <h2>Turning it on</h2>
 <p>Add this to your <code>.gurkencheckrc</code>:</p>

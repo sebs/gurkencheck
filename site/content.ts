@@ -156,7 +156,9 @@ export const RULE_DOCS: RuleDoc[] = [
     summary: 'Drops a Background that only one scenario uses.',
     explanation:
       'A Background exists to share setup between scenarios. With only one scenario in ' +
-      'the file there is nothing to share, and the steps read better inside the scenario.',
+      'the file there is nothing to share, and the steps read better inside the scenario. ' +
+      'A Background inside a Rule is judged against that Rule\'s scenarios. A Background ' +
+      'with no scenarios at all is left to no-files-without-scenarios to report.',
     config: '{\n  "no-background-only-scenario": "on"\n}',
     good: 'Feature: Logging in\n\n  Background:\n    Given I am a known user\n\n  Scenario: Logging in works\n    When I log in\n    Then I see my dashboard\n\n  Scenario: Logging out works\n    When I log out\n    Then I see the front page',
     bad: 'Feature: Logging in\n\n  Background:\n    Given I am a known user\n\n  Scenario: Logging in works\n    When I log in\n    Then I see my dashboard',

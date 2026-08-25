@@ -21,3 +21,14 @@ test('reports a background used by a single scenario', () => {
 test('reports a background used by a single scenario outline', () => {
   checkRule(rule, 'no-background-only-scenario/ViolationsOutline.feature', {}, [{message, line: 4}]);
 });
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/159
+test('says nothing when a background has no scenarios at all', () => {
+  checkRule(rule, 'no-background-only-scenario/BackgroundWithoutScenarios.feature', {}, []);
+});
+
+test('judges a background inside a rule against that rule s scenarios', () => {
+  checkRule(rule, 'no-background-only-scenario/RuleWithOneScenario.feature', {}, [
+    {message, line: 14},
+  ]);
+});
