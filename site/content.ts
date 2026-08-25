@@ -423,9 +423,19 @@ export const RULE_DOCS: RuleDoc[] = [
     summary: 'One action per scenario.',
     explanation:
       'A scenario should test one action. Two When steps usually means two scenarios ' +
-      'have been joined together, which makes a failure harder to read. Note that an ' +
-      'And step following a When counts as another When.',
-    config: '{\n  "only-one-when": "on"\n}',
+      'have been joined together, which makes a failure harder to read. By default an ' +
+      'And step following a When counts as another When, because it is another action. ' +
+      'If your team writes one action across several And steps, turn countAnd off and ' +
+      'only real When keywords are counted.',
+    settings: [
+      {
+        name: 'countAnd',
+        type: 'true or false',
+        fallback: 'true',
+        description: 'Whether an And step following a When counts as another When. Set it to false to count only real When keywords.',
+      },
+    ],
+    config: '{\n  "only-one-when": ["on", {"countAnd": true}]\n}',
     good: 'Feature: Logging in\n\n  Scenario: A known user logs in\n    Given I am a known user\n    When I log in\n    Then I see my dashboard',
     bad: 'Feature: Logging in\n\n  Scenario: A known user logs in and out\n    Given I am a known user\n    When I log in\n    When I log out\n    Then I see the front page',
     message: 'Scenario "A known user logs in and out" contains 2 When statements (max 1)',

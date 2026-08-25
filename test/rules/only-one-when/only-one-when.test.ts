@@ -31,3 +31,22 @@ test('reports scenarios with more than one When', async () => {
 test('reports scenarios with more than one When inside rules', async () => {
   await checkRule(rule, 'only-one-when/ViolationsUsingRules.feature', {}, violations);
 });
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/345
+const whenOnly: ExpectedError[] = [
+  tooMany('When, When', 2, 7),
+  tooMany('Given, When, When, And, Then', 2, 31),
+  tooMany('Given, When, Then, When, And', 2, 39),
+];
+
+test('countAnd off counts only real When keywords', async () => {
+  await checkRule(rule, 'only-one-when/Violations.feature', {countAnd: false}, whenOnly);
+});
+
+test('countAnd off behaves the same inside rules', async () => {
+  await checkRule(rule, 'only-one-when/ViolationsUsingRules.feature', {countAnd: false}, whenOnly);
+});
+
+test('countAnd on is the default', async () => {
+  await checkRule(rule, 'only-one-when/Violations.feature', {countAnd: true}, violations);
+});
