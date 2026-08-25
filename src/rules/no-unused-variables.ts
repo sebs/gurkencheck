@@ -6,13 +6,25 @@ const name = 'no-unused-variables';
 /** `<name>` placeholders, as used in Scenario Outlines. */
 const VARIABLE = /<([^>]*)>/gu;
 
+/** Variable name -> every line it appears on. */
+type Sightings = Map<string, Set<number>>;
+
+function note(variable: string, line: number, into: Sightings): void {
+  const lines = into.get(variable);
+  if (lines === undefined) {
+    into.set(variable, new Set([line]));
+  } else {
+    lines.add(line);
+  }
+}
+
 /** Records every `<variable>` in `text` against the line it appears on. */
-function collect(text: string | undefined, line: number, into: Map<string, number>): void {
+function collect(text: string | undefined, line: number, into: Sightings): void {
   if (text === undefined || text === '') {
     return;
   }
   for (const match of text.matchAll(VARIABLE)) {
-    into.set(match[1]!, line);
+    note(match[1]!, line, into);
   }
 }
 
@@ -31,15 +43,15 @@ const rule: LintRule = {
         continue;
       }
 
-      /** Column name -> line of the Examples table header. */
-      const declared = new Map<string, number>();
-      /** Variable name -> line where it is used. */
-      const used = new Map<string, number>();
+      /** Column names, against the Examples header lines declaring them. */
+      const declared: Sightings = new Map();
+      /** Variable names, against every line using them. */
+      const used: Sightings = new Map();
 
       for (const examples of scenario.examples) {
         for (const cell of examples.tableHeader?.cells ?? []) {
           if (cell.value !== '') {
-            declared.set(cell.value, cell.location.line);
+            note(cell.value, cell.location.line, declared);
           }
         }
       }
@@ -61,8 +73,13 @@ const rule: LintRule = {
         }
       }
 
-      for (const [variable, line] of declared) {
-        if (!used.has(variable)) {
+      // Every place a problem appears is reported, not just the last one, so
+      // that fixing the file does not turn into a game of whack-a-mole.
+      for (const [variable, lines] of declared) {
+        if (used.has(variable)) {
+          continue;
+        }
+        for (const line of lines) {
           errors.push({
             message: `Examples table variable "${variable}" is not used in any step`,
             rule: name,
@@ -71,8 +88,11 @@ const rule: LintRule = {
         }
       }
 
-      for (const [variable, line] of used) {
-        if (!declared.has(variable)) {
+      for (const [variable, lines] of used) {
+        if (declared.has(variable)) {
+          continue;
+        }
+        for (const line of lines) {
           errors.push({
             message: `Step variable "${variable}" does not exist in the examples table`,
             rule: name,

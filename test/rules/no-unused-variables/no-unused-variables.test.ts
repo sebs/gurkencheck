@@ -29,3 +29,14 @@ test('reports examples columns that no step uses', () => {
     })),
   );
 });
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/175
+test('reports every line a problem variable appears on', () => {
+  checkRule(rule, 'no-unused-variables/RepeatedVariables.feature', {}, [
+    {message: 'Step variable "b" does not exist in the examples table', line: 5},
+    {message: 'Step variable "b" does not exist in the examples table', line: 6},
+    {message: 'Step variable "b" does not exist in the examples table', line: 7},
+    {message: 'Examples table variable "b" is not used in any step', line: 17},
+    {message: 'Examples table variable "b" is not used in any step', line: 21},
+  ]);
+});
