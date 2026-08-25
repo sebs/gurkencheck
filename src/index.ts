@@ -29,6 +29,8 @@ export type {ParseResult} from './gherkin/parse.ts';
 export {getNeutralKeyword, getNodeType} from './gherkin/keywords.ts';
 export {backgroundsOf, rulesOf, scenariosOf, stepContainersOf} from './gherkin/traverse.ts';
 export {hasErrors, lint} from './linter.ts';
+export {readSuppressions} from './suppressions.ts';
+export type {Suppressions} from './suppressions.ts';
 export {
   getRuleSettings,
   isRuleEnabled,

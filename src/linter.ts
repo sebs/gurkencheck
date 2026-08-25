@@ -4,6 +4,7 @@
 import path from 'node:path';
 import {readAndParseFile} from './gherkin/parse.ts';
 import {resetRules, runEnabledRules} from './rules.ts';
+import {readSuppressions} from './suppressions.ts';
 import type {Configuration, FileResult, RuleRegistry} from './types.ts';
 import {sortBy} from './util/collections.ts';
 
@@ -24,10 +25,17 @@ export async function lint(
   const results: FileResult[] = [];
 
   for (const result of parsed) {
-    const errors =
-      result.errors.length > 0
-        ? result.errors
-        : await runEnabledRules(result.feature, result.file, configuration, rules);
+    // Parse errors are not suppressible: the file could not be read, so
+    // hiding the message would leave nothing in its place.
+    let errors = result.errors;
+
+    if (errors.length === 0) {
+      errors = await runEnabledRules(result.feature, result.file, configuration, rules);
+      const suppressions = readSuppressions(result.file.lines);
+      if (!suppressions.isEmpty) {
+        errors = errors.filter((error) => !suppressions.isSuppressed(error));
+      }
+    }
 
     results.push({
       filePath: path.resolve(result.file.relativePath),

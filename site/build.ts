@@ -184,6 +184,31 @@ and everything else is checked.</p>
 you do not have to write <code>build/**</code>. Blank lines and lines starting with
 <code>#</code> are ignored.</p>
 
+<h2>Switching a rule off for one place</h2>
+<p>Ignoring a whole file is often too blunt: one long step name should not cost you every
+other check in that file. Write a comment in the feature file instead.</p>
+${codeBlock(`# gurkencheck-disable-next-line name-length
+  Scenario: A name that is long for a good reason and stays that way
+
+# gurkencheck-disable use-and, name-length
+  ... everything below here skips those two rules ...
+# gurkencheck-enable use-and
+
+# gurkencheck-disable-file no-trailing-spaces`)}
+<div class="wide"><table>
+<thead><tr><th>Directive</th><th>What it covers</th></tr></thead>
+<tbody>
+<tr><td><code>gurkencheck-disable-next-line</code></td><td>The line directly below the comment.</td></tr>
+<tr><td><code>gurkencheck-disable</code></td><td>From the comment to the end of the file, or to the next <code>gurkencheck-enable</code>.</td></tr>
+<tr><td><code>gurkencheck-enable</code></td><td>Resumes the rules a <code>gurkencheck-disable</code> switched off.</td></tr>
+<tr><td><code>gurkencheck-disable-file</code></td><td>The whole file, wherever the comment appears.</td></tr>
+</tbody>
+</table></div>
+<p>Name the rules you mean, separated by commas or spaces. A directive naming no rules
+covers all of them. Comments inside a doc string are text and are left alone.</p>
+<p>The four always-on rules cannot be switched off this way. A file that breaks one of them
+cannot be read at all, so hiding the message would leave nothing in its place.</p>
+
 <h2>Rules you switch on</h2>
 <p>These are all off by default. Each page shows an example that passes and one that fails.</p>
 ${ruleList(configurable)}

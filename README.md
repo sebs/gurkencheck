@@ -80,6 +80,33 @@ or a state plus that rule's own settings:
 
 Mistyped rule names and settings are reported before any file is read.
 
+## Switching a rule off for one place
+
+Write a comment in the feature file:
+
+```gherkin
+# gurkencheck-disable-next-line name-length
+  Scenario: A name that is long for a good reason and stays that way
+
+# gurkencheck-disable use-and, name-length
+  ... everything below here skips those two rules ...
+# gurkencheck-enable use-and
+
+# gurkencheck-disable-file no-trailing-spaces
+```
+
+| Directive | What it covers |
+|---|---|
+| `gurkencheck-disable-next-line` | The line directly below the comment |
+| `gurkencheck-disable` | From the comment to the end of the file, or to the next `gurkencheck-enable` |
+| `gurkencheck-enable` | Resumes the rules a `gurkencheck-disable` switched off |
+| `gurkencheck-disable-file` | The whole file, wherever the comment appears |
+
+Name the rules you mean, separated by commas or spaces; a directive naming no rules covers
+all of them. Comments inside a doc string are text and are left alone. The four always-on
+rules cannot be switched off this way — a file that breaks one of them cannot be read at
+all, so hiding the message would leave nothing in its place.
+
 ## Skipping files
 
 Put one glob per line in a `.gurkencheckignore` file, or pass `--ignore` on the command

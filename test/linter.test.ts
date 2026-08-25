@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {test} from 'node:test';
 import {lint} from '../src/linter.ts';
 import {loadRules} from '../src/rules.ts';
@@ -80,4 +83,63 @@ test('returns one result per file, in the order given', async () => {
     results.map((result) => result.filePath.endsWith('MultipleFeatures.feature')),
     [false, true],
   );
+});
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/268
+// https://github.com/gherkin-lint/gherkin-lint/issues/203
+const SUPPRESSION_CONFIG = {'use-and': 'on', 'name-length': ['on', {Scenario: 5}]} as const;
+
+async function errorsForSource(source: string, config: object = SUPPRESSION_CONFIG) {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-inline-'));
+  const file = path.join(directory, 'Example.feature');
+  try {
+    fs.writeFileSync(file, source);
+    const results = await lint([file], config as never, rules);
+    return results[0]!.errors;
+  } finally {
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+}
+
+const TWO_PROBLEMS = [
+  'Feature: A',
+  '',
+  '  Scenario: A scenario with a name that is too long',
+  '    Given my first sentence',
+  '    Given my second sentence',
+  '',
+].join('\n');
+
+test('without a directive both problems are reported', async () => {
+  const errors = await errorsForSource(TWO_PROBLEMS);
+  assert.deepEqual(errors.map((error) => error.rule).sort(), ['name-length', 'use-and']);
+});
+
+test('a directive switches off one rule and leaves the rest working', async () => {
+  const errors = await errorsForSource(
+    TWO_PROBLEMS.replace('  Scenario:', '  # gurkencheck-disable-next-line name-length\n  Scenario:'),
+  );
+  assert.deepEqual(errors.map((error) => error.rule), ['use-and']);
+});
+
+test('a ranged directive covers everything below it', async () => {
+  const errors = await errorsForSource(`# gurkencheck-disable\n${TWO_PROBLEMS}`);
+  assert.deepEqual(errors, []);
+});
+
+test('a parse error cannot be suppressed', async () => {
+  const errors = await errorsForSource(
+    [
+      '# gurkencheck-disable-file',
+      'Feature: A',
+      '',
+      '  Scenario: S',
+      '    Given x',
+      '',
+      'Feature: B',
+      '',
+    ].join('\n'),
+    {},
+  );
+  assert.deepEqual(errors.map((error) => error.rule), ['one-feature-per-file']);
 });
