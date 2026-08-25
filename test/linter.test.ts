@@ -143,3 +143,15 @@ test('a parse error cannot be suppressed', async () => {
   );
   assert.deepEqual(errors.map((error) => error.rule), ['one-feature-per-file']);
 });
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/158
+test('reports a Background written after a Scenario as its own problem', async () => {
+  assert.deepEqual(await errorsFor('BackgroundAfterScenario'), [
+    {
+      line: 11,
+      column: 1,
+      message: 'A "Background" must come before the Scenarios it applies to',
+      rule: 'background-before-scenarios',
+    },
+  ]);
+});

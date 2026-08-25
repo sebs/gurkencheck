@@ -25,6 +25,7 @@ export const ALWAYS_ON_RULES = [
   'no-tags-on-backgrounds',
   'one-feature-per-file',
   'up-to-one-background-per-file',
+  'background-before-scenarios',
   'no-multiline-steps',
 ] as const;
 
@@ -113,6 +114,23 @@ function startsWithKeyword(text: string, keywords: readonly string[]): boolean {
   return keywords.some((keyword) => text.startsWith(`${keyword.trim()}:`));
 }
 
+/**
+ * True when a Background is already open above `line`.
+ *
+ * The parser rejects a second Background and a Background written below a
+ * Scenario in exactly the same way, but they are different mistakes with
+ * different fixes, so the lines above are checked to tell them apart.
+ */
+function hasEarlierBackground(
+  lines: readonly string[],
+  line: number,
+  dialect: Dialect,
+): boolean {
+  return lines
+    .slice(0, Math.max(0, line - 1))
+    .some((text) => startsWithKeyword(text.trim(), dialect.background));
+}
+
 /** The step keywords of a dialect, without the `*` wildcard, for messages. */
 function stepKeywordsFor(dialect: Dialect): string[] {
   return [dialect.given, dialect.when, dialect.then, dialect.and, dialect.but]
@@ -161,15 +179,26 @@ function withoutTagsAbove(lines: readonly string[], line: number): string[] | un
   return blanked ? result : undefined;
 }
 
-function classify(complaint: ParserComplaint, dialect: Dialect): RuleError {
+function classify(
+  complaint: ParserComplaint,
+  dialect: Dialect,
+  lines: readonly string[],
+): RuleError {
   if (complaint.got !== undefined) {
     if (startsWithKeyword(complaint.got, dialect.background)) {
-      return {
-        message: 'Multiple "Background" definitions in the same file are disallowed',
-        rule: 'up-to-one-background-per-file',
-        line: complaint.line,
-        column: complaint.column,
-      };
+      return hasEarlierBackground(lines, complaint.line, dialect)
+        ? {
+            message: 'Multiple "Background" definitions in the same file are disallowed',
+            rule: 'up-to-one-background-per-file',
+            line: complaint.line,
+            column: complaint.column,
+          }
+        : {
+            message: 'A "Background" must come before the Scenarios it applies to',
+            rule: 'background-before-scenarios',
+            line: complaint.line,
+            column: complaint.column,
+          };
     }
     if (startsWithKeyword(complaint.got, dialect.feature)) {
       return {
@@ -238,9 +267,18 @@ export function parseFeature(relativePath: string, source: string): ParseResult 
       }
     }
 
-    for (const complaint of complaints) {
-      errors.push(classify(complaint, dialect));
+    const classified = complaints.map((complaint) => classify(complaint, dialect, workingLines));
+
+    // A Background in the wrong place derails everything after it: each
+    // following line is rejected in turn, and none of those complaints tells
+    // the reader anything the first one did not. Report the cause on its own.
+    const misplacedBackground = classified[0];
+    if (misplacedBackground?.rule === 'background-before-scenarios') {
+      errors.push(misplacedBackground);
+      return {file, feature: undefined, errors};
     }
+
+    errors.push(...classified);
     return {file, feature: undefined, errors};
   }
 

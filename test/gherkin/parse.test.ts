@@ -96,3 +96,52 @@ test('falls back to the parser message for anything unrecognised', () => {
   assert.equal(errors[0]!.rule, 'unexpected-error');
   assert.match(errors[0]!.message, /Language not supported: klingon-nope/u);
 });
+
+// https://github.com/gherkin-lint/gherkin-lint/issues/158
+test('tells a misplaced Background apart from a second one', () => {
+  const misplaced = parseFeature(
+    'x.feature',
+    ['Feature: F', '', 'Scenario: S', '  Then step', '', 'Background:', '  Given a', ''].join('\n'),
+  );
+  assert.deepEqual(misplaced.errors, [
+    {
+      line: 6,
+      column: 1,
+      message: 'A "Background" must come before the Scenarios it applies to',
+      rule: 'background-before-scenarios',
+    },
+  ]);
+
+  const duplicate = parseFeature(
+    'x.feature',
+    [
+      'Feature: F',
+      '',
+      'Background:',
+      '  Given a',
+      '',
+      'Background:',
+      '  Given b',
+      '',
+      'Scenario: S',
+      '  Then step',
+      '',
+    ].join('\n'),
+  );
+  assert.equal(duplicate.errors[0]?.rule, 'up-to-one-background-per-file');
+});
+
+test('recognises a misplaced Background in another language', () => {
+  const source = [
+    '# language: de',
+    'Funktionalität: F',
+    '',
+    '  Szenario: S',
+    '    Dann etwas',
+    '',
+    'Grundlage:',
+    '  Angenommen etwas',
+    '',
+  ].join('\n');
+  assert.equal(parseFeature('x.feature', source).errors[0]?.rule, 'background-before-scenarios');
+});

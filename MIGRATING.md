@@ -95,6 +95,14 @@ reported.
 
 ## New rules
 
+**`background-before-scenarios`** is a new always-on rule. A Background written below the
+Scenarios it applies to used to be reported as
+`up-to-one-background-per-file` — "Multiple \"Background\" definitions in the same file are
+disallowed" — even when the file had only one. The parser rejects both the same way, so
+the two are now told apart by looking at what came before, and a misplaced Background
+gets its own message. If you match on rule names, this is a name you have not seen before.
+
+
 **`no-undeclared-variables`** is the second half of `no-unused-variables`, split out.
 `no-unused-variables` reported both an Examples column no step reads and a
 `<placeholder>` with no column behind it, which are two different mistakes with two

@@ -551,6 +551,19 @@ export const RULE_DOCS: RuleDoc[] = [
     message: 'Multiple "Background" definitions in the same file are disallowed',
   },
   {
+    name: 'background-before-scenarios',
+    summary: 'A Background has to come before the Scenarios it applies to.',
+    explanation:
+      'A Background is the shared setup that runs before every Scenario in its Feature, ' +
+      'so Gherkin expects it above them. Written underneath, the file cannot be read at ' +
+      'all. The fix is to move it to the top, not to delete it.',
+    alwaysOn: true,
+    config: '// Always on. Listing it is accepted and does nothing;\n// asking for it to be off is an error.\n{\n  "background-before-scenarios": "on"\n}',
+    good: 'Feature: Logging in\n\n  Background:\n    Given I am a known user\n\n  Scenario: Logging in works\n    When I log in\n\n  Scenario: Logging out works\n    When I log out',
+    bad: 'Feature: Logging in\n\n  Scenario: Logging in works\n    When I log in\n\n  Background:\n    Given I am a known user',
+    message: 'A "Background" must come before the Scenarios it applies to',
+  },
+  {
     name: 'no-multiline-steps',
     summary: 'A step has to fit on one line.',
     explanation:
