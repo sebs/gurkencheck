@@ -1,0 +1,4 @@
+{
+  "extends": "./shared/base.gurkencheckrc",
+  "no-trailing-spaces": "off"
+}

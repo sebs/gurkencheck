@@ -44,6 +44,24 @@ it on.</p>
 It exits with <code>0</code> when everything is clean, <code>1</code> when a rule was broken,
 and <code>2</code> when it could not run at all.</p>
 
+<h2>Sharing a configuration</h2>
+<p>Build on top of another configuration with <code>extends</code>. What your file says wins
+over what it extends, and later entries in a list win over earlier ones.</p>
+<pre><code>{
+  &quot;extends&quot;: &quot;gurkencheck:recommended&quot;,
+  &quot;indentation&quot;: [&quot;on&quot;, {&quot;Step&quot;: 4}],
+  &quot;no-trailing-spaces&quot;: &quot;off&quot;
+}</code></pre>
+<p>An entry is one of three things:</p>
+<div class="wide"><table>
+<thead><tr><th>Entry</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td><code>gurkencheck:recommended</code></td><td>The built-in recommended rules.</td></tr>
+<tr><td><code>./team/.gurkencheckrc</code></td><td>Another file, resolved from the file doing the extending.</td></tr>
+<tr><td><code>@acme/gurkencheck-config</code></td><td>An installed package exporting a configuration, as JSON or as a module.</td></tr>
+</tbody>
+</table></div>
+
 <h2>Command line options</h2>
 <div class="wide"><table>
 <thead><tr><th>Option</th><th>What it does</th></tr></thead>

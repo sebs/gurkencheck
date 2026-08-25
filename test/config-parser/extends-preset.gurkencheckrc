@@ -1,0 +1,5 @@
+{
+  "extends": "gurkencheck:recommended",
+  "no-trailing-spaces": "off",
+  "use-and": "on"
+}

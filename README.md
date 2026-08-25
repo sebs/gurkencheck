@@ -113,6 +113,25 @@ all of them. Comments inside a doc string are text and are left alone. The four 
 rules cannot be switched off this way — a file that breaks one of them cannot be read at
 all, so hiding the message would leave nothing in its place.
 
+## Sharing a configuration
+
+Build on top of another configuration with `extends`. What your file says wins over what it
+extends, and later entries in a list win over earlier ones.
+
+```jsonc
+{
+  "extends": "gurkencheck:recommended",
+  "indentation": ["on", {"Step": 4}],
+  "no-trailing-spaces": "off"
+}
+```
+
+| Entry | What it means |
+|---|---|
+| `gurkencheck:recommended` | The built-in recommended rules |
+| `./team/.gurkencheckrc` | Another file, resolved from the file doing the extending |
+| `@acme/gurkencheck-config` | An installed package exporting a configuration, as JSON or as a module |
+
 ## Skipping files
 
 Put one glob per line in a `.gurkencheckignore` file, or pass `--ignore` on the command

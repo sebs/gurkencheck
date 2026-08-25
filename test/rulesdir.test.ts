@@ -12,7 +12,7 @@ const RULES_DIRS = [
 
 test('loads custom rules written as CommonJS, ESM and .mjs', async () => {
   const rules = await loadRules(RULES_DIRS);
-  const config = readConfiguration('test/rulesdir/.gurkencheckrc', rules);
+  const config = await readConfiguration('test/rulesdir/.gurkencheckrc', rules);
   assert.ok(config.ok, 'the fixture configuration should be valid');
 
   const featureFile = 'test/rulesdir/simple.features';

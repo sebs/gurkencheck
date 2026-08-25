@@ -152,7 +152,8 @@ the process.
 +const results = await lint(files, config.configuration, rules);
 ```
 
-`readConfiguration` returns `{ok: true, configuration}` or `{ok: false, message, details}`
+`readConfiguration` is now `async`, because `extends` may pull a configuration out of an
+installed package. It returns `{ok: true, configuration, source}` or `{ok: false, message, details}`
 instead of printing and exiting. `findFeatureFiles` returns the patterns it could not make
 sense of instead of exiting. Rules are loaded once into a registry and passed in, rather
 than being re-read from disk for every file.

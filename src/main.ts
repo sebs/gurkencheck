@@ -94,7 +94,7 @@ export async function run(argv: readonly string[]): Promise<number> {
     return EXIT_USAGE;
   }
 
-  const configuration = readConfiguration(values.config, rules);
+  const configuration = await readConfiguration(values.config, rules);
   if (!configuration.ok) {
     logger.boldError(configuration.message);
     for (const detail of configuration.details) {

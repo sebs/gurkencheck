@@ -1,0 +1,3 @@
+{
+  "extends": ["gurkencheck:recommended", "./shared/base.gurkencheckrc"]
+}

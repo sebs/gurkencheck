@@ -161,6 +161,24 @@ ${codeBlock(`{
 It exits with <code>0</code> when everything is clean, <code>1</code> when a rule was broken,
 and <code>2</code> when it could not run at all.</p>
 
+<h2>Sharing a configuration</h2>
+<p>Build on top of another configuration with <code>extends</code>. What your file says wins
+over what it extends, and later entries in a list win over earlier ones.</p>
+${codeBlock(`{
+  "extends": "gurkencheck:recommended",
+  "indentation": ["on", {"Step": 4}],
+  "no-trailing-spaces": "off"
+}`)}
+<p>An entry is one of three things:</p>
+<div class="wide"><table>
+<thead><tr><th>Entry</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td><code>gurkencheck:recommended</code></td><td>The built-in recommended rules.</td></tr>
+<tr><td><code>./team/.gurkencheckrc</code></td><td>Another file, resolved from the file doing the extending.</td></tr>
+<tr><td><code>@acme/gurkencheck-config</code></td><td>An installed package exporting a configuration, as JSON or as a module.</td></tr>
+</tbody>
+</table></div>
+
 <h2>Command line options</h2>
 <div class="wide"><table>
 <thead><tr><th>Option</th><th>What it does</th></tr></thead>
