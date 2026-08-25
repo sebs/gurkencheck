@@ -1,146 +1,61 @@
 {
-  "name": "gherkin-lint",
-  "version": "4.2.4",
-  "description": "A Gherkin linter/validator written in javascript",
-  "author": "Vasiliki Siakka",
-  "contributors": [
-    {
-      "name": "Tim Brust",
-      "url": "https://github.com/timbru31"
-    },
-    {
-      "name": "Oskar Pfeifer-Bley",
-      "url": "https://github.com/UFOMelkor"
-    },
-    {
-      "name": "Xavier Garcia Buils",
-      "url": "https://github.com/xgbuils"
-    },
-    {
-      "name": "Rene Saarsoo",
-      "url": "https://github.com/nene"
-    },
-    {
-      "name": "Giuseppe DiBella",
-      "url": "https://github.com/gd46"
-    },
-    {
-      "name": "Joscha Feth",
-      "url": "https://github.com/joscha"
-    },
-    {
-      "name": "Simon St John-Green",
-      "url": "https://github.com/SimonStJG"
-    },
-    {
-      "name": "Jonathan Hedstrom",
-      "url": "https://github.com/jhedstrom"
-    },
-    {
-      "name": "josemenveg",
-      "url": "https://github.com/josemenveg"
-    },
-    {
-      "name": "Guy Kisel",
-      "url": "https://github.com/guykisel"
-    },
-    {
-      "name": "Rory Price-Coggins",
-      "url": "https://github.com/roryp2"
-    },
-    {
-      "name": "JuanMa Ruiz",
-      "url": "https://github.com/JuanMaRuiz"
-    },
-    {
-      "name": "Matt Jarrett",
-      "url": "https://github.com/cujarrett"
-    },
-    {
-      "name": "Standa Opichal",
-      "url": "https://github.com/opichals"
-    },
-    {
-      "name": "Bloodsoul",
-      "url": "https://github.com/Bloodsoul"
-    },
-    {
-      "name": "David Goss",
-      "url": "https://github.com/davidjgoss"
-    },
-    {
-      "name": "Alexander Bayandin",
-      "url": "https://github.com/bayandin"
-    },
-    {
-      "name": "Mike O'Connor",
-      "url": "https://github.com/mikeoconnor0308"
-    },
-    {
-      "name": "Dave M",
-      "url": "https://github.com/dsm2005"
-    },
-    {
-      "name": "Justin Zelinsky",
-      "url": "https://github.com/justinzelinsky"
-    },
-    {
-      "name": "Mathieu Couette",
-      "url": "https://github.com/MathieuCouette"
-    },
-    {
-      "name": "David Rodríguez",
-      "url": "https://github.com/deivid-rodriguez"
-    },
-    {
-      "name": "David Merrill",
-      "url": "https://githubn.com/dsm2005"
-    }
-  ],
-  "main": "dist/main.js",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/gherkin-lint/gherkin-lint.git"
-  },
+  "name": "gurkencheck",
+  "version": "5.0.0",
+  "description": "A Gherkin linter/validator written in TypeScript, with no build step beyond tsc",
   "keywords": [
     "gherkin",
-    "linter"
+    "cucumber",
+    "linter",
+    "lint",
+    "bdd",
+    "feature-files",
+    "typescript"
   ],
-  "dependencies": {
-    "commander": "11.0.0",
-    "core-js": "3.33.1",
-    "gherkin": "9.0.0",
-    "glob": "7.1.6",
-    "lodash": "4.17.21",
-    "strip-json-comments": "3.0.1",
-    "xml-js": "^1.6.11"
+  "license": "ISC",
+  "author": "Vasiliki Siakka",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gurkencheck/gurkencheck.git"
   },
-  "devDependencies": {
-    "@babel/cli": "7.8.4",
-    "@babel/core": "7.9.0",
-    "@babel/preset-env": "7.9.0",
-    "chai": "4.2.0",
-    "coveralls": "3.0.11",
-    "eslint": "6.8.0",
-    "mocha": "7.1.1",
-    "mocha-sinon": "2.1.2",
-    "mock-fs": "4.11.0",
-    "nyc": "15.1.0",
-    "sinon": "9.0.1"
+  "homepage": "https://gurkencheck.github.io/gurkencheck/",
+  "bugs": {
+    "url": "https://github.com/gurkencheck/gurkencheck/issues"
   },
-  "engines": {
-    "node": ">=10.0.0"
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   },
   "bin": {
-    "gherkin-lint": "dist/main.js"
+    "gurkencheck": "./dist/main.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "@cucumber/gherkin": "^42.0.1",
+    "@cucumber/messages": "^34.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^7.0.2"
   },
   "scripts": {
-    "build": "babel src -d dist",
-    "demo": "node ./dist/main.js -c ./test-data-wip/.gherkin-lintrc test-data-wip/**",
-    "lint": "eslint ./src ./test",
-    "mocha": "mocha --recursive",
-    "prepare": "npm run build",
-    "test": "npm run lint && npm run build && nyc --reporter=lcovonly --reporter=html --reporter=text -include=dist/** npm run mocha"
-  },
-  "license": "ISC"
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "test:watch": "node --test --watch \"test/**/*.test.ts\"",
+    "coverage": "node --test --experimental-test-coverage \"test/**/*.test.ts\"",
+    "docs": "node site/build.ts",
+    "generate:rules": "node scripts/generate-rules.ts",
+    "demo": "node src/main.ts examples",
+    "prepack": "npm run build"
+  }
 }

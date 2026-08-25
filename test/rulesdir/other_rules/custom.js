@@ -1,17 +1,10 @@
-var rule = 'another-custom';
+// A custom rule written as an ES module with a default export.
+const name = 'another-custom';
 
-function custom() {
-  return [
-    {
-      message: 'Another custom error',
-      rule   : rule,
-      line   : 456
-    }
-  ];
-}
-
-module.exports = {
-  name: rule,
-  run: custom,
-  availableConfigs: []
+export default {
+  name,
+  availableConfigs: [],
+  run() {
+    return [{message: 'Another custom error', rule: name, line: 456}];
+  },
 };

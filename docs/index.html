@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gurkencheck - A linter for Gherkin feature files.</title>
+<meta name="description" content="A linter for Gherkin feature files. Documentation for every rule, with an example that passes and one that fails.">
+<link rel="stylesheet" href="./style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>&#x1F952;</text></svg>">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site"><div class="inner">
+<a class="name" href="./index.html">gurkencheck</a>
+<span class="tagline">A linter for Gherkin feature files.</span>
+</div></header>
+<div class="layout single">
+<main id="main">
+<h1>gurkencheck</h1>
+<p class="lede">A linter for Gherkin feature files. It reads your <code>.feature</code> files and tells you
+where they drift from the conventions your team has agreed on.</p>
+
+<h2>Install</h2>
+<pre><code>npm install --save-dev gurkencheck</code></pre>
+
+<h2>Get started</h2>
+<p>Create a file called <code>.gurkencheckrc</code> in your project and list the
+rules you want. Every rule is off until you switch it on.</p>
+<pre><code>{
+  &quot;no-unnamed-features&quot;: &quot;on&quot;,
+  &quot;no-unnamed-scenarios&quot;: &quot;on&quot;,
+  &quot;no-trailing-spaces&quot;: &quot;on&quot;,
+  &quot;indentation&quot;: [&quot;on&quot;, {&quot;Feature&quot;: 0, &quot;Scenario&quot;: 2, &quot;Step&quot;: 4}]
+}</code></pre>
+<p>Then run it:</p>
+<pre><code>npx gurkencheck</code></pre>
+<p>With no paths given, it searches the current directory for <code>.feature</code> files.
+It exits with <code>0</code> when everything is clean, <code>1</code> when a rule was broken,
+and <code>2</code> when it could not run at all.</p>
+
+<h2>Command line options</h2>
+<div class="wide"><table>
+<thead><tr><th>Option</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>-f, --format</code></td><td>Output format: <code>stylish</code> (the default), <code>json</code> or <code>xunit</code>.</td></tr>
+<tr><td><code>-c, --config</code></td><td>Path to a configuration file, if it is not <code>.gurkencheckrc</code> in the current directory.</td></tr>
+<tr><td><code>-i, --ignore</code></td><td>Comma separated globs to skip. Overrides <code>.gurkencheckignore</code>.</td></tr>
+<tr><td><code>-r, --rulesdir</code></td><td>A directory holding your own rules. May be given more than once.</td></tr>
+<tr><td><code>-h, --help</code></td><td>Show the options.</td></tr>
+<tr><td><code>-v, --version</code></td><td>Show the version number.</td></tr>
+</tbody>
+</table></div>
+
+<h2>Skipping files</h2>
+<p>Put one glob per line in a <code>.gurkencheckignore</code> file, or pass
+<code>--ignore</code> on the command line. Without either, <code>node_modules</code> is skipped
+and everything else is checked.</p>
+
+<h2>Rules you switch on</h2>
+<p>These are all off by default. Each page shows an example that passes and one that fails.</p>
+<ul class="rule-list"><li>
+<a href="rules/allowed-tags.html"><code>allowed-tags</code></a>
+<p>Only lets you use tags from a list you decide on.</p>
+</li>
+<li>
+<a href="rules/file-name.html"><code>file-name</code></a>
+<p>Keeps every feature file named in the same style.</p>
+</li>
+<li>
+<a href="rules/indentation.html"><code>indentation</code></a>
+<p>Checks how far each line is indented.</p>
+</li>
+<li>
+<a href="rules/keywords-in-logical-order.html"><code>keywords-in-logical-order</code></a>
+<p>Keeps Given, When and Then in that order.</p>
+</li>
+<li>
+<a href="rules/max-scenarios-per-file.html"><code>max-scenarios-per-file</code></a>
+<p>Limits how many scenarios one file may hold.</p>
+</li>
+<li>
+<a href="rules/name-length.html"><code>name-length</code></a>
+<p>Stops names and steps from growing too long.</p>
+</li>
+<li>
+<a href="rules/new-line-at-eof.html"><code>new-line-at-eof</code></a>
+<p>Requires, or forbids, an empty line at the end of the file.</p>
+</li>
+<li>
+<a href="rules/no-background-only-scenario.html"><code>no-background-only-scenario</code></a>
+<p>Drops a Background that only one scenario uses.</p>
+</li>
+<li>
+<a href="rules/no-dupe-feature-names.html"><code>no-dupe-feature-names</code></a>
+<p>Makes sure no two features share a name.</p>
+</li>
+<li>
+<a href="rules/no-dupe-scenario-names.html"><code>no-dupe-scenario-names</code></a>
+<p>Makes sure no two scenarios share a name.</p>
+</li>
+<li>
+<a href="rules/no-duplicate-tags.html"><code>no-duplicate-tags</code></a>
+<p>Stops the same tag being written twice in one place.</p>
+</li>
+<li>
+<a href="rules/no-empty-background.html"><code>no-empty-background</code></a>
+<p>Removes a Background with no steps in it.</p>
+</li>
+<li>
+<a href="rules/no-empty-file.html"><code>no-empty-file</code></a>
+<p>Flags feature files with nothing in them.</p>
+</li>
+<li>
+<a href="rules/no-examples-in-scenarios.html"><code>no-examples-in-scenarios</code></a>
+<p>Reminds you that Examples belong to a Scenario Outline.</p>
+</li>
+<li>
+<a href="rules/no-files-without-scenarios.html"><code>no-files-without-scenarios</code></a>
+<p>Flags a feature file that never tests anything.</p>
+</li>
+<li>
+<a href="rules/no-homogenous-tags.html"><code>no-homogenous-tags</code></a>
+<p>Moves a tag up when every scenario carries it.</p>
+</li>
+<li>
+<a href="rules/no-multiple-empty-lines.html"><code>no-multiple-empty-lines</code></a>
+<p>Allows at most one blank line in a row.</p>
+</li>
+<li>
+<a href="rules/no-partially-commented-tag-lines.html"><code>no-partially-commented-tag-lines</code></a>
+<p>Catches a &quot;#&quot; part way along a line of tags.</p>
+</li>
+<li>
+<a href="rules/no-restricted-patterns.html"><code>no-restricted-patterns</code></a>
+<p>Bans wording you do not want in your feature files.</p>
+</li>
+<li>
+<a href="rules/no-restricted-tags.html"><code>no-restricted-tags</code></a>
+<p>Bans tags you do not want committed.</p>
+</li>
+<li>
+<a href="rules/no-scenario-outlines-without-examples.html"><code>no-scenario-outlines-without-examples</code></a>
+<p>Flags a Scenario Outline with no rows to run.</p>
+</li>
+<li>
+<a href="rules/no-superfluous-tags.html"><code>no-superfluous-tags</code></a>
+<p>Removes a tag repeated from the level above.</p>
+</li>
+<li>
+<a href="rules/no-trailing-spaces.html"><code>no-trailing-spaces</code></a>
+<p>Removes spaces and tabs left at the end of a line.</p>
+</li>
+<li>
+<a href="rules/no-unnamed-features.html"><code>no-unnamed-features</code></a>
+<p>Every Feature needs a name.</p>
+</li>
+<li>
+<a href="rules/no-unnamed-scenarios.html"><code>no-unnamed-scenarios</code></a>
+<p>Every Scenario needs a name.</p>
+</li>
+<li>
+<a href="rules/no-unused-variables.html"><code>no-unused-variables</code></a>
+<p>Keeps an Examples table and its steps in step with each other.</p>
+</li>
+<li>
+<a href="rules/one-space-between-tags.html"><code>one-space-between-tags</code></a>
+<p>One space between tags on the same line.</p>
+</li>
+<li>
+<a href="rules/only-one-when.html"><code>only-one-when</code></a>
+<p>One action per scenario.</p>
+</li>
+<li>
+<a href="rules/required-tags.html"><code>required-tags</code></a>
+<p>Requires each scenario to carry certain tags.</p>
+</li>
+<li>
+<a href="rules/scenario-size.html"><code>scenario-size</code></a>
+<p>Limits how many steps a scenario or background may have.</p>
+</li>
+<li>
+<a href="rules/use-and.html"><code>use-and</code></a>
+<p>Use And instead of repeating a keyword.</p>
+</li></ul>
+
+<h2>Always on</h2>
+<p>These four are not really settings. They describe things Gherkin itself refuses to read,
+so a file that breaks one of them cannot be checked at all.</p>
+<ul class="rule-list"><li>
+<a href="rules/no-tags-on-backgrounds.html"><code>no-tags-on-backgrounds</code></a>
+<p>A Background cannot have tags.</p>
+</li>
+<li>
+<a href="rules/one-feature-per-file.html"><code>one-feature-per-file</code></a>
+<p>One Feature per file.</p>
+</li>
+<li>
+<a href="rules/up-to-one-background-per-file.html"><code>up-to-one-background-per-file</code></a>
+<p>At most one Background per file.</p>
+</li>
+<li>
+<a href="rules/no-multiline-steps.html"><code>no-multiline-steps</code></a>
+<p>A step has to fit on one line.</p>
+</li></ul>
+
+<h2>Writing your own rule</h2>
+<p>Point <code>--rulesdir</code> at a directory of your own modules. Each one exports an object
+with a <code>name</code> and a <code>run</code> function, and gets called once per file.</p>
+<pre><code>// rules/no-lorem.js
+const name = 'no-lorem';
+
+export default {
+  name,
+  run(feature, file) {
+    if (feature === undefined) return [];
+    return feature.children
+      .filter((child) =&gt; child.scenario?.name.includes('lorem'))
+      .map((child) =&gt; ({
+        message: 'Placeholder text left in a scenario name',
+        rule: name,
+        line: child.scenario.location.line,
+      }));
+  },
+};</code></pre>
+<p>Then switch it on by name, the same as any built-in rule:</p>
+<pre><code>npx gurkencheck --rulesdir ./rules</code></pre>
+</main>
+</div>
+<footer>
+<p>gurkencheck is free software under the ISC licence.
+<a href="https://github.com/gurkencheck/gurkencheck">Source on GitHub</a></p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,119 @@
+import type {Location, Tag} from '@cucumber/messages';
+import {getNeutralKeyword} from '../gherkin/keywords.ts';
+import type {LintRule, RuleError} from '../types.ts';
+import {groupBy, mergeDefaults, sortBy} from '../util/collections.ts';
+
+const name = 'indentation';
+
+/** The indentation, in spaces, expected for each kind of line. */
+const defaultConfig = {
+  Feature: 0,
+  Background: 0,
+  Rule: 0,
+  Scenario: 0,
+  Step: 2,
+  Examples: 0,
+  example: 2,
+  given: 2,
+  when: 2,
+  then: 2,
+  and: 2,
+  but: 2,
+};
+
+type IndentationConfig = typeof defaultConfig & {
+  'feature tag': number;
+  'scenario tag': number;
+};
+
+const availableConfigs = {
+  ...defaultConfig,
+  // Tag indentation falls back to the node the tags belong to, so these have
+  // no fixed default of their own.
+  'feature tag': -1,
+  'scenario tag': -1,
+};
+
+function resolveConfig(configuration: Record<string, unknown>): IndentationConfig {
+  const merged = mergeDefaults(defaultConfig, configuration) as IndentationConfig;
+  merged['feature tag'] =
+    typeof configuration['feature tag'] === 'number' ? configuration['feature tag'] : merged.Feature;
+  merged['scenario tag'] =
+    typeof configuration['scenario tag'] === 'number'
+      ? configuration['scenario tag']
+      : merged.Scenario;
+  return merged;
+}
+
+const rule: LintRule = {
+  name,
+  availableConfigs,
+  run(feature, _file, configuration) {
+    if (feature === undefined) {
+      return [];
+    }
+
+    const raw = (configuration ?? {}) as Record<string, unknown>;
+    const config = resolveConfig(raw);
+    const errors: RuleError[] = [];
+
+    const test = (location: Location, type: keyof IndentationConfig): void => {
+      // Columns are 1-based, indentation is counted from 0.
+      const actual = (location.column ?? 1) - 1;
+      const expected = config[type];
+      if (actual !== expected) {
+        errors.push({
+          message: `Wrong indentation for "${type}", expected indentation level of ${expected}, but got ${actual}`,
+          rule: name,
+          line: location.line,
+        });
+      }
+    };
+
+    const testStep = (step: {keyword: string; location: Location}): void => {
+      const keyword = getNeutralKeyword(step, feature.language);
+      // A step only uses its own keyword's setting when the user set one.
+      const type = keyword !== '' && keyword in raw ? (keyword as keyof IndentationConfig) : 'Step';
+      test(step.location, type);
+    };
+
+    const testTags = (tags: readonly Tag[], type: 'feature tag' | 'scenario tag'): void => {
+      for (const [, tagsOnLine] of groupBy(tags, (tag) => tag.location.line)) {
+        const first = sortBy(tagsOnLine, (tag) => tag.location.column ?? 0)[0];
+        if (first !== undefined) {
+          test(first.location, type);
+        }
+      }
+    };
+
+    test(feature.location, 'Feature');
+    testTags(feature.tags, 'feature tag');
+
+    for (const child of feature.children) {
+      if (child.rule !== undefined) {
+        test(child.rule.location, 'Rule');
+      } else if (child.background !== undefined) {
+        test(child.background.location, 'Background');
+        child.background.steps.forEach(testStep);
+      } else if (child.scenario !== undefined) {
+        test(child.scenario.location, 'Scenario');
+        testTags(child.scenario.tags, 'scenario tag');
+        child.scenario.steps.forEach(testStep);
+
+        for (const examples of child.scenario.examples) {
+          test(examples.location, 'Examples');
+          if (examples.tableHeader !== undefined) {
+            test(examples.tableHeader.location, 'example');
+            for (const row of examples.tableBody) {
+              test(row.location, 'example');
+            }
+          }
+        }
+      }
+    }
+
+    return errors;
+  },
+};
+
+export default rule;

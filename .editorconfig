@@ -1,13 +1,16 @@
-# EditorConfig is awesome: http://EditorConfig.org
+# EditorConfig is awesome: https://editorconfig.org
+
+root = true
 
 [*]
 end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 indent_style = space
+charset = utf-8
 
 [*.md]
 trim_trailing_whitespace = false
 
-[{*.js,.gherkin-lintrc}]
+[{*.ts,*.js,*.json,.gurkencheckrc}]
 indent_size = 2

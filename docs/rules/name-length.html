@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>name-length - gurkencheck</title>
+<meta name="description" content="Stops names and steps from growing too long.">
+<link rel="stylesheet" href="../style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>&#x1F952;</text></svg>">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site"><div class="inner">
+<a class="name" href="../index.html">gurkencheck</a>
+<span class="tagline">A linter for Gherkin feature files.</span>
+</div></header>
+<div class="layout">
+<nav class="rules" aria-label="Rules">
+
+<h2>Rules you switch on</h2>
+<ul><li><a href="../rules/allowed-tags.html">allowed-tags</a></li><li><a href="../rules/file-name.html">file-name</a></li><li><a href="../rules/indentation.html">indentation</a></li><li><a href="../rules/keywords-in-logical-order.html">keywords-in-logical-order</a></li><li><a href="../rules/max-scenarios-per-file.html">max-scenarios-per-file</a></li><li><a href="../rules/name-length.html" aria-current="page">name-length</a></li><li><a href="../rules/new-line-at-eof.html">new-line-at-eof</a></li><li><a href="../rules/no-background-only-scenario.html">no-background-only-scenario</a></li><li><a href="../rules/no-dupe-feature-names.html">no-dupe-feature-names</a></li><li><a href="../rules/no-dupe-scenario-names.html">no-dupe-scenario-names</a></li><li><a href="../rules/no-duplicate-tags.html">no-duplicate-tags</a></li><li><a href="../rules/no-empty-background.html">no-empty-background</a></li><li><a href="../rules/no-empty-file.html">no-empty-file</a></li><li><a href="../rules/no-examples-in-scenarios.html">no-examples-in-scenarios</a></li><li><a href="../rules/no-files-without-scenarios.html">no-files-without-scenarios</a></li><li><a href="../rules/no-homogenous-tags.html">no-homogenous-tags</a></li><li><a href="../rules/no-multiple-empty-lines.html">no-multiple-empty-lines</a></li><li><a href="../rules/no-partially-commented-tag-lines.html">no-partially-commented-tag-lines</a></li><li><a href="../rules/no-restricted-patterns.html">no-restricted-patterns</a></li><li><a href="../rules/no-restricted-tags.html">no-restricted-tags</a></li><li><a href="../rules/no-scenario-outlines-without-examples.html">no-scenario-outlines-without-examples</a></li><li><a href="../rules/no-superfluous-tags.html">no-superfluous-tags</a></li><li><a href="../rules/no-trailing-spaces.html">no-trailing-spaces</a></li><li><a href="../rules/no-unnamed-features.html">no-unnamed-features</a></li><li><a href="../rules/no-unnamed-scenarios.html">no-unnamed-scenarios</a></li><li><a href="../rules/no-unused-variables.html">no-unused-variables</a></li><li><a href="../rules/one-space-between-tags.html">one-space-between-tags</a></li><li><a href="../rules/only-one-when.html">only-one-when</a></li><li><a href="../rules/required-tags.html">required-tags</a></li><li><a href="../rules/scenario-size.html">scenario-size</a></li><li><a href="../rules/use-and.html">use-and</a></li></ul>
+
+<h2>Always on</h2>
+<ul><li><a href="../rules/no-tags-on-backgrounds.html">no-tags-on-backgrounds</a></li><li><a href="../rules/one-feature-per-file.html">one-feature-per-file</a></li><li><a href="../rules/up-to-one-background-per-file.html">up-to-one-background-per-file</a></li><li><a href="../rules/no-multiline-steps.html">no-multiline-steps</a></li></ul>
+</nav>
+<main id="main">
+<h1><code>name-length</code></h1>
+<p class="lede">Stops names and steps from growing too long.</p>
+
+<h2>What it does</h2>
+<p>A very long name is usually a sign that too much is being described at once. You can set a separate limit for each kind of name.</p>
+
+<h2>Turning it on</h2>
+<p>Add this to your <code>.gurkencheckrc</code>:</p>
+<pre><code>{
+  &quot;name-length&quot;: [&quot;on&quot;, {
+    &quot;Feature&quot;: 70,
+    &quot;Scenario&quot;: 70,
+    &quot;Step&quot;: 70
+  }]
+}</code></pre>
+
+<h2>Settings</h2>
+<div class="wide"><table>
+<thead><tr><th>Setting</th><th>Value</th><th>If you leave it out</th><th>What it does</th></tr></thead>
+<tbody>
+<tr id="setting-name-length-Feature">
+<td><code>Feature</code></td>
+<td>number of characters</td>
+<td><code>70</code></td>
+<td>Longest allowed Feature name.</td>
+</tr>
+<tr id="setting-name-length-Rule">
+<td><code>Rule</code></td>
+<td>number of characters</td>
+<td><code>70</code></td>
+<td>Longest allowed Rule name.</td>
+</tr>
+<tr id="setting-name-length-Scenario">
+<td><code>Scenario</code></td>
+<td>number of characters</td>
+<td><code>70</code></td>
+<td>Longest allowed Scenario name.</td>
+</tr>
+<tr id="setting-name-length-Step">
+<td><code>Step</code></td>
+<td>number of characters</td>
+<td><code>70</code></td>
+<td>Longest allowed step text.</td>
+</tr>
+</tbody>
+</table></div>
+
+<h2>Examples</h2>
+<div class="example good">
+<div class="label"><span aria-hidden="true">&#10003;</span> Passes</div>
+<pre><code>Feature: Logging in
+
+  Scenario: A known user logs in
+    Given I am a known user</code></pre>
+
+</div>
+<div class="example bad">
+<div class="label"><span aria-hidden="true">&#10007;</span> Fails</div>
+<pre><code>Feature: Logging in
+
+  Scenario: A known user who has already confirmed their email address and accepted the terms logs in
+    Given I am a known user</code></pre>
+<p class="outcome">gurkencheck reports: <code>Scenario name is too long. Length of 95 is longer than the maximum allowed: 70</code></p>
+</div>
+</main>
+</div>
+<footer>
+<p>gurkencheck is free software under the ISC licence.
+<a href="https://github.com/gurkencheck/gurkencheck">Source on GitHub</a></p>
+</footer>
+</body>
+</html>
