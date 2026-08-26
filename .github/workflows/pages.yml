@@ -20,11 +20,11 @@ on:
         required: false
         type: string
 
-# Least privilege for publishing to Pages over OIDC.
+# The default for both jobs. The Pages and OIDC scopes are granted to the
+# deploy job alone, so the job that runs the project's own build never holds
+# a credential that can publish.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # One deployment at a time, and never cancel one that is already going out.
 concurrency:
@@ -36,14 +36,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v7
+      # Actions are pinned to a commit hash; the tag in the comment is what
+      # dependabot reads when it moves the hash forward.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ inputs.version && format('v{0}', inputs.version) || github.ref }}
+          # Nothing here pushes, so the token has no business staying in
+          # .git/config where later steps could read it.
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      # No npm cache: this artifact is deployed, and a cache entry poisoned by
+      # a run on any branch would be baked into the published site.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24.x
-          cache: npm
+          package-manager-cache: false
 
       - run: npm ci
 
@@ -53,13 +60,19 @@ jobs:
         run: npm run docs
 
       - name: Upload the Pages artifact
-        uses: actions/upload-pages-artifact@v5
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
           path: docs
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
+
+    # Least privilege for publishing to Pages over OIDC, scoped to the only
+    # job that needs it.
+    permissions:
+      pages: write
+      id-token: write
 
     environment:
       name: github-pages
@@ -68,4 +81,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5

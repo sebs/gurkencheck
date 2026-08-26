@@ -13,7 +13,7 @@ on:
     tags:
       - 'v*'
 
-# Needed by softprops/action-gh-release to create the release.
+# Needed to create the release.
 permissions:
   contents: write
 
@@ -22,12 +22,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v7
+      # Actions are pinned to a commit hash; the tag in the comment is what
+      # dependabot reads when it moves the hash forward.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # The release is created through `gh`, which takes its token from the
+          # environment, so the git credential does not need to persist.
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      # No npm cache: this run produces the tarball people install, and a cache
+      # entry poisoned by a run on any branch would end up inside it.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24.x
-          cache: npm
+          package-manager-cache: false
 
       - name: Read the version from package.json
         id: package
@@ -35,11 +43,12 @@ jobs:
 
       # `npm version` keeps these in step; a hand-made tag might not.
       - name: Check the tag matches package.json
+        env:
+          PKG_VERSION: ${{ steps.package.outputs.version }}
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          pkg="${{ steps.package.outputs.version }}"
-          if [ "$tag" != "$pkg" ]; then
-            echo "::error::Tag '$GITHUB_REF_NAME' does not match package.json version '$pkg'."
+          if [ "$tag" != "$PKG_VERSION" ]; then
+            echo "::error::Tag '$GITHUB_REF_NAME' does not match package.json version '$PKG_VERSION'."
             exit 1
           fi
 
@@ -63,8 +72,11 @@ jobs:
           npm pack --pack-destination release-artifacts
           ls -la release-artifacts
 
+      # `gh` ships with the runner, so this needs no third-party action.
       - name: Create the GitHub release
-        uses: softprops/action-gh-release@v3
-        with:
-          files: release-artifacts/*.tgz
-          generate_release_notes: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --generate-notes \
+            release-artifacts/*.tgz

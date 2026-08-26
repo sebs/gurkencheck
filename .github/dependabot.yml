@@ -6,4 +6,16 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    # Let a release age before opening a PR for it. A compromised publish is
+    # usually caught and yanked well inside a week.
+    cooldown:
+      default-days: 7
 
+  # The workflows pin their actions to a commit hash, so dependabot is what
+  # moves those hashes forward.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7

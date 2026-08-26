@@ -9,6 +9,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Reading the code is all this workflow does.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -20,9 +24,15 @@ jobs:
         node: ['22.x', '24.x', '26.x']
 
     steps:
-      - uses: actions/checkout@v7
+      # Actions are pinned to a commit hash; the tag in the comment is what
+      # dependabot reads when it moves the hash forward.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # Nothing here pushes, so the token has no business staying in
+          # .git/config where later steps could read it.
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: ${{ matrix.node }}
           cache: npm

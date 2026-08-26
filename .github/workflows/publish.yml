@@ -32,27 +32,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Publish exactly the tagged source, not whatever the branch has moved on to.
-      - uses: actions/checkout@v7
+      # Publish exactly the tagged source, not whatever the branch has moved on
+      # to. Actions are pinned to a commit hash; the tag in the comment is what
+      # dependabot reads when it moves the hash forward.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: v${{ inputs.version }}
+          # npm authenticates over OIDC, so nothing here needs the git
+          # credential to outlive the checkout.
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24.x
           cache: npm
           registry-url: https://registry.npmjs.org
 
       # Trusted publishing needs npm 11.5.1 or newer, which is ahead of the
-      # version bundled with node.
+      # version bundled with node. Pinned rather than @latest so a run is
+      # reproducible; bump it by hand when npm ships something this needs.
       - name: Update npm
-        run: npm install -g npm@latest
+        # A global install cannot come out of the lockfile, hence the ignore.
+        run: npm install -g npm@12.0.2 # zizmor: ignore[adhoc-packages]
 
       - name: Check package.json matches the requested version
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
           pkg="$(node -p "require('./package.json').version")"
-          if [ "$pkg" != "${{ inputs.version }}" ]; then
-            echo "::error::package.json is '$pkg', not the requested '${{ inputs.version }}'."
+          if [ "$pkg" != "$VERSION" ]; then
+            echo "::error::package.json is '$pkg', not the requested '$VERSION'."
             exit 1
           fi
 
