@@ -12,7 +12,7 @@
     "typescript"
   ],
   "license": "ISC",
-  "author": "Vasiliki Siakka",
+  "author": "Sebastian Schürmann",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sebs/gurkencheck.git"
