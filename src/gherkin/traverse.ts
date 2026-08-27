@@ -59,6 +59,33 @@ export function* backgroundsOf(
   }
 }
 
+/**
+ * The Backgrounds whose steps run before a Scenario.
+ *
+ * A Scenario inside a `Rule:` inherits the Feature's Background as well as
+ * the Rule's own, so a rule asking what a Scenario actually does has to look
+ * at both.
+ */
+export function backgroundsFor(feature: Feature, containingRule: Rule | undefined): Background[] {
+  const backgrounds: Background[] = [];
+
+  for (const child of feature.children) {
+    if (child.background !== undefined) {
+      backgrounds.push(child.background);
+    }
+  }
+
+  if (containingRule !== undefined) {
+    for (const child of containingRule.children) {
+      if (child.background !== undefined) {
+        backgrounds.push(child.background);
+      }
+    }
+  }
+
+  return backgrounds;
+}
+
 /** Every node that holds steps: Backgrounds and Scenarios, Rules included. */
 export function* stepContainersOf(feature: Feature): Generator<StepContainer> {
   for (const child of feature.children) {

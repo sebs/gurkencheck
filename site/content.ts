@@ -33,6 +33,19 @@ export const RULE_DOCS: RuleDoc[] = [
     message: 'Not allowed tag @smoek on Feature',
   },
   {
+    name: 'background-setup-only',
+    summary: 'Keeps a Background to setting things up.',
+    explanation:
+      'A Background runs before every scenario in the file, so an action or a check written ' +
+      'there happens over and over, out of sight of the scenario it belongs to. Anything that ' +
+      'is not setup belongs in the scenarios themselves. An And or a But counts as whatever ' +
+      'keyword it carries on from, so a step following a When is reported too.',
+    config: '{\n  "background-setup-only": "on"\n}',
+    good: 'Feature: Logging in\n\n  Background:\n    Given I am a known user\n    And the network is up\n\n  Scenario: Logging in\n    When I log in\n    Then I see my dashboard\n\n  Scenario: Logging out\n    When I log out\n    Then I see the front page',
+    bad: 'Feature: Logging in\n\n  Background:\n    Given I am a known user\n    When I log in\n\n  Scenario: A dashboard is shown\n    Then I see my dashboard\n\n  Scenario: Logging out is offered\n    Then I can log out',
+    message: 'Step "When I log in" is not a setup step, and a Background only sets things up',
+  },
+  {
     name: 'file-name',
     summary: 'Keeps every feature file named in the same style.',
     explanation:
@@ -358,6 +371,48 @@ export const RULE_DOCS: RuleDoc[] = [
     good: 'Feature: Logging in\n\n  Scenario Outline: Logging in as <role>\n    Given I am a <role>\n\n    Examples:\n      | role  |\n      | admin |',
     bad: 'Feature: Logging in\n\n  Scenario Outline: Logging in as <role>\n    Given I am a <role>\n\n    Examples:\n      | role |',
     message: 'Scenario Outline does not have any Examples',
+  },
+  {
+    name: 'no-scenarios-without-then',
+    summary: 'Every scenario has to check something.',
+    explanation:
+      'A scenario with no Then step acts without ever saying what should have happened, so it passes for as long as nothing throws - which is not the same as the feature working. Steps in a Background count towards this, ' +
+      'because they really do run before the scenario; turn countBackground off if you want ' +
+      'every scenario to read on its own instead. An And or a But counts as whatever keyword ' +
+      'it carries on from.',
+    settings: [
+      {
+        name: 'countBackground',
+        type: 'true or false',
+        fallback: 'true',
+        description: 'Whether a Then step in a Background counts for the scenarios under it. Set it to false to make each scenario stand on its own.',
+      },
+    ],
+    config: '{\n  "no-scenarios-without-then": ["on", {"countBackground": true}]\n}',
+    good: 'Feature: Logging in\n\n  Scenario: A known user logs in\n    Given I am a known user\n    When I log in\n    Then I see my dashboard',
+    bad: 'Feature: Logging in\n\n  Scenario: A known user logs in\n    Given I am a known user\n    When I log in',
+    message: 'Scenario "A known user logs in" does not have a Then step',
+  },
+  {
+    name: 'no-scenarios-without-when',
+    summary: 'Every scenario has to do something.',
+    explanation:
+      'A scenario with no When step sets the world up and checks it without ever acting on it, which usually means the action was left out, or buried in a Given where a reader will not look for it. Steps in a Background count towards this, ' +
+      'because they really do run before the scenario; turn countBackground off if you want ' +
+      'every scenario to read on its own instead. An And or a But counts as whatever keyword ' +
+      'it carries on from.',
+    settings: [
+      {
+        name: 'countBackground',
+        type: 'true or false',
+        fallback: 'true',
+        description: 'Whether a When step in a Background counts for the scenarios under it. Set it to false to make each scenario stand on its own.',
+      },
+    ],
+    config: '{\n  "no-scenarios-without-when": ["on", {"countBackground": true}]\n}',
+    good: 'Feature: Logging in\n\n  Scenario: A known user logs in\n    Given I am a known user\n    When I log in\n    Then I see my dashboard',
+    bad: 'Feature: Logging in\n\n  Scenario: A known user has a dashboard\n    Given I am a known user\n    Then I see my dashboard',
+    message: 'Scenario "A known user has a dashboard" does not have a When step',
   },
   {
     name: 'no-superfluous-tags',

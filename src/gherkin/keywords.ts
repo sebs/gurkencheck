@@ -58,6 +58,31 @@ export function getNeutralKeyword(
   return '';
 }
 
+/**
+ * The keyword of each step, with `And`, `But` and `*` replaced by the keyword
+ * they carry on from.
+ *
+ * A step's own keyword does not say what the step does: `And I log in` is a
+ * setup, an action or a verification depending only on what came before it.
+ * A step that carries on from nothing - an `And` written first - resolves to
+ * the empty string, the same as a keyword the dialect does not know.
+ */
+export function resolvedStepKeywords(
+  steps: readonly Pick<Step, 'keyword'>[],
+  language: string | undefined,
+): NeutralKeyword[] {
+  let carried: NeutralKeyword = '';
+
+  return steps.map((step) => {
+    const keyword = getNeutralKeyword(step, language);
+    if (keyword === 'and' || keyword === 'but') {
+      return carried;
+    }
+    carried = keyword;
+    return keyword;
+  });
+}
+
 /** True when the keyword is a Given/When/Then/And/But step keyword. */
 export function isStepKeyword(keyword: NeutralKeyword): boolean {
   return STEP_KEYWORDS.has(keyword);

@@ -9,6 +9,7 @@
  */
 import type {LintRule} from '../types.ts';
 import allowedTags from './allowed-tags.ts';
+import backgroundSetupOnly from './background-setup-only.ts';
 import fileName from './file-name.ts';
 import indentation from './indentation.ts';
 import keywordsInLogicalOrder from './keywords-in-logical-order.ts';
@@ -30,6 +31,8 @@ import noPartiallyCommentedTagLines from './no-partially-commented-tag-lines.ts'
 import noRestrictedPatterns from './no-restricted-patterns.ts';
 import noRestrictedTags from './no-restricted-tags.ts';
 import noScenarioOutlinesWithoutExamples from './no-scenario-outlines-without-examples.ts';
+import noScenariosWithoutThen from './no-scenarios-without-then.ts';
+import noScenariosWithoutWhen from './no-scenarios-without-when.ts';
 import noSuperfluousTags from './no-superfluous-tags.ts';
 import noTrailingSpaces from './no-trailing-spaces.ts';
 import noUndeclaredVariables from './no-undeclared-variables.ts';
@@ -45,6 +48,7 @@ import useAnd from './use-and.ts';
 /** Every rule shipped with gurkencheck, in alphabetical order. */
 export const BUILT_IN_RULES: readonly LintRule[] = [
   allowedTags,
+  backgroundSetupOnly,
   fileName,
   indentation,
   keywordsInLogicalOrder,
@@ -66,6 +70,8 @@ export const BUILT_IN_RULES: readonly LintRule[] = [
   noRestrictedPatterns,
   noRestrictedTags,
   noScenarioOutlinesWithoutExamples,
+  noScenariosWithoutThen,
+  noScenariosWithoutWhen,
   noSuperfluousTags,
   noTrailingSpaces,
   noUndeclaredVariables,

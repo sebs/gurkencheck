@@ -70,6 +70,8 @@ test('the fixtures are worth comparing', async () => {
       'no-homogenous-tags',
       'no-partially-commented-tag-lines',
       'no-restricted-tags',
+      'no-scenarios-without-then',
+      'no-scenarios-without-when',
       'no-superfluous-tags',
       'no-unnamed-scenarios',
       'one-space-between-tags',
