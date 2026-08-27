@@ -75,12 +75,18 @@ const GITHUB_MARK =
 const configurable = RULE_DOCS.filter((rule) => rule.alwaysOn !== true);
 const alwaysOn = RULE_DOCS.filter((rule) => rule.alwaysOn === true);
 
-function header(root: string, path: string, target: Target): string {
+/**
+ * `picker` is the version picker, and is empty on the pages that do without
+ * one. It is offered with the rules, because a rule is the thing that
+ * differs between releases: a setting that arrived in one, a message that
+ * was reworded in another. The rest of the site reads the same either way.
+ */
+function header(root: string, picker = ''): string {
   return `<header class="site"><div class="inner">
 <a class="name" href="${root}/index.html">${SITE_NAME}</a>
 <span class="tagline">${escapeHtml(TAGLINE)}</span>
 <nav class="project" aria-label="Project">
-${versionPicker(path, target)}
+${picker}
 <a href="${root}/${RULES_INDEX}">Rules</a>
 <a href="${NPM_URL}">npm</a>
 <a href="${REPO_URL}">${GITHUB_MARK}GitHub</a>
@@ -182,7 +188,7 @@ ${settingsTable(rule)}
 ${example('good', rule.good)}
 ${example('bad', rule.bad, rule.message)}`;
 
-  const body = `${header('..', filePath, target)}
+  const body = `${header('..', versionPicker(filePath, target))}
 <div class="layout">
 ${sidebar('..', rule.name)}
 <main id="main">
@@ -239,7 +245,7 @@ function rulesIndexPage(target: Target): string {
     'each with an example that passes and one that fails.',
   );
 
-  const body = `${header('..', RULES_INDEX, target)}
+  const body = `${header('..', versionPicker(RULES_INDEX, target))}
 <div class="layout">
 ${sidebar('..')}
 <main id="main">
@@ -495,7 +501,7 @@ ${codeBlock('npx gurkencheck --rulesdir ./rules')}`;
     'and see an example that passes and one that fails for each of them.',
   );
 
-  const body = `${header('.', 'index.html', target)}
+  const body = `${header('.')}
 <div class="layout single">
 <main id="main">
 ${intro}
@@ -525,7 +531,7 @@ ${html}
  * than relative to a directory the reader was never in.
  */
 function notFoundPage(target: Target): string {
-  const body = `${header(SITE_URL, '404.html', target)}
+  const body = `${header(SITE_URL)}
 <div class="layout single">
 <main id="main">
 <h1>Page not found</h1>

@@ -235,6 +235,19 @@ test('the version picker keeps the reader on the same page', () => {
   assert.match(picker, /href="[^"]*\/0\.0\.4\/rules\/indentation\.html" aria-current="true"/);
 });
 
+test('the version picker sits with the rules and nowhere else', () => {
+  // A rule is what differs between releases; the home page and the 404 read
+  // the same whichever release you are on.
+  for (const [file, html] of old.pages) {
+    const offered = html.includes('class="versions"');
+    assert.equal(
+      offered,
+      file.startsWith('rules/'),
+      offered ? `${file} offers a version picker and should not` : `${file} has no version picker`,
+    );
+  }
+});
+
 test('only the copy at the root lists the published versions', () => {
   assert.ok(!old.written.includes('versions.json'), 'an archived version listed the others');
 
