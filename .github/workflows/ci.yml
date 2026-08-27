@@ -55,3 +55,8 @@ jobs:
       # Proves the documentation site still generates.
       - name: Build the site
         run: npm run docs
+
+      # The full assembly needs every tag and an install per release, which is
+      # too much for every branch. Checking it parses catches the typos.
+      - name: Check the site assembly script parses
+        run: bash -n scripts/build-site.sh

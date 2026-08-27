@@ -2,23 +2,26 @@ name: Pages
 
 # Publishes the documentation site to GitHub Pages.
 #
-# The policy is that the site describes a released version. It deploys
-# automatically when a version tag is pushed, so the site and the newest
-# release stay in step, and it can be run by hand against any released version
-# to re-publish or to roll the site back.
+# The site holds the latest docs at the root and a frozen copy of every
+# release under its own version number:
 #
-# Nothing is committed: docs/ is generated from site/ during the run and
+#   /rules/no-restricted-tags.html         what master says today
+#   /0.0.5/rules/no-restricted-tags.html   what 0.0.5 shipped
+#
+# A Pages deployment replaces the whole site rather than adding to it, so
+# there is no such thing as deploying one version on its own: every run
+# assembles all of them. Both triggers therefore do the same work, and either
+# one on its own leaves the site complete.
+#
+# Nothing is committed: the whole site is generated during the run and
 # uploaded as a Pages artifact.
 on:
   push:
+    branches:
+      - master
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Released version to publish the site from, e.g. 0.0.4. Leave empty to publish from the branch you run this on.'
-        required: false
-        type: string
 
 # The default for both jobs. The Pages and OIDC scopes are granted to the
 # deploy job alone, so the job that runs the project's own build never holds
@@ -40,7 +43,9 @@ jobs:
       # dependabot reads when it moves the hash forward.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ inputs.version && format('v{0}', inputs.version) || github.ref }}
+          # Each release is rebuilt from its own tag, so the whole history and
+          # every tag has to be here rather than just the tip.
+          fetch-depth: 0
           # Nothing here pushes, so the token has no business staying in
           # .git/config where later steps could read it.
           persist-credentials: false
@@ -54,15 +59,16 @@ jobs:
 
       - run: npm ci
 
-      # The site carries the version it was built from, so a reader can tell
-      # which release they are looking at.
-      - name: Build the site
-        run: npm run docs
+      # Builds the latest docs from master, then one copy per release tag,
+      # each from its own tag so that it documents the rules that release
+      # actually shipped.
+      - name: Assemble every version of the site
+        run: ./scripts/build-site.sh _site
 
       - name: Upload the Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
-          path: docs
+          path: _site
 
   deploy:
     needs: build

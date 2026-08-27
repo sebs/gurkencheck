@@ -17,9 +17,11 @@ import {
   page,
   pageFor,
   tableOfContents,
+  versionPicker,
   websiteBlock,
 } from './html.ts';
 import type {Crumb} from './html.ts';
+import {version} from '../src/version.ts';
 import {
   NPM_URL,
   REPO_URL,
@@ -29,11 +31,21 @@ import {
   TAGLINE,
   absolute,
   canonical,
+  inVersion,
 } from './site.ts';
+import type {Target} from './site.ts';
 import type {RuleDoc} from './types.ts';
 
 const OUTPUT = 'docs';
 const RULES_INDEX = 'rules/index.html';
+
+/** The file listing every published version, for anything that wants it. */
+const VERSIONS_FILE = 'versions.json';
+
+/** What a plain `npm run docs` builds: the latest docs, with no version picker. */
+function latestTarget(): Target {
+  return {version: version(), latest: true, published: []};
+}
 
 /** Files copied into the site as they are, rather than generated. */
 const ASSETS = ['style.css', 'icon.svg', 'apple-touch-icon.png', SOCIAL_CARD.file];
@@ -63,11 +75,12 @@ const GITHUB_MARK =
 const configurable = RULE_DOCS.filter((rule) => rule.alwaysOn !== true);
 const alwaysOn = RULE_DOCS.filter((rule) => rule.alwaysOn === true);
 
-function header(root: string): string {
+function header(root: string, path: string, target: Target): string {
   return `<header class="site"><div class="inner">
 <a class="name" href="${root}/index.html">${SITE_NAME}</a>
 <span class="tagline">${escapeHtml(TAGLINE)}</span>
 <nav class="project" aria-label="Project">
+${versionPicker(path, target)}
 <a href="${root}/${RULES_INDEX}">Rules</a>
 <a href="${NPM_URL}">npm</a>
 <a href="${REPO_URL}">${GITHUB_MARK}GitHub</a>
@@ -146,7 +159,7 @@ ${rows}
 </table></div>`;
 }
 
-function rulePage(rule: RuleDoc): string {
+function rulePage(rule: RuleDoc, target: Target): string {
   const badge = rule.alwaysOn === true ? ' <span class="badge">Always on</span>' : '';
   const filePath = pageFor(rule.name);
   const url = canonical(filePath);
@@ -169,7 +182,7 @@ ${settingsTable(rule)}
 ${example('good', rule.good)}
 ${example('bad', rule.bad, rule.message)}`;
 
-  const body = `${header('..')}
+  const body = `${header('..', filePath, target)}
 <div class="layout">
 ${sidebar('..', rule.name)}
 <main id="main">
@@ -195,7 +208,8 @@ ${anchorHeadings(sections).html}
   return page({
     title: `${rule.name} \u2013 ${suffix}`,
     description,
-    url,
+    path: filePath,
+    target,
     root: '..',
     kind: 'article',
     jsonLd: [
@@ -217,7 +231,7 @@ ${anchorHeadings(sections).html}
 }
 
 /** A page listing every rule, so `rules/` is somewhere rather than a 404. */
-function rulesIndexPage(): string {
+function rulesIndexPage(target: Target): string {
   const url = canonical(RULES_INDEX);
   const trail: Crumb[] = [{name: SITE_NAME, path: ''}];
   const description = summarise(
@@ -225,7 +239,7 @@ function rulesIndexPage(): string {
     'each with an example that passes and one that fails.',
   );
 
-  const body = `${header('..')}
+  const body = `${header('..', RULES_INDEX, target)}
 <div class="layout">
 ${sidebar('..')}
 <main id="main">
@@ -251,7 +265,8 @@ ${ruleList('..', alwaysOn)}`).html
   return page({
     title: `All ${RULE_DOCS.length} rules \u2013 ${SITE_NAME}`,
     description,
-    url,
+    path: RULES_INDEX,
+    target,
     root: '..',
     jsonLd: [
       {
@@ -289,7 +304,7 @@ function ruleList(root: string, rules: RuleDoc[]): string {
     .join('\n')}</ul>`;
 }
 
-function indexPage(): string {
+function indexPage(target: Target): string {
   const intro = `<h1>${escapeHtml(SITE_NAME)}</h1>
 <p class="lede">${escapeHtml(TAGLINE)} It reads your <code>.feature</code> files and tells you
 where they drift from the conventions your team has agreed on.</p>`;
@@ -474,14 +489,13 @@ order.</p>
 ${codeBlock('npx gurkencheck --rulesdir ./rules')}`;
 
   const {html, headings} = anchorHeadings(sections);
-  const url = canonical('index.html');
   const description = summarise(
     TAGLINE,
     `Install it, switch on the ${RULE_DOCS.length} rules your team wants,`,
     'and see an example that passes and one that fails for each of them.',
   );
 
-  const body = `${header('.')}
+  const body = `${header('.', 'index.html', target)}
 <div class="layout single">
 <main id="main">
 ${intro}
@@ -493,7 +507,8 @@ ${html}
   return page({
     title: `${SITE_NAME} \u2013 ${TAGLINE.replace(/\.$/, '')}`,
     description,
-    url,
+    path: 'index.html',
+    target,
     root: '.',
     jsonLd: [
       applicationBlock(description),
@@ -509,8 +524,8 @@ ${html}
  * It is served from any depth, so everything it points at is absolute rather
  * than relative to a directory the reader was never in.
  */
-function notFoundPage(): string {
-  const body = `${header(SITE_URL)}
+function notFoundPage(target: Target): string {
+  const body = `${header(SITE_URL, '404.html', target)}
 <div class="layout single">
 <main id="main">
 <h1>Page not found</h1>
@@ -524,7 +539,8 @@ renamed.</p>
   return page({
     title: `Page not found \u2013 ${SITE_NAME}`,
     description: 'That address is not part of this site.',
-    url: absolute('404.html'),
+    path: '404.html',
+    target,
     root: SITE_URL,
     noindex: true,
     body,
@@ -544,6 +560,28 @@ ${urls}
 `;
 }
 
+/**
+ * The published versions, for anything that wants to offer a way between them.
+ *
+ * The pages carry their own picker, so nothing on the site reads this file;
+ * it is here for the things that are not pages.
+ */
+function versionsJson(target: Target): string {
+  const newest = target.published[0] ?? target.version;
+
+  return `${JSON.stringify(
+    {
+      latest: {version: newest, url: inVersion(undefined, '')},
+      versions: target.published.map((released) => ({
+        version: released,
+        url: inVersion(released, ''),
+      })),
+    },
+    null,
+    2,
+  )}\n`;
+}
+
 /** Everything here is meant to be read, so nothing is disallowed. */
 function robots(): string {
   return `User-agent: *
@@ -553,8 +591,13 @@ Sitemap: ${absolute('sitemap.xml')}
 `;
 }
 
-/** Writes the whole site into `docs/`. */
-export function build(outputDirectory: string = OUTPUT): string[] {
+/**
+ * Writes one copy of the site into `outputDirectory`.
+ *
+ * Called once for the latest docs at the root, and once more for each release
+ * being republished under its own version number.
+ */
+export function build(outputDirectory: string = OUTPUT, target: Target = latestTarget()): string[] {
   fs.rmSync(outputDirectory, {recursive: true, force: true});
   fs.mkdirSync(path.join(outputDirectory, 'rules'), {recursive: true});
 
@@ -571,24 +614,41 @@ export function build(outputDirectory: string = OUTPUT): string[] {
     written.push(asset);
   }
 
-  write('index.html', indexPage());
-  write(RULES_INDEX, rulesIndexPage());
-  write('404.html', notFoundPage());
+  write('index.html', indexPage(target));
+  write(RULES_INDEX, rulesIndexPage(target));
+  write('404.html', notFoundPage(target));
   // Tells GitHub Pages not to run the files through Jekyll.
   write('.nojekyll', '');
 
   for (const rule of RULE_DOCS) {
-    write(pageFor(rule.name), rulePage(rule));
+    write(pageFor(rule.name), rulePage(rule, target));
   }
 
   // Everything a reader can land on, which is every page bar the 404.
   write('sitemap.xml', sitemap(['index.html', RULES_INDEX, ...RULE_DOCS.map((r) => pageFor(r.name))]));
   write('robots.txt', robots());
 
+  // Only the copy at the root: an archived version is a snapshot, and the
+  // list of what came after it belongs with the docs that are current.
+  if (target.latest && target.published.length > 0) {
+    write(VERSIONS_FILE, versionsJson(target));
+  }
+
   return written;
 }
 
 if (import.meta.filename === process.argv[1]) {
-  const written = build();
-  console.log(`Wrote ${written.length} files into ${OUTPUT}/`);
+  // The version being built and the ones already published come from the
+  // environment, so that assembling the whole site stays outside the
+  // generator: it builds one copy and knows nothing about the others.
+  const {DOCS_VERSION, DOCS_LATEST, DOCS_PUBLISHED} = process.env;
+  const target: Target = {
+    version: DOCS_VERSION === undefined || DOCS_VERSION === '' ? version() : DOCS_VERSION,
+    latest: DOCS_LATEST !== 'false',
+    published: (DOCS_PUBLISHED ?? '').split(/[\s,]+/).filter((entry) => entry !== ''),
+  };
+
+  const written = build(OUTPUT, target);
+  const what = target.latest ? 'the latest docs' : `the docs for ${target.version}`;
+  console.log(`Wrote ${written.length} files of ${what} into ${OUTPUT}/`);
 }

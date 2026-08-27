@@ -34,6 +34,36 @@ export const NPM_URL = `https://www.npmjs.com/package/${SITE_NAME}`;
 export const LICENCE = pkg.license ?? 'ISC';
 export const AUTHOR = pkg.author ?? '';
 
+/**
+ * What one build of the site documents.
+ *
+ * The site is published twice over: the latest docs at the root, and a frozen
+ * copy of every release under its own version number. Both are built by this
+ * generator; only the label on them differs.
+ */
+export interface Target {
+  /** The version being documented, such as `0.0.5`. */
+  version: string;
+  /** True for the copy at the site root, false for an archived version. */
+  latest: boolean;
+  /**
+   * Every published version, newest first.
+   *
+   * Empty when a build does not know - a plain `npm run docs` - which leaves
+   * the version picker out rather than showing a list of one.
+   */
+  published: readonly string[];
+}
+
+/**
+ * The address a page has in one version of the docs.
+ *
+ * `undefined` is the copy at the root, which is whatever was released last.
+ */
+export function inVersion(version: string | undefined, filePath: string): string {
+  return absolute(version === undefined ? filePath : `${version}/${filePath}`);
+}
+
 /** The name of the preview image, and the size it was drawn at. */
 export const SOCIAL_CARD = {file: 'social-card.png', width: 1200, height: 630} as const;
 

@@ -2,9 +2,11 @@
  * The little bit of HTML templating the documentation site needs.
  */
 import {version} from '../src/version.ts';
+import type {Target} from './site.ts';
 import {
   AUTHOR,
   canonical,
+  inVersion,
   SITE_NAME,
   SOCIAL_CARD,
   TAGLINE,
@@ -125,13 +127,64 @@ function structuredData(blocks: object[]): string {
   return `\n<script type="application/ld+json">${json}</script>`;
 }
 
+/**
+ * The picker that moves between versions of the docs.
+ *
+ * Built as plain markup rather than fetched from `versions.json`, because
+ * every version is rebuilt on every deploy: the list in an old version's
+ * pages is as current as the one in the newest. It keeps the reader on the
+ * same page across the move, and the site's 404 catches the pages that a
+ * given version never had.
+ */
+export function versionPicker(path: string, target: Target): string {
+  if (target.published.length === 0) {
+    return '';
+  }
+
+  const entry = (version: string | undefined, label: string, current: boolean): string => {
+    const mark = current ? ' aria-current="true"' : '';
+    return `<li><a href="${escapeHtml(inVersion(version, path))}"${mark}>${escapeHtml(label)}</a></li>`;
+  };
+
+  const newest = target.published[0] ?? target.version;
+  const archived = target.published
+    .map((version) => entry(version, version, !target.latest && version === target.version))
+    .join('');
+
+  return `<details class="versions">
+<summary>${escapeHtml(target.latest ? `${target.version} (latest)` : target.version)}</summary>
+<ul>${entry(undefined, `${newest} (latest)`, target.latest)}${archived}</ul>
+</details>`;
+}
+
+/** Says out loud what the canonical link says to a crawler. */
+function archivedNotice(path: string, target: Target): string {
+  if (target.latest) {
+    return '';
+  }
+
+  const newest = target.published[0];
+  const named = newest === undefined ? 'the latest version' : `version ${newest}`;
+
+  return `<p class="archived">You are reading the documentation for
+${escapeHtml(SITE_NAME)} ${escapeHtml(target.version)}.
+<a href="${escapeHtml(inVersion(undefined, path))}">Go to ${escapeHtml(named)}</a>.</p>
+`;
+}
+
 export interface PageOptions {
   /** What the browser tab and the search result say. */
   title: string;
   /** The one sentence a search result and a link preview show. */
   description: string;
-  /** Where this page lives, absolute, for the canonical link and the preview. */
-  url: string;
+  /**
+   * Where this page sits inside one copy of the site, such as
+   * `rules/indentation.html`. The version folder is not part of it: the same
+   * path names the same page in every version.
+   */
+  path: string;
+  /** Which version this build documents. */
+  target: Target;
   /** What links to the stylesheet and to other pages are written relative to. */
   root: string;
   /** Which kind of thing a link preview should treat this as. */
@@ -147,7 +200,8 @@ export interface PageOptions {
 export function page({
   title,
   description,
-  url,
+  path,
+  target,
   root,
   kind = 'website',
   jsonLd = [],
@@ -155,6 +209,10 @@ export function page({
   body,
 }: PageOptions): string {
   const card = absolute(SOCIAL_CARD.file);
+  // Every version of a page names the copy at the root as the one to index.
+  // Without it the same rule, published once per release, reads to a search
+  // engine as a dozen pages competing with each other.
+  const url = canonical(path);
   const robots = noindex
     ? 'noindex, follow'
     : 'index, follow, max-image-preview:large, max-snippet:-1';
@@ -195,7 +253,7 @@ export function page({
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
-${body}
+${archivedNotice(path, target)}${body}
 <footer>
 <p>${escapeHtml(SITE_NAME)} ${escapeHtml(version())} &middot; free software under the ${escapeHtml(LICENCE)} licence</p>
 <p><a href="${REPO_URL}">Source on GitHub</a> &middot;

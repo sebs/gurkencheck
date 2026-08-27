@@ -14,6 +14,7 @@ import {test} from 'node:test';
 import {build} from '../site/build.ts';
 import {RULE_DOCS} from '../site/content.ts';
 import {SITE_URL, SOCIAL_CARD} from '../site/site.ts';
+import {canonicalise} from '../scripts/canonicalise-docs.ts';
 
 /** Builds the site once into a temporary directory and reads it all back. */
 function site(): {directory: string; pages: Map<string, string>; written: string[]} {
@@ -170,4 +171,95 @@ test('every page links to the source on GitHub', () => {
   for (const [file, html] of pages) {
     assert.ok(html.includes('https://github.com/sebs/gurkencheck"'), `${file} does not link to GitHub`);
   }
+});
+
+/**
+ * The site is published once per release, so the same rule exists at a dozen
+ * addresses. What keeps that from reading as a dozen competing pages is that
+ * every copy names the one at the root, and only that one, as the page to
+ * index. It is worth checking, because getting it wrong is invisible.
+ */
+const PUBLISHED = ['9.9.9', '0.0.4'];
+
+/** Builds one archived version into a temporary directory and reads it back. */
+function archived(): {directory: string; pages: Map<string, string>; written: string[]} {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-archived-'));
+  const written = build(directory, {version: '0.0.4', latest: false, published: PUBLISHED});
+  const html = new Map(
+    written
+      .filter((file) => file.endsWith('.html'))
+      .map((file) => [file, fs.readFileSync(path.join(directory, file), 'utf8')]),
+  );
+  return {directory, pages: html, written};
+}
+
+const old = archived();
+
+test('an archived version points at the copy at the root, not at itself', () => {
+  const canonicalOf = (html: string): string =>
+    /<link rel="canonical" href="([^"]+)"/.exec(html)?.[1] ?? '';
+
+  for (const [file, html] of old.pages) {
+    const claimed = canonicalOf(html);
+    assert.ok(
+      !claimed.includes('/0.0.4/'),
+      `${file} in 0.0.4 claims to be its own canonical page: ${claimed}`,
+    );
+
+    const atTheRoot = pages.get(file);
+    assert.ok(atTheRoot !== undefined, `${file} exists in 0.0.4 but not at the root`);
+    assert.equal(claimed, canonicalOf(atTheRoot), `${file} in 0.0.4 points somewhere else`);
+  }
+});
+
+test('an archived version says so, and the latest one does not', () => {
+  for (const [file, html] of old.pages) {
+    assert.match(html, /<p class="archived">/, `${file} in 0.0.4 does not say it is archived`);
+  }
+  for (const [file, html] of pages) {
+    assert.ok(!html.includes('class="archived"'), `${file} at the root claims to be archived`);
+  }
+});
+
+test('the version picker keeps the reader on the same page', () => {
+  const html = old.pages.get('rules/indentation.html') ?? '';
+  const picker = /<details class="versions">[\s\S]*?<\/details>/.exec(html)?.[0] ?? '';
+  const links = [...picker.matchAll(/href="([^"]+)"/g)].map(([, url]) => url);
+
+  assert.deepEqual(links, [
+    `${SITE_URL}/rules/indentation.html`,
+    `${SITE_URL}/9.9.9/rules/indentation.html`,
+    `${SITE_URL}/0.0.4/rules/indentation.html`,
+  ]);
+  // The version being read is the one marked, wherever it sits in the list.
+  assert.match(picker, /href="[^"]*\/0\.0\.4\/rules\/indentation\.html" aria-current="true"/);
+});
+
+test('only the copy at the root lists the published versions', () => {
+  assert.ok(!old.written.includes('versions.json'), 'an archived version listed the others');
+
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-latest-'));
+  build(directory, {version: '9.9.9', latest: true, published: PUBLISHED});
+  const listed = JSON.parse(fs.readFileSync(path.join(directory, 'versions.json'), 'utf8')) as {
+    latest: {version: string; url: string};
+    versions: {version: string; url: string}[];
+  };
+
+  assert.deepEqual(listed.latest, {version: '9.9.9', url: `${SITE_URL}/`});
+  assert.deepEqual(listed.versions, [
+    {version: '9.9.9', url: `${SITE_URL}/9.9.9/`},
+    {version: '0.0.4', url: `${SITE_URL}/0.0.4/`},
+  ]);
+});
+
+test('a build that knows of no releases leaves the picker out', () => {
+  for (const [file, html] of pages) {
+    assert.ok(!html.includes('class="versions"'), `${file} offers a picker with nothing in it`);
+  }
+});
+
+test('filling in a version notice leaves a page that already has one alone', () => {
+  // The pass exists for releases tagged before the generator wrote these, and
+  // has to become a no-op rather than a duplicate as those fall out of view.
+  assert.deepEqual(canonicalise(old.directory, '0.0.4'), []);
 });
