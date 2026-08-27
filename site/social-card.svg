@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="gurkencheck - a linter for Gherkin feature files">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#151a18"/>
+      <stop offset="1" stop-color="#10201a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="10" fill="#7fc7a1"/>
+
+  <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+    <text x="80" y="150" font-size="76" font-weight="700" fill="#ffffff">gurkencheck</text>
+    <text x="80" y="206" font-size="32" fill="#a2aab4">A linter for Gherkin feature files.</text>
+  </g>
+
+  <g>
+    <rect x="80" y="256" width="1040" height="236" rx="14" fill="#0d1113" stroke="#2c333a" stroke-width="2"/>
+    <g font-family="Menlo, DejaVu Sans Mono, monospace" font-size="24">
+      <text x="112" y="308" fill="#7fc7a1">$ npx gurkencheck</text>
+      <text x="112" y="360" fill="#e6e8ea">features/login.feature</text>
+      <text x="112" y="404" fill="#f2837c">  3:3</text>
+      <text x="196" y="404" fill="#e6e8ea">Scenario has no name</text>
+      <text x="716" y="404" fill="#a2aab4">no-unnamed-scenarios</text>
+      <text x="112" y="448" fill="#f2837c">  7:1</text>
+      <text x="196" y="448" fill="#e6e8ea">Trailing whitespace</text>
+      <text x="716" y="448" fill="#a2aab4">no-trailing-spaces</text>
+    </g>
+  </g>
+
+  <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="24" fill="#a2aab4">
+    <text x="80" y="562">SARIF, JUnit, TAP and JSON output</text>
+    <text x="1120" y="562" text-anchor="end" fill="#7fc7a1">sebs.github.io/gurkencheck</text>
+  </g>
+</svg>
