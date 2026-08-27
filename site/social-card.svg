@@ -1,3 +1,8 @@
+<!--
+  The link preview LinkedIn, Slack and search results show. They will not take
+  an SVG, so this is the source and social-card.png is what actually ships.
+  Redraw it after editing:  rsvg-convert -w 1200 -h 630 site/social-card.svg -o site/social-card.png
+-->
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="gurkencheck - a linter for Gherkin feature files">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">

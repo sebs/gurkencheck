@@ -8,31 +8,93 @@ import path from 'node:path';
 import {DEFAULT_CONFIG_FILE_NAME} from '../src/config-parser.ts';
 import {DEFAULT_IGNORE_FILE_NAME} from '../src/feature-finder.ts';
 import {RULE_DOCS} from './content.ts';
-import {anchorFor, escapeHtml, page, pageFor} from './html.ts';
+import {
+  anchorFor,
+  anchorHeadings,
+  applicationBlock,
+  breadcrumbBlock,
+  escapeHtml,
+  page,
+  pageFor,
+  tableOfContents,
+  websiteBlock,
+} from './html.ts';
+import type {Crumb} from './html.ts';
+import {
+  NPM_URL,
+  REPO_URL,
+  SITE_NAME,
+  SITE_URL,
+  SOCIAL_CARD,
+  TAGLINE,
+  absolute,
+  canonical,
+} from './site.ts';
 import type {RuleDoc} from './types.ts';
 
 const OUTPUT = 'docs';
-const SITE_NAME = 'gurkencheck';
-const TAGLINE = 'A linter for Gherkin feature files.';
+const RULES_INDEX = 'rules/index.html';
+
+/** Files copied into the site as they are, rather than generated. */
+const ASSETS = ['style.css', 'icon.svg', 'apple-touch-icon.png', SOCIAL_CARD.file];
+
+/**
+ * A description is cut off in a search result, so say the useful part first
+ * and keep the whole thing short.
+ */
+function summarise(...sentences: string[]): string {
+  const text = sentences.join(' ');
+  if (text.length <= 160) return text;
+  const cut = text.slice(0, 160);
+  return `${cut.slice(0, cut.lastIndexOf(' '))}\u2026`;
+}
+
+const GITHUB_MARK =
+  '<svg class="mark" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" ' +
+  'focusable="false"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 ' +
+  '5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-' +
+  '.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66' +
+  '.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02' +
+  '.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 ' +
+  '2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.' +
+  '54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-' +
+  '3.58-8-8-8Z"/></svg>';
 
 const configurable = RULE_DOCS.filter((rule) => rule.alwaysOn !== true);
 const alwaysOn = RULE_DOCS.filter((rule) => rule.alwaysOn === true);
 
-function header(depth: number): string {
-  const root = depth === 0 ? '.' : '..';
+function header(root: string): string {
   return `<header class="site"><div class="inner">
 <a class="name" href="${root}/index.html">${SITE_NAME}</a>
 <span class="tagline">${escapeHtml(TAGLINE)}</span>
+<nav class="project" aria-label="Project">
+<a href="${root}/${RULES_INDEX}">Rules</a>
+<a href="${NPM_URL}">npm</a>
+<a href="${REPO_URL}">${GITHUB_MARK}GitHub</a>
+</nav>
 </div></header>`;
 }
 
-function sidebar(currentRule?: string): string {
+/** The trail from the home page to the page you are on. */
+function breadcrumbs(root: string, trail: Crumb[], current: string): string {
+  const links = trail
+    .map((crumb) => {
+      const target = crumb.path === '' ? 'index.html' : crumb.path;
+      return `<li><a href="${root}/${target}">${escapeHtml(crumb.name)}</a></li>`;
+    })
+    .join('');
+
+  return `<nav class="crumbs" aria-label="Breadcrumb"><ol>${links}
+<li><span aria-current="page">${escapeHtml(current)}</span></li></ol></nav>`;
+}
+
+function sidebar(root: string, currentRule?: string): string {
   const group = (heading: string, rules: RuleDoc[]): string => `
 <h2>${escapeHtml(heading)}</h2>
 <ul>${rules
     .map((rule) => {
       const current = rule.name === currentRule ? ' aria-current="page"' : '';
-      return `<li><a href="../${pageFor(rule.name)}"${current}>${escapeHtml(rule.name)}</a></li>`;
+      return `<li><a href="${root}/${pageFor(rule.name)}"${current}>${escapeHtml(rule.name)}</a></li>`;
     })
     .join('')}</ul>`;
 
@@ -86,15 +148,14 @@ ${rows}
 
 function rulePage(rule: RuleDoc): string {
   const badge = rule.alwaysOn === true ? ' <span class="badge">Always on</span>' : '';
+  const filePath = pageFor(rule.name);
+  const url = canonical(filePath);
+  const trail: Crumb[] = [
+    {name: SITE_NAME, path: ''},
+    {name: 'Rules', path: RULES_INDEX},
+  ];
 
-  const body = `${header(1)}
-<div class="layout">
-${sidebar(rule.name)}
-<main id="main">
-<h1><code>${escapeHtml(rule.name)}</code>${badge}</h1>
-<p class="lede">${escapeHtml(rule.summary)}</p>
-
-<h2>What it does</h2>
+  const sections = `<h2>What it does</h2>
 <p>${escapeHtml(rule.explanation)}</p>
 
 <h2>Turning it on</h2>
@@ -106,23 +167,122 @@ ${settingsTable(rule)}
 
 <h2>Examples</h2>
 ${example('good', rule.good)}
-${example('bad', rule.bad, rule.message)}
+${example('bad', rule.bad, rule.message)}`;
+
+  const body = `${header('..')}
+<div class="layout">
+${sidebar('..', rule.name)}
+<main id="main">
+${breadcrumbs('..', trail, rule.name)}
+<h1><code>${escapeHtml(rule.name)}</code>${badge}</h1>
+<p class="lede">${escapeHtml(rule.summary)}</p>
+
+${anchorHeadings(sections).html}
 </main>
 </div>`;
 
+  const description = summarise(
+    rule.summary,
+    rule.alwaysOn === true
+      ? `An always-on ${SITE_NAME} rule for Gherkin feature files, with examples that pass and fail.`
+      : `A ${SITE_NAME} rule for Gherkin feature files, with its settings and examples that pass and fail.`,
+  );
+
+  // A long rule name plus a long suffix is cut off in a search result, so the
+  // longest names get the short suffix.
+  const suffix = rule.name.length > 24 ? SITE_NAME : `${SITE_NAME} rule for Gherkin`;
+
   return page({
-    title: `${rule.name} - ${SITE_NAME}`,
-    description: rule.summary,
-    depth: 1,
+    title: `${rule.name} \u2013 ${suffix}`,
+    description,
+    url,
+    root: '..',
+    kind: 'article',
+    jsonLd: [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'TechArticle',
+        headline: rule.name,
+        name: rule.name,
+        description,
+        url,
+        inLanguage: 'en',
+        isPartOf: websiteBlock(),
+        about: {'@type': 'SoftwareApplication', name: SITE_NAME, url: absolute('')},
+      },
+      breadcrumbBlock([...trail, {name: rule.name, path: filePath}]),
+    ],
     body,
   });
 }
 
-function ruleList(rules: RuleDoc[]): string {
+/** A page listing every rule, so `rules/` is somewhere rather than a 404. */
+function rulesIndexPage(): string {
+  const url = canonical(RULES_INDEX);
+  const trail: Crumb[] = [{name: SITE_NAME, path: ''}];
+  const description = summarise(
+    `Every one of the ${RULE_DOCS.length} rules ${SITE_NAME} can check a Gherkin feature file against,`,
+    'each with an example that passes and one that fails.',
+  );
+
+  const body = `${header('..')}
+<div class="layout">
+${sidebar('..')}
+<main id="main">
+${breadcrumbs('..', trail, 'Rules')}
+<h1>Rules</h1>
+<p class="lede">All ${RULE_DOCS.length} of them. Each page shows what the rule does, how to
+switch it on, what you can set, and an example that passes next to one that fails.</p>
+
+${
+    anchorHeadings(`<h2>Rules you switch on</h2>
+<p>Off unless a configuration file names them, or unless you are using the recommended
+set.</p>
+${ruleList('..', configurable)}
+
+<h2>Always on</h2>
+<p>These describe things Gherkin itself refuses to read, so a file that breaks one of them
+cannot be checked at all.</p>
+${ruleList('..', alwaysOn)}`).html
+  }
+</main>
+</div>`;
+
+  return page({
+    title: `All ${RULE_DOCS.length} rules \u2013 ${SITE_NAME}`,
+    description,
+    url,
+    root: '..',
+    jsonLd: [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: 'Rules',
+        description,
+        url,
+        isPartOf: websiteBlock(),
+        mainEntity: {
+          '@type': 'ItemList',
+          numberOfItems: RULE_DOCS.length,
+          itemListElement: RULE_DOCS.map((rule, index) => ({
+            '@type': 'ListItem',
+            position: index + 1,
+            name: rule.name,
+            url: canonical(pageFor(rule.name)),
+          })),
+        },
+      },
+      breadcrumbBlock([...trail, {name: 'Rules', path: RULES_INDEX}]),
+    ],
+    body,
+  });
+}
+
+function ruleList(root: string, rules: RuleDoc[]): string {
   return `<ul class="rule-list">${rules
     .map(
       (rule) => `<li>
-<a href="${pageFor(rule.name)}"><code>${escapeHtml(rule.name)}</code></a>
+<a href="${root}/${pageFor(rule.name)}"><code>${escapeHtml(rule.name)}</code></a>
 <p>${escapeHtml(rule.summary)}</p>
 </li>`,
     )
@@ -130,14 +290,11 @@ function ruleList(rules: RuleDoc[]): string {
 }
 
 function indexPage(): string {
-  const body = `${header(0)}
-<div class="layout single">
-<main id="main">
-<h1>${escapeHtml(SITE_NAME)}</h1>
+  const intro = `<h1>${escapeHtml(SITE_NAME)}</h1>
 <p class="lede">${escapeHtml(TAGLINE)} It reads your <code>.feature</code> files and tells you
-where they drift from the conventions your team has agreed on.</p>
+where they drift from the conventions your team has agreed on.</p>`;
 
-<h2>Install</h2>
+  const sections = `<h2>Install</h2>
 ${codeBlock('npm install --save-dev gurkencheck')}
 
 <h2>Get started</h2>
@@ -269,12 +426,12 @@ cannot be read at all, so hiding the message would leave nothing in its place.</
 
 <h2>Rules you switch on</h2>
 <p>These are all off by default. Each page shows an example that passes and one that fails.</p>
-${ruleList(configurable)}
+${ruleList('.', configurable)}
 
 <h2>Always on</h2>
 <p>These four are not really settings. They describe things Gherkin itself refuses to read,
 so a file that breaks one of them cannot be checked at all.</p>
-${ruleList(alwaysOn)}
+${ruleList('.', alwaysOn)}
 
 <h2>Writing your own formatter</h2>
 <p>Pass a path or a package name to <code>--format</code>. The module exports a function
@@ -314,16 +471,86 @@ to wait for something &mdash; reading a file, or asking an issue tracker whether
 refers to a real ticket. Files are checked one after another, so rules see a predictable
 order.</p>
 <p>Then switch it on by name, the same as any built-in rule:</p>
-${codeBlock('npx gurkencheck --rulesdir ./rules')}
+${codeBlock('npx gurkencheck --rulesdir ./rules')}`;
+
+  const {html, headings} = anchorHeadings(sections);
+  const url = canonical('index.html');
+  const description = summarise(
+    TAGLINE,
+    `Install it, switch on the ${RULE_DOCS.length} rules your team wants,`,
+    'and see an example that passes and one that fails for each of them.',
+  );
+
+  const body = `${header('.')}
+<div class="layout single">
+<main id="main">
+${intro}
+${tableOfContents(headings)}
+${html}
 </main>
 </div>`;
 
   return page({
-    title: `${SITE_NAME} - ${TAGLINE}`,
-    description: `${TAGLINE} Documentation for every rule, with an example that passes and one that fails.`,
-    depth: 0,
+    title: `${SITE_NAME} \u2013 ${TAGLINE.replace(/\.$/, '')}`,
+    description,
+    url,
+    root: '.',
+    jsonLd: [
+      applicationBlock(description),
+      {'@context': 'https://schema.org', ...websiteBlock()},
+    ],
     body,
   });
+}
+
+/**
+ * The page GitHub Pages serves for an address that is not there.
+ *
+ * It is served from any depth, so everything it points at is absolute rather
+ * than relative to a directory the reader was never in.
+ */
+function notFoundPage(): string {
+  const body = `${header(SITE_URL)}
+<div class="layout single">
+<main id="main">
+<h1>Page not found</h1>
+<p class="lede">That address is not part of this site. It may have moved when a rule was
+renamed.</p>
+<p><a href="${absolute('')}">Start from the home page</a>, or
+<a href="${absolute(RULES_INDEX)}">look through the list of rules</a>.</p>
+</main>
+</div>`;
+
+  return page({
+    title: `Page not found \u2013 ${SITE_NAME}`,
+    description: 'That address is not part of this site.',
+    url: absolute('404.html'),
+    root: SITE_URL,
+    noindex: true,
+    body,
+  });
+}
+
+/** The list of pages, so a search engine does not have to guess at them. */
+function sitemap(paths: string[]): string {
+  const urls = paths
+    .map((filePath) => `  <url><loc>${escapeHtml(canonical(filePath))}</loc></url>`)
+    .join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls}
+</urlset>
+`;
+}
+
+/** Everything here is meant to be read, so nothing is disallowed. */
+function robots(): string {
+  return `User-agent: *
+Allow: /
+
+Sitemap: ${absolute('sitemap.xml')}
+`;
 }
 
 /** Writes the whole site into `docs/`. */
@@ -337,14 +564,26 @@ export function build(outputDirectory: string = OUTPUT): string[] {
     written.push(relativePath);
   };
 
-  write('style.css', fs.readFileSync(path.join(import.meta.dirname, 'style.css'), 'utf8'));
+  // The stylesheet, the icons and the link preview image are copied byte for
+  // byte: two of them are PNGs, which do not survive being read as text.
+  for (const asset of ASSETS) {
+    fs.copyFileSync(path.join(import.meta.dirname, asset), path.join(outputDirectory, asset));
+    written.push(asset);
+  }
+
   write('index.html', indexPage());
+  write(RULES_INDEX, rulesIndexPage());
+  write('404.html', notFoundPage());
   // Tells GitHub Pages not to run the files through Jekyll.
   write('.nojekyll', '');
 
   for (const rule of RULE_DOCS) {
     write(pageFor(rule.name), rulePage(rule));
   }
+
+  // Everything a reader can land on, which is every page bar the 404.
+  write('sitemap.xml', sitemap(['index.html', RULES_INDEX, ...RULE_DOCS.map((r) => pageFor(r.name))]));
+  write('robots.txt', robots());
 
   return written;
 }

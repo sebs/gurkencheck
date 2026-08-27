@@ -87,6 +87,25 @@ header.site .tagline {
   font-size: 0.9rem;
 }
 
+header.site nav.project {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  font-size: 0.9rem;
+}
+
+header.site nav.project a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-soft);
+  text-decoration: none;
+}
+
+header.site nav.project a:hover { color: var(--accent); text-decoration: underline; }
+header.site nav.project .mark { display: block; }
+
 .layout {
   max-width: 68rem;
   margin: 0 auto;
@@ -253,6 +272,57 @@ td:first-child { white-space: nowrap; }
 .rule-list a:hover { text-decoration: underline; }
 .rule-list p { margin: 0.2rem 0 0; color: var(--text-soft); font-size: 0.94rem; }
 
+nav.crumbs {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+}
+
+nav.crumbs ol {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+}
+
+nav.crumbs li + li::before {
+  content: "/";
+  padding-right: 0.4rem;
+  color: var(--border);
+}
+
+nav.crumbs a { color: var(--text-soft); }
+nav.crumbs span { color: var(--text-soft); }
+
+nav.toc {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  padding: 1rem 1.25rem;
+  margin: 0 0 2.5rem;
+}
+
+nav.toc h2 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-soft);
+  margin: 0 0 0.5rem;
+}
+
+nav.toc ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  columns: 2;
+  column-gap: 2rem;
+}
+
+nav.toc li { break-inside: avoid; margin: 0.15rem 0; }
+nav.toc a { text-decoration: none; }
+nav.toc a:hover { text-decoration: underline; }
+
 .anchor {
   color: var(--text-soft);
   text-decoration: none;
@@ -260,7 +330,11 @@ td:first-child { white-space: nowrap; }
   opacity: 0;
   padding-left: 0.35rem;
 }
-h3:hover .anchor, .anchor:focus { opacity: 1; }
+
+h2:hover .anchor, h3:hover .anchor, .anchor:focus { opacity: 1; }
+
+/* A heading linked to from elsewhere should not sit right against the top. */
+[id] { scroll-margin-top: 1rem; }
 
 footer {
   border-top: 1px solid var(--border);
@@ -274,4 +348,9 @@ footer {
 @media (max-width: 52rem) {
   .layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
   nav.rules { position: static; max-height: none; padding: 1.5rem 0 0; }
+  header.site nav.project { margin-left: 0; width: 100%; }
+}
+
+@media (max-width: 40rem) {
+  nav.toc ul { columns: 1; }
 }

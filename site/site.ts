@@ -41,3 +41,13 @@ export const SOCIAL_CARD = {file: 'social-card.png', width: 1200, height: 630} a
 export function absolute(relativePath: string): string {
   return relativePath === '' ? `${SITE_URL}/` : `${SITE_URL}/${relativePath}`;
 }
+
+/**
+ * The address a page is indexed under.
+ *
+ * A directory and the `index.html` inside it are the same page. Dropping the
+ * file name in one place stops a search engine treating them as two.
+ */
+export function canonical(filePath: string): string {
+  return absolute(filePath.replace(/(^|\/)index\.html$/, '$1'));
+}
