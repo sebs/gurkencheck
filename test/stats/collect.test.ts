@@ -142,6 +142,20 @@ test('a scenario inheriting a tag is not counted as untagged', () => {
   assert.equal(all.tags.untaggedScenarios, 2);
 });
 
+test('a tag on an Examples table still makes a scenario reachable', () => {
+  // Cucumber puts the tag on every test case the table generates, so the
+  // scenario can be picked out by a tag expression after all.
+  const tagged = collectStatistics([
+    parseFeature(
+      'Examples.feature',
+      'Feature: A\n\n  Scenario Outline: B\n    Given I have <n> items\n\n' +
+        '    @slow\n    Examples:\n      | n |\n      | 1 |\n',
+    ),
+  ]);
+  assert.equal(tagged.tags.untaggedScenarios, 0);
+  assert.deepEqual(tagged.tags.vocabulary, [{name: '@slow', count: 1}]);
+});
+
 test('the dialect of each file is counted', () => {
   assert.deepEqual(all.languages, [
     {code: 'en', files: 2},

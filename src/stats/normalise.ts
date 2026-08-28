@@ -42,7 +42,7 @@ const NUMBER = /\b\d+(?:[.,]\d+)*\b/gu;
 const WHITESPACE = /\s+/gu;
 
 /** A full stop or exclamation mark at the end, which changes nothing. */
-const TRAILING_PUNCTUATION = /[.!]+$/u;
+const TRAILING_PUNCTUATION = /[\s.!]*[.!]$/u;
 
 /**
  * The form of a step text used to decide whether two steps are the same one.
@@ -59,7 +59,11 @@ export function normaliseStepText(text: string): string {
     .toLowerCase()
     .replace(WHITESPACE, ' ')
     .trim()
-    .replace(TRAILING_PUNCTUATION, '');
+    // Whatever sat in front of the full stop goes with it: `I own it .` and
+    // `I own it` are one step, and a step text ending in a space is not one
+    // anybody would recognise in the report.
+    .replace(TRAILING_PUNCTUATION, '')
+    .trim();
 }
 
 /** How many words a step is made of, counted before normalisation. */

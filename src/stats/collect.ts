@@ -151,9 +151,16 @@ function collectFile(
       steps: scenario.steps.length,
     });
 
-    // A scenario with no tag of its own and none to inherit cannot be picked
-    // out by any tag expression, however carefully the run is filtered.
-    if (scenario.tags.length === 0 && feature.tags.length === 0 && (rule?.tags.length ?? 0) === 0) {
+    // A scenario with no tag anywhere on it and none to inherit cannot be
+    // picked out by any tag expression, however carefully the run is
+    // filtered. A tag on an Examples table counts: Cucumber puts it on every
+    // test case that table generates, so the scenario is reachable after all.
+    const selectable =
+      scenario.tags.length > 0 ||
+      feature.tags.length > 0 ||
+      (rule?.tags.length ?? 0) > 0 ||
+      scenario.examples.some((examples) => examples.tags.length > 0);
+    if (!selectable) {
       into.untagged += 1;
     }
   }

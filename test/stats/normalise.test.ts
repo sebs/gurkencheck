@@ -42,6 +42,19 @@ test('case, spacing and a full stop do not make a new step', () => {
   assert.equal(normaliseStepText('I  Check   Out.'), normaliseStepText('i check out'));
 });
 
+test('a full stop takes the space in front of it with it', () => {
+  // Stripping only the stop would leave `i own it `, which is a step nobody
+  // would recognise in the report and counts as one of its own.
+  assert.equal(normaliseStepText('I own it .'), normaliseStepText('I own it'));
+  assert.equal(normaliseStepText('I own it .'), 'i own it');
+  assert.equal(normaliseStepText('I wait...'), 'i wait');
+});
+
+test('an exclamation mark at the end is ignored, a question mark is not', () => {
+  assert.equal(normaliseStepText('I own it!'), normaliseStepText('I own it'));
+  assert.equal(normaliseStepText('Is it mine?'), 'is it mine?');
+});
+
 test('countWords counts words, not characters', () => {
   assert.equal(countWords('I have 3 items'), 4);
   assert.equal(countWords('   '), 0);

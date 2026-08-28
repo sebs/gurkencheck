@@ -127,12 +127,13 @@ test('the sitemap lists every page a reader can land on, and nothing else', () =
   const sitemap = fs.readFileSync(path.join(directory, 'sitemap.xml'), 'utf8');
   const listed = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(([, url]) => url).sort();
 
-  const expected = [
-    `${SITE_URL}/`,
-    `${SITE_URL}/rules/`,
-    `${SITE_URL}/stats.html`,
-    ...RULE_DOCS.map((rule) => `${SITE_URL}/rules/${rule.name}.html`),
-  ].sort();
+  // Taken from the pages that were actually written rather than from a second
+  // hand-written list: two literals kept in step by hand only guard each
+  // other, and would agree with each other about a page neither knew about.
+  const expected = [...pages.keys()]
+    .filter((file) => file !== '404.html')
+    .map((file) => `${SITE_URL}/${file.replace(/index\.html$/u, '')}`)
+    .sort();
 
   assert.deepEqual(listed, expected);
   assert.ok(!sitemap.includes('404'), 'a page that is not there should not be advertised');

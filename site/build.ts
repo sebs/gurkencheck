@@ -687,10 +687,11 @@ things. The 104 is every step in the files, Background steps included &mdash; 11
 &mdash; because every one of them still needs a step definition behind it. The steps per
 scenario leave Backgrounds out, because a Background is written once and read many times, and
 charging it to every scenario would make a tidy suite look long-winded.</p>
-<p>The summary line is five real numbers rather than an average and a guess: the
-<code>min</code>, <code>median</code>, <code>p90</code> and <code>max</code> are each a step
-count that some scenario in your files actually has. A mean of 3.3 would hide a forty-step
-scenario; the <code>Longest</code> list underneath names it and says where it is.</p>
+<p>The summary line is four real numbers and an average: the <code>min</code>,
+<code>median</code>, <code>p90</code> and <code>max</code> are each a step count that some
+scenario in your files actually has, and the <code>mean</code> is not. A mean of 3.3 on its
+own would hide a forty-step scenario; the <code>Longest</code> list underneath names it and
+says where it is.</p>
 
 <h2>What makes two steps the same step</h2>
 <p>Distinct is the number worth watching, and what it means depends entirely on when two
@@ -700,8 +701,9 @@ counting them as two would make every measure of reuse meaningless.</p>
 <p>So before two steps are compared, the parts a step definition would capture are replaced
 by a marker. A number becomes <code>0</code>, a double quoted string becomes
 <code>""</code>, and a Scenario Outline placeholder becomes <code>&lt;&gt;</code>. Case,
-repeated spaces and a full stop at the end are ignored. The keyword is left out altogether,
-so a <code>Given</code> and an <code>And</code> of the same sentence are one step.</p>
+repeated spaces, and a full stop or an exclamation mark at the end are ignored. The keyword is
+left out altogether, so a <code>Given</code> and an <code>And</code> of the same sentence are
+one step.</p>
 <p>Single quotes are left exactly as they are. <code>the user's basket is 'empty'</code> has
 three of them, and a rule that paired them up would eat half the sentence. Cucumber's own
 expressions quote with <code>"</code> in any case.</p>
@@ -734,9 +736,10 @@ two.</p>
 rest are what a tag looks like when it was typed from memory: <code>@wishlst</code> sits in
 that list a few characters from <code>@wishlist</code>, and a run filtered on either of them
 quietly misses the other's scenarios.</p>
-<p>Untagged scenarios counts the ones carrying no tag of their own and inheriting none from
-their Feature or their Rule, and so reachable by no tag expression at all. A tag on a Feature
-covers every scenario inside it, which is why that figure is zero here and often is.</p>
+<p>Untagged scenarios counts the ones carrying no tag of their own, none on their Examples
+tables, and none inherited from their Feature or their Rule, and so reachable by no tag
+expression at all. A tag on a Feature covers every scenario inside it, which is why that
+figure is zero here and often is.</p>
 
 <h2>Keeping the report beside a build</h2>
 <p>The text report is for reading. The other two formats are for keeping and for showing to
@@ -763,9 +766,12 @@ themselves.</p>
 </tbody>
 </table></div>
 <p>Everything the command can refuse is refused before a file is read: a format that does not
-exist, a <code>--top</code> that is not a whole number, a language code that is not a
-dialect, a path that names nothing. Any of those exits <code>2</code>. Once a report has been
-produced it exits <code>0</code>, whatever the numbers say.</p>
+exist, a <code>--top</code> that is not a whole number, a language code that is not a dialect,
+an argument that is neither a feature file, a directory nor a glob. Any of those exits
+<code>2</code>. A path that is well formed but matches nothing is not one of them &mdash; the
+report says <code>No feature files found.</code> and exits <code>0</code> &mdash; so a
+directory renamed out from under a build script goes unnoticed rather than failing it. Once a
+report has been produced it exits <code>0</code>, whatever the numbers say.</p>
 
 <h2>What is not counted</h2>
 <p>A file the parser refuses is listed at the end of the report and counted nowhere in it.

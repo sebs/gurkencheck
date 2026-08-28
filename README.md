@@ -144,8 +144,9 @@ Steps
     2  i'm logged in    features/profile.feature:9
 ```
 
-It always exits `0`. Statistics are for reading, not for failing a build — that is what
-the rules are for.
+Once it has run it exits `0`, whatever the numbers say; it exits `2` only when it could not
+run at all, such as a format that does not exist or a `--top` that is not a whole number.
+Statistics are for reading, not for failing a build — that is what the rules are for.
 
 ```
 gurkencheck stats [options] <feature-files>
@@ -173,24 +174,28 @@ Given I have 3 items in my cart.
 ```
 
 Numbers, `"quoted strings"` and `<placeholders>` are each replaced by a marker; case,
-spacing and a trailing full stop are ignored; and the keyword is left out, so a `Given`
+spacing and a trailing full stop or exclamation mark are ignored; and the keyword is left
+out, so a `Given`
 and an `And` of the same text are one step. Single quotes are left alone — `the user's
 cart is 'empty'` has three of them, and pairing them up would eat half the sentence.
 
 A low share of distinct steps means the team shares a vocabulary. A high one means
 everybody invents their own phrasing, and the step definitions rot.
 
-**Nearly the same** groups steps that are within three single-character edits of each
-other: `I am logged in` against `I'm logged in`, or a `<placeholder>` against a value
-written in its place. Those are one behaviour costing two step definitions. Three edits
-is deliberately tight — beyond that a step is a different sentence rather than the same
-one spelled two ways.
+**Nearly the same** groups steps a few single-character edits apart: `I am logged in`
+against `I'm logged in`, or a `<placeholder>` against a value written in its place. Those
+are one behaviour costing two step definitions. The budget is at most three edits, and no
+more than about a seventh of the longer of the two, so a short step is allowed only one;
+steps under eight characters are left out altogether. That is deliberately tight — further
+apart than that and a step is a different sentence rather than the same one spelled two
+ways.
 
 **Written once** lists the steps used exactly once. Some are genuine; most are a phrasing
 somebody invented because they could not find the one that already existed.
 
-**Untagged scenarios** counts the scenarios carrying no tag of their own and inheriting
-none from their Feature or Rule, and so reachable by no tag expression.
+**Untagged scenarios** counts the scenarios carrying no tag of their own, none on their
+Examples tables, and none inherited from their Feature or Rule, and so reachable by no tag
+expression.
 
 Files the parser refuses are listed at the end rather than counted, because half a broken
 file would quietly make every number wrong.
