@@ -34,6 +34,7 @@ export type {ParseResult} from './gherkin/parse.ts';
 export {getNeutralKeyword, getNodeType} from './gherkin/keywords.ts';
 export {DEFAULT_LANGUAGE, detectLanguage, getDialect, isKnownLanguage} from './gherkin/dialects.ts';
 export {backgroundsOf, rulesOf, scenariosOf, stepContainersOf} from './gherkin/traverse.ts';
+export {EXIT_LINT_ERRORS, EXIT_OK, EXIT_USAGE} from './exit-codes.ts';
 export {countBySeverity, hasErrors, lint} from './linter.ts';
 export type {LintOptions} from './linter.ts';
 export {readSuppressions} from './suppressions.ts';
@@ -47,6 +48,43 @@ export {
   runEnabledRules,
 } from './rules.ts';
 export {BUILT_IN_RULES} from './rules/index.ts';
+export {collectStatistics, distribution} from './stats/collect.ts';
+export type {CollectOptions} from './stats/collect.ts';
+export {DEFAULT_SIMILARITY, boundedEditDistance, groupSimilar} from './stats/similar.ts';
+export type {SimilarityOptions} from './stats/similar.ts';
+export {
+  NUMBER_MARKER,
+  PLACEHOLDER_MARKER,
+  STRING_MARKER,
+  countWords,
+  normaliseStepText,
+} from './stats/normalise.ts';
+export {
+  DEFAULT_STATS_FORMAT,
+  DEFAULT_TOP,
+  STATS_FORMATTERS,
+  getStatsFormatter,
+  toJson as statisticsToJson,
+  toMarkdown,
+  toText,
+} from './stats/format/index.ts';
+export type {StatsFormatOptions, StatsFormatter} from './stats/format/index.ts';
+export {runStats, statsUsage} from './stats/command.ts';
+export type {
+  Distribution,
+  Inventory,
+  KeywordMix,
+  LanguageEntry,
+  ScenarioRef,
+  ScenarioStats,
+  SimilarGroup,
+  Statistics,
+  StepEntry,
+  StepStats,
+  TagEntry,
+  TagStats,
+  UnreadableFile,
+} from './stats/types.ts';
 export type {
   Configuration,
   FeatureFile,

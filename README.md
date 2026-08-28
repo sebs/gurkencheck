@@ -75,6 +75,10 @@ gurkencheck [options] <feature-files>
   -l, --language <code>   dialect for files with no "# language:" header
   -h, --help              show this message
   -v, --version           show the version number
+
+Commands:
+  stats [paths]           report on the shape of your feature files,
+                          rather than on what is wrong with them
 ```
 
 ## Rules
@@ -98,6 +102,109 @@ or a state plus that rule's own settings:
 ```
 
 Mistyped rule names and settings are reported before any file is read.
+
+## Statistics
+
+`gurkencheck stats` describes a suite instead of judging it: what is in the files, how
+much of the step vocabulary is shared, and where it has drifted apart.
+
+```sh
+npx gurkencheck stats features
+```
+
+```
+124 files, 124 features, 811 test cases
+
+Inventory
+  Features            124
+  Rules                18
+  Backgrounds          61
+  Scenarios           402
+  Scenario Outlines    57
+  Examples tables      61   409 rows
+  Steps              2314   as written
+  ...
+
+Scenarios
+  Test cases            811   one per Scenario, one per Examples row
+  Steps per scenario    min 1   median 5   p90 11   max 27   mean 5.5
+
+  Longest
+    27  Checkout with every payment method  features/checkout.feature:88
+    ...
+
+Steps
+  Written          2314   Background steps included
+  Distinct          871   38% of all steps - lower is more reuse
+  Written once      512   59% of distinct steps
+  ...
+
+  Nearly the same (14 groups)
+    9  i am logged in   features/login.feature:4
+    2  i'm logged in    features/profile.feature:9
+```
+
+It always exits `0`. Statistics are for reading, not for failing a build — that is what
+the rules are for.
+
+```
+gurkencheck stats [options] <feature-files>
+
+  -f, --format <format>   output format: text, json, md (default: text)
+  -i, --ignore <globs>    comma separated globs to skip
+  -l, --language <code>   dialect for files with no "# language:" header
+      --top <n>           how many entries each list shows (default: 10)
+  -h, --help              show this message
+```
+
+### What the numbers mean
+
+**Test cases** counts one per Scenario and one per row of every Examples table, because a
+Scenario Outline with twelve rows is twelve tests. It is usually well above the number
+people carry in their heads, and it is the one that predicts how long a run takes.
+
+**Distinct steps** is the number to watch. Two steps count as one when they differ only in
+what a step definition would capture anyway, so these are all the same step:
+
+```gherkin
+Given I have 3 items in my cart
+Given I have 17 items in my cart
+Given I have 3 items in my cart.
+```
+
+Numbers, `"quoted strings"` and `<placeholders>` are each replaced by a marker; case,
+spacing and a trailing full stop are ignored; and the keyword is left out, so a `Given`
+and an `And` of the same text are one step. Single quotes are left alone — `the user's
+cart is 'empty'` has three of them, and pairing them up would eat half the sentence.
+
+A low share of distinct steps means the team shares a vocabulary. A high one means
+everybody invents their own phrasing, and the step definitions rot.
+
+**Nearly the same** groups steps that are within three single-character edits of each
+other: `I am logged in` against `I'm logged in`, or a `<placeholder>` against a value
+written in its place. Those are one behaviour costing two step definitions. Three edits
+is deliberately tight — beyond that a step is a different sentence rather than the same
+one spelled two ways.
+
+**Written once** lists the steps used exactly once. Some are genuine; most are a phrasing
+somebody invented because they could not find the one that already existed.
+
+**Untagged scenarios** counts the scenarios carrying no tag of their own and inheriting
+none from their Feature or Rule, and so reachable by no tag expression.
+
+Files the parser refuses are listed at the end rather than counted, because half a broken
+file would quietly make every number wrong.
+
+### Keeping a record
+
+`--format json` writes the whole dataset, with none of the lists cut short, indented so
+that two runs can be diffed:
+
+```sh
+npx gurkencheck stats features --format json > stats.json
+```
+
+`--format md` writes the same report as Markdown tables, for pasting into a pull request.
 
 ## Reporting to GitHub code scanning
 

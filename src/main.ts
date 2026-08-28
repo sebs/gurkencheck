@@ -6,20 +6,15 @@ import fs from 'node:fs';
 import {pathToFileURL} from 'node:url';
 import {parseArgs} from 'node:util';
 import {DEFAULT_CONFIG_FILE_NAME, readConfiguration} from './config-parser.ts';
+import {EXIT_LINT_ERRORS, EXIT_OK, EXIT_USAGE} from './exit-codes.ts';
 import {DEFAULT_IGNORE_FILE_NAME, findFeatureFiles} from './feature-finder.ts';
 import {DEFAULT_FORMAT, FORMATTERS, loadFormatter} from './formatters/index.ts';
 import {isKnownLanguage} from './gherkin/dialects.ts';
 import {hasErrors, lint} from './linter.ts';
 import * as logger from './logger.ts';
 import {loadRules} from './rules.ts';
+import {runStats} from './stats/command.ts';
 import {version} from './version.ts';
-
-/** Nothing to report. */
-const EXIT_OK = 0;
-/** At least one finding serious enough to fail the run. Warnings alone do not. */
-const EXIT_LINT_ERRORS = 1;
-/** The linter could not run: bad arguments, missing or invalid config. */
-const EXIT_USAGE = 2;
 
 function usage(): string {
   return [
@@ -38,12 +33,23 @@ function usage(): string {
     '  -h, --help              show this message',
     '  -v, --version           show the version number',
     '',
+    'Commands:',
+    '  stats [paths]           report on the shape of your feature files,',
+    '                          rather than on what is wrong with them',
+    '',
     'With no files given, the working directory is searched recursively.',
     'Documentation: https://sebs.github.io/gurkencheck/',
   ].join('\n');
 }
 
 export async function run(argv: readonly string[]): Promise<number> {
+  // Subcommands are matched before the options are read, so that `stats` can
+  // accept a --format of its own without the two sets of names colliding.
+  // A directory really called `stats` is still lintable, as `./stats`.
+  if (argv[0] === 'stats') {
+    return runStats(argv.slice(1));
+  }
+
   let parsed;
   try {
     parsed = parseArgs({
