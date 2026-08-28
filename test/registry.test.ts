@@ -72,6 +72,7 @@ test('the site builds a page for every rule', () => {
       assert.ok(written.includes(`rules/${rule.name}.html`), `no page for ${rule.name}`);
     }
     assert.ok(written.includes('index.html'));
+    assert.ok(written.includes('stats.html'));
     assert.ok(written.includes('style.css'));
 
     const index = fs.readFileSync(path.join(output, 'index.html'), 'utf8');

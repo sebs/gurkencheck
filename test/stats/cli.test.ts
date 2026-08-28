@@ -98,6 +98,12 @@ test('a format that does not exist is reported before anything is read', async (
   assert.match(stderr, /Unsupported format "yaml"/u);
 });
 
+test('a format borrowed from the object prototype is refused', async () => {
+  const {code, stderr} = await cli(['stats', FIXTURES, '--format', 'constructor']);
+  assert.equal(code, 2);
+  assert.match(stderr, /Unsupported format "constructor"/u);
+});
+
 test('--top has to be a whole number of at least one', async () => {
   for (const value of ['0', 'ten', '2.5']) {
     const {code, stderr} = await cli(['stats', FIXTURES, '--top', value]);

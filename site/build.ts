@@ -38,6 +38,7 @@ import type {RuleDoc} from './types.ts';
 
 const OUTPUT = 'docs';
 const RULES_INDEX = 'rules/index.html';
+const STATS_PAGE = 'stats.html';
 
 /** The file listing every published version, for anything that wants it. */
 const VERSIONS_FILE = 'versions.json';
@@ -88,6 +89,7 @@ function header(root: string, picker = ''): string {
 <nav class="project" aria-label="Project">
 ${picker}
 <a href="${root}/${RULES_INDEX}">Rules</a>
+<a href="${root}/${STATS_PAGE}">Stats</a>
 <a href="${NPM_URL}">npm</a>
 <a href="${REPO_URL}">${GITHUB_MARK}GitHub</a>
 </nav>
@@ -399,6 +401,17 @@ the line on its own. The <code>json</code> format carries the same <code>line</c
 <code>column</code> fields, in the same shape eslint's JSON formatter uses, so tools built
 around that already understand it.</p>
 
+<h2>Counting what is in your files</h2>
+<p>The same files answer a different question. Before a team agrees a convention it helps to
+know what it already has: how many test cases will really run, how much of the step vocabulary
+is shared, and how much of it is the same sentence written twice. <code>gurkencheck stats</code>
+counts your feature files rather than checking them.</p>
+${codeBlock('npx gurkencheck stats')}
+<p>It exits <code>0</code> whatever it finds, so it can sit in a build without ever failing
+one. The word <code>stats</code> has to come first, before any option, because the command has
+a <code>--format</code> of its own whose values have nothing to do with the linter's.
+<a href="./${STATS_PAGE}">Feature file statistics</a> goes through what each number means.</p>
+
 <h2>Skipping files</h2>
 <p>Put one glob per line in a <code>${DEFAULT_IGNORE_FILE_NAME}</code> file, or pass
 <code>--ignore</code> on the command line. Without either, <code>node_modules</code> is skipped
@@ -442,16 +455,16 @@ ${codeBlock(`# gurkencheck-disable-next-line name-length
 </table></div>
 <p>Name the rules you mean, separated by commas or spaces. A directive naming no rules
 covers all of them. Comments inside a doc string are text and are left alone.</p>
-<p>The four always-on rules cannot be switched off this way. A file that breaks one of them
-cannot be read at all, so hiding the message would leave nothing in its place.</p>
+<p>The ${alwaysOn.length} always-on rules cannot be switched off this way. A file that breaks
+one of them cannot be read at all, so hiding the message would leave nothing in its place.</p>
 
 <h2>Rules you switch on</h2>
 <p>These are all off by default. Each page shows an example that passes and one that fails.</p>
 ${ruleList('.', configurable)}
 
 <h2>Always on</h2>
-<p>These four are not really settings. They describe things Gherkin itself refuses to read,
-so a file that breaks one of them cannot be checked at all.</p>
+<p>These ${alwaysOn.length} are not really settings. They describe things Gherkin itself
+refuses to read, so a file that breaks one of them cannot be checked at all.</p>
 ${ruleList('.', alwaysOn)}
 
 <h2>Writing your own formatter</h2>
@@ -519,6 +532,289 @@ ${html}
     jsonLd: [
       applicationBlock(description),
       {'@context': 'https://schema.org', ...websiteBlock()},
+    ],
+    body,
+  });
+}
+
+/**
+ * A real report, from a small suite of shop feature files, run with
+ * `--top 3` so that the whole of it fits on the page.
+ */
+const SAMPLE_REPORT = `9 files, 9 features, 38 test cases
+
+Inventory
+  Features              9
+  Rules                 2
+  Backgrounds           8
+  Scenarios            23
+  Scenario Outlines     5
+  Examples tables       5   15 rows
+  Steps               104   as written
+  Data tables           0
+  Doc strings           0
+
+Scenarios
+  Test cases           38   one per Scenario, one per Examples row
+  Steps per scenario   min 2   median 3   p90 4   max 4   mean 3.3   Background steps excluded
+
+  Longest
+    4  Adding the first item         features/basket.feature:7
+    4  Checking out with no address  features/checkout.feature:15
+    4  Choosing next day delivery    features/delivery.feature:4
+    … and 25 more scenarios
+
+Steps
+  Written          104   Background steps included
+  Distinct          63   61% of all steps - lower is more reuse
+  Written once      43   68% of distinct steps
+  Words per step   min 3   median 6   p90 7   max 10   mean 5.7
+  Keywords         Given 39 (38%)   When 29 (28%)   Then 36 (35%)   And and But resolved to what they follow
+
+  Most used
+    8  i am signed in as ""         features/basket.feature:5
+    6  i have 0 items in my basket  features/checkout.feature:6
+    4  i check out                  features/checkout.feature:12
+    … and 17 more steps
+
+  Written once
+    i add "" to my wishlist            features/wishlist.feature:8
+    i add <> of "" to my basket        features/basket.feature:26
+    i am asked for a delivery address  features/checkout.feature:18
+    … and 40 more steps
+
+  Nearly the same (6 groups)
+    8  i am signed in as ""  features/basket.feature:5
+    1  i'm signed in as ""   features/wishlist.feature:5
+
+    6  i have 0 items in my basket  features/checkout.feature:6
+    2  i have 0 item in my basket   features/basket.feature:14
+
+    4  i have a delivery address on file   features/checkout.feature:11
+    1  i have no delivery address on file  features/checkout.feature:16
+    … and 3 more groups
+
+Tags
+  Written              13
+  Distinct             10
+  Written once          7   a tag written once is often a typo of one written often
+  Untagged scenarios    0   0% of scenarios, counting inherited tags
+
+  Most used
+    2  @account
+    2  @checkout
+    2  @slow
+
+  Written once
+    @basket, @delivery, @payment
+    … and 4 more tags`;
+
+/** The near-duplicate section of the same run, at the default `--top`. */
+const SAMPLE_SIMILAR = `  Nearly the same (6 groups)
+    8  i am signed in as ""  features/basket.feature:5
+    1  i'm signed in as ""   features/wishlist.feature:5
+
+    6  i have 0 items in my basket  features/checkout.feature:6
+    2  i have 0 item in my basket   features/basket.feature:14
+
+    4  i have a delivery address on file   features/checkout.feature:11
+    1  i have no delivery address on file  features/checkout.feature:16
+
+    2  my basket has 0 item   features/basket.feature:10
+    1  my basket has 0 items  features/basket.feature:16
+
+    2  the delivery cost is 0   features/delivery.feature:8
+    1  the delivery cost is <>  features/delivery.feature:20
+
+    1  the basket total is 0   features/basket.feature:11
+    1  the basket total is <>  features/basket.feature:27`;
+
+
+/**
+ * The page for the `stats` command.
+ *
+ * It sits at the top level rather than under `rules/`, because it documents a
+ * second command rather than a rule: it has options of its own, a `--format`
+ * whose values have nothing to do with the linter's, and an exit code that
+ * never fails a build. It carries no version picker for the same reason the
+ * home page does not - and because each release is rebuilt from its own tag,
+ * so the releases before this page existed have no copy of it to link to.
+ */
+function statsPage(target: Target): string {
+  const url = canonical(STATS_PAGE);
+  const trail: Crumb[] = [{name: SITE_NAME, path: ''}];
+  const description = summarise(
+    `${SITE_NAME} stats counts what is in your feature files: the test cases that really run,`,
+    'the shared step vocabulary, and the steps written two ways.',
+  );
+
+  const sections = `<h2>Running it</h2>
+<p>The linter tells you what is wrong with your feature files. The same files answer a
+different question &mdash; how much is there, and how much of it is the same thing written
+twice &mdash; and <code>stats</code> is the command that asks it. There is nothing to
+configure.</p>
+${codeBlock('npx gurkencheck stats features')}
+<p>With no paths given it searches the current directory, the same way the linter does. The
+word <code>stats</code> has to come first, before any option. Written anywhere else it is read
+as a path rather than as a command, so <code>gurkencheck --format json stats</code> reports
+that there is no such file &mdash; or quietly lints a directory, if one of that name happens
+to exist.</p>
+<p>The report goes to stdout, so <code>gurkencheck stats &gt; report.txt</code> works. It
+exits <code>0</code> whatever it finds. Statistics describe a suite rather than judge it, and
+nothing here should ever be the reason a build goes red.</p>
+
+<h2>The report</h2>
+<p>This is the whole of it for a small shop's worth of feature files. Every list in it is the
+head of a longer one, cut to the number of entries <code>--top</code> allows and marked with
+how many were left out; this run asked for three, to keep it short.</p>
+${codeBlock(SAMPLE_REPORT)}
+<p>The sections below walk it in the order it prints, because several of the numbers count
+something slightly different from what their name suggests.</p>
+
+<h2>Test cases, not scenarios</h2>
+<p>These files hold 23 Scenarios and 5 Scenario Outlines, and the suite runs 38 tests. An
+Outline is not one test. It is one per row of its Examples table, and the five tables here
+carry 15 rows between them. That is the figure that predicts how long a run takes, and it is
+almost always higher than the one people carry in their heads.</p>
+<p>An Outline that has no Examples table yet counts as one, which is how
+<a href="./${pageFor('max-scenarios-per-file')}"><code>max-scenarios-per-file</code></a>
+counts it as well, so the two never disagree about the size of a suite.</p>
+
+<h2>Two numbers called steps</h2>
+<p>The report prints 104 steps written and a median of 3 steps per scenario, and the two do
+not reach each other: 104 steps across 28 scenarios would be 3.7 apiece. They count different
+things. The 104 is every step in the files, Background steps included &mdash; 11 of them here
+&mdash; because every one of them still needs a step definition behind it. The steps per
+scenario leave Backgrounds out, because a Background is written once and read many times, and
+charging it to every scenario would make a tidy suite look long-winded.</p>
+<p>The summary line is five real numbers rather than an average and a guess: the
+<code>min</code>, <code>median</code>, <code>p90</code> and <code>max</code> are each a step
+count that some scenario in your files actually has. A mean of 3.3 would hide a forty-step
+scenario; the <code>Longest</code> list underneath names it and says where it is.</p>
+
+<h2>What makes two steps the same step</h2>
+<p>Distinct is the number worth watching, and what it means depends entirely on when two
+steps count as one. <code>I have 3 items in my basket</code> and
+<code>I have 17 items in my basket</code> are one step behind one step definition, and
+counting them as two would make every measure of reuse meaningless.</p>
+<p>So before two steps are compared, the parts a step definition would capture are replaced
+by a marker. A number becomes <code>0</code>, a double quoted string becomes
+<code>""</code>, and a Scenario Outline placeholder becomes <code>&lt;&gt;</code>. Case,
+repeated spaces and a full stop at the end are ignored. The keyword is left out altogether,
+so a <code>Given</code> and an <code>And</code> of the same sentence are one step.</p>
+<p>Single quotes are left exactly as they are. <code>the user's basket is 'empty'</code> has
+three of them, and a rule that paired them up would eat half the sentence. Cucumber's own
+expressions quote with <code>"</code> in any case.</p>
+<p>Each kind of argument keeps a marker of its own, so <code>the delivery cost is 0</code> and
+<code>the delivery cost is &lt;&gt;</code> stay apart. That understates reuse a little in a
+suite full of Outlines, and it is the trade worth making: the normalised text is what the
+report shows you, and a <code>0</code> in a step that has no number in it would be a lie
+about the file. The next section puts the two back together.</p>
+<p>A low share of distinct steps means the team shares a vocabulary. A high one means
+everybody invents their own phrasing, and the step definitions rot.</p>
+
+<h2>Steps written two ways</h2>
+<p>This is the part of the report you can act on the same afternoon. Each group is one
+behaviour that is costing you more than one step definition.</p>
+${codeBlock(SAMPLE_SIMILAR)}
+<p>Two steps are grouped when at most three single character edits turn one into the other,
+and when those edits are no more than about a seventh of the longer of the two. Steps shorter
+than eight characters are left out, because at that length almost everything looks like
+everything. Three edits is deliberately tight: further apart than that and a step is a
+different sentence rather than the same one spelled two ways.</p>
+<p>A group may be a chain. Where one step is close to a second and the second is close to a
+third, all three are reported together even though the first and the third are not close to
+each other, so a phrasing that drifted over three years arrives as one group rather than
+two.</p>
+<p>Nothing on the command line changes how close two steps have to be. A script can:
+<code>collectStatistics</code> takes a <code>similarity</code> setting.</p>
+
+<h2>Tags nobody agreed on</h2>
+<p>Seven of the ten tags here are written exactly once. Some of those are deliberate. The
+rest are what a tag looks like when it was typed from memory: <code>@wishlst</code> sits in
+that list a few characters from <code>@wishlist</code>, and a run filtered on either of them
+quietly misses the other's scenarios.</p>
+<p>Untagged scenarios counts the ones carrying no tag of their own and inheriting none from
+their Feature or their Rule, and so reachable by no tag expression at all. A tag on a Feature
+covers every scenario inside it, which is why that figure is zero here and often is.</p>
+
+<h2>Keeping the report beside a build</h2>
+<p>The text report is for reading. The other two formats are for keeping and for showing to
+somebody else.</p>
+${codeBlock('npx gurkencheck stats features --format json > stats.json')}
+<p><code>--format json</code> writes the whole dataset with none of the lists cut short:
+every distinct step, every scenario, every group, and every file that could not be read. It
+is indented rather than packed onto one line, so two runs of it can be read side by side and
+a build can keep a record of what the suite looked like when it went out. <code>--top</code>
+does not apply to it.</p>
+<p><code>--format md</code> writes the same report as Markdown tables, for pasting into a
+pull request where the person who has to agree to the work is not going to run the command
+themselves.</p>
+
+<h2>Options</h2>
+<div class="wide"><table>
+<thead><tr><th>Option</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>-f, --format</code></td><td>Output format: <code>text</code> (the default), <code>json</code> or <code>md</code>. These are the stats command's own formats; the linter's do not apply here.</td></tr>
+<tr><td><code>-i, --ignore</code></td><td>Comma separated globs to skip. Replaces <code>${DEFAULT_IGNORE_FILE_NAME}</code> rather than adding to it.</td></tr>
+<tr><td><code>-l, --language</code></td><td>The dialect to read files in when they carry no <code>#&nbsp;language:</code> header. This command does not read <code>${DEFAULT_CONFIG_FILE_NAME}</code>, so a <code>language</code> key there does not reach it.</td></tr>
+<tr><td><code>--top</code></td><td>How many entries each list in the text and Markdown reports shows. Ten by default, and it changes nothing under <code>--format json</code>, which never cuts a list short.</td></tr>
+<tr><td><code>-h, --help</code></td><td>Show the options.</td></tr>
+</tbody>
+</table></div>
+<p>Everything the command can refuse is refused before a file is read: a format that does not
+exist, a <code>--top</code> that is not a whole number, a language code that is not a
+dialect, a path that names nothing. Any of those exits <code>2</code>. Once a report has been
+produced it exits <code>0</code>, whatever the numbers say.</p>
+
+<h2>What is not counted</h2>
+<p>A file the parser refuses is listed at the end of the report and counted nowhere in it.
+Half a broken file is worse than none of it, because every number above it would quietly be
+wrong. That list is wider than files with a syntax error in them: it also holds the ones
+breaking a rule Gherkin itself enforces &mdash; two Features in one file, a second
+Background, a tag on a Background &mdash; which are the ${alwaysOn.length}
+<a href="./${RULES_INDEX}">always-on rules</a>.</p>
+<p>Nothing on this page has an opinion. There is no threshold to cross, no figure that turns
+the report red, and no advice about what a good reuse number looks like &mdash; a target
+invented here would be quoted back as a standard. The report says
+<code>lower is more reuse</code> and stops there. What to do about it is yours, and holding a
+team to it afterwards is what the <a href="./${RULES_INDEX}">rules</a> are for.</p>`;
+
+  const {html, headings} = anchorHeadings(sections);
+
+  const body = `${header('.')}
+<div class="layout single">
+<main id="main">
+${breadcrumbs('.', trail, 'Statistics')}
+<h1>Feature file statistics</h1>
+<p class="lede">A suite of feature files grows one scenario at a time, so nobody knows what it
+adds up to. <code>gurkencheck stats</code> counts it: how many test cases really run, how much
+of the step vocabulary is shared, and where the same sentence has been written two ways.</p>
+${tableOfContents(headings)}
+${html}
+</main>
+</div>`;
+
+  return page({
+    title: `Feature file statistics \u2013 ${SITE_NAME}`,
+    description,
+    path: STATS_PAGE,
+    target,
+    root: '.',
+    kind: 'article',
+    jsonLd: [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'TechArticle',
+        headline: 'Feature file statistics',
+        name: 'Feature file statistics',
+        description,
+        url,
+        inLanguage: 'en',
+        isPartOf: websiteBlock(),
+        about: {'@type': 'SoftwareApplication', name: SITE_NAME, url: absolute('')},
+      },
+      breadcrumbBlock([...trail, {name: 'Statistics', path: STATS_PAGE}]),
     ],
     body,
   });
@@ -622,6 +918,7 @@ export function build(outputDirectory: string = OUTPUT, target: Target = latestT
 
   write('index.html', indexPage(target));
   write(RULES_INDEX, rulesIndexPage(target));
+  write(STATS_PAGE, statsPage(target));
   write('404.html', notFoundPage(target));
   // Tells GitHub Pages not to run the files through Jekyll.
   write('.nojekyll', '');
@@ -631,7 +928,10 @@ export function build(outputDirectory: string = OUTPUT, target: Target = latestT
   }
 
   // Everything a reader can land on, which is every page bar the 404.
-  write('sitemap.xml', sitemap(['index.html', RULES_INDEX, ...RULE_DOCS.map((r) => pageFor(r.name))]));
+  write(
+    'sitemap.xml',
+    sitemap(['index.html', RULES_INDEX, STATS_PAGE, ...RULE_DOCS.map((r) => pageFor(r.name))]),
+  );
   write('robots.txt', robots());
 
   // Only the copy at the root: an archived version is a snapshot, and the

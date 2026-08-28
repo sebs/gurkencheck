@@ -83,8 +83,8 @@ Commands:
 
 ## Rules
 
-There are 33 rules you switch on, covering naming, tags, indentation, structure and size,
-plus four that are always on because Gherkin itself refuses to read a file that breaks
+There are 36 rules you switch on, covering naming, tags, indentation, structure and size,
+plus five that are always on because Gherkin itself refuses to read a file that breaks
 them. Each one is documented at
 **[sebs.github.io/gurkencheck](https://sebs.github.io/gurkencheck/)** with a
 good and a bad example.
@@ -245,7 +245,7 @@ Write a comment in the feature file:
 | `gurkencheck-disable-file` | The whole file, wherever the comment appears |
 
 Name the rules you mean, separated by commas or spaces; a directive naming no rules covers
-all of them. Comments inside a doc string are text and are left alone. The four always-on
+all of them. Comments inside a doc string are text and are left alone. The five always-on
 rules cannot be switched off this way — a file that breaks one of them cannot be read at
 all, so hiding the message would leave nothing in its place.
 

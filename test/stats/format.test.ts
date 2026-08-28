@@ -89,3 +89,29 @@ test('a format name that is not a format has no formatter', () => {
   assert.equal(getStatsFormatter(undefined), toText);
   assert.equal(getStatsFormatter('yaml'), undefined);
 });
+
+test('a name every object inherits is not a format', () => {
+  // Reading the record straight would hand back Object.prototype.constructor
+  // and run it as a formatter.
+  for (const inherited of ['constructor', 'toString', 'hasOwnProperty', '__proto__']) {
+    assert.equal(getStatsFormatter(inherited), undefined, `${inherited} resolved to a formatter`);
+  }
+});
+
+test('one entry left out is reported as one, not as one of many', () => {
+  const text = toText(statistics, {top: 4});
+  assert.match(text, /… and 1 more scenario$/mu);
+  assert.doesNotMatch(text, /1 more (scenarios|steps|tags|groups|files)/u);
+
+  const markdown = toMarkdown(statistics, {top: 4});
+  assert.doesNotMatch(markdown, /1 more (scenarios|steps|tags|groups|files)/u);
+});
+
+test('the Markdown tag tables do not list the same tag twice', () => {
+  const markdown = toMarkdown(statistics, options);
+  const mostUsed = /### Most used tags\n\n([\s\S]*?)\n\n/u.exec(markdown)?.[1] ?? '';
+  for (const once of statistics.tags.usedOnce) {
+    // The whole cell, not a substring: @smok is the start of @smoke.
+    assert.ok(!mostUsed.includes(`\`${once}\``), `${once} is in both tag tables`);
+  }
+});

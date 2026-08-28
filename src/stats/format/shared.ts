@@ -38,6 +38,11 @@ export function plural(count: number, singular: string, many = `${singular}s`): 
   return `${count} ${count === 1 ? singular : many}`;
 }
 
+/** `… and 1 more scenario` / `… and 3 more scenarios` */
+export function andMore(hidden: number, singular: string, many = `${singular}s`): string {
+  return `… and ${hidden} more ${hidden === 1 ? singular : many}`;
+}
+
 /**
  * The first `top` entries, and how many were left out.
  *

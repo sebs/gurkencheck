@@ -19,9 +19,17 @@ export const STATS_FORMATTERS: Record<string, StatsFormatter> = {
   markdown: toMarkdown,
 };
 
-/** The formatter for a format name, or `undefined` when there is no such format. */
+/**
+ * The formatter for a format name, or `undefined` when there is no such format.
+ *
+ * Asking the record for a key it does not have is not enough: every object
+ * inherits `constructor`, `toString` and the rest from its prototype, so
+ * `--format constructor` would come back with a function and be run as if it
+ * were a formatter.
+ */
 export function getStatsFormatter(format: string | undefined): StatsFormatter | undefined {
-  return STATS_FORMATTERS[format ?? DEFAULT_STATS_FORMAT];
+  const name = format ?? DEFAULT_STATS_FORMAT;
+  return Object.hasOwn(STATS_FORMATTERS, name) ? STATS_FORMATTERS[name] : undefined;
 }
 
 export {toJson, toMarkdown, toText};

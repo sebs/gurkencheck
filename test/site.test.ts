@@ -130,6 +130,7 @@ test('the sitemap lists every page a reader can land on, and nothing else', () =
   const expected = [
     `${SITE_URL}/`,
     `${SITE_URL}/rules/`,
+    `${SITE_URL}/stats.html`,
     ...RULE_DOCS.map((rule) => `${SITE_URL}/rules/${rule.name}.html`),
   ].sort();
 
@@ -164,6 +165,21 @@ test('structured data cannot break out of the script tag it sits in', () => {
 test('the assets the pages ask for are copied in', () => {
   for (const asset of ['style.css', 'icon.svg', 'apple-touch-icon.png', SOCIAL_CARD.file]) {
     assert.ok(written.includes(asset), `${asset} was not written`);
+  }
+});
+
+/**
+ * The link test above proves that a link which exists resolves. It says
+ * nothing about a link that was dropped, and a page nothing points at is a
+ * page nobody reads.
+ */
+test('every page offers the way to the stats page', () => {
+  for (const [file, html] of pages) {
+    const root = file === '404.html' ? SITE_URL : path.dirname(file) === '.' ? '.' : '..';
+    assert.ok(
+      html.includes(`href="${root}/stats.html"`),
+      `${file} does not link to the stats page`,
+    );
   }
 });
 

@@ -6,7 +6,7 @@
  */
 import {style} from '../../logger.ts';
 import type {SimilarGroup, StepEntry, Statistics} from '../types.ts';
-import {head, location, percent, plural, summarise} from './shared.ts';
+import {andMore, head, location, percent, plural, summarise} from './shared.ts';
 import type {StatsFormatOptions} from './shared.ts';
 
 /** Longer than this and a step is a paragraph; the report shows the start. */
@@ -76,8 +76,8 @@ function listing(entries: readonly Entry[], indent = '    '): string[] {
   });
 }
 
-function more(hidden: number, of: string): string[] {
-  return hidden === 0 ? [] : [style.gray(`    … and ${hidden} more ${of}`)];
+function more(hidden: number, singular: string): string[] {
+  return hidden === 0 ? [] : [style.gray(`    ${andMore(hidden, singular)}`)];
 }
 
 function stepLines(entries: readonly StepEntry[], counted = true): string[] {
@@ -154,7 +154,7 @@ export function toText(statistics: Statistics, options: StatsFormatOptions): str
           where: location(scenario.file, scenario.line),
         })),
       ),
-      ...more(largest.hidden, 'scenarios'),
+      ...more(largest.hidden, 'scenario'),
     );
   }
 
@@ -192,7 +192,7 @@ export function toText(statistics: Statistics, options: StatsFormatOptions): str
     options.top,
   );
   if (mostUsed.shown.length > 0) {
-    lines.push('', '  Most used', ...stepLines(mostUsed.shown), ...more(mostUsed.hidden, 'steps'));
+    lines.push('', '  Most used', ...stepLines(mostUsed.shown), ...more(mostUsed.hidden, 'step'));
   }
 
   const once = head(
@@ -204,7 +204,7 @@ export function toText(statistics: Statistics, options: StatsFormatOptions): str
       '',
       '  Written once',
       ...stepLines(once.shown, false),
-      ...more(once.hidden, 'steps'),
+      ...more(once.hidden, 'step'),
     );
   }
 
@@ -214,7 +214,7 @@ export function toText(statistics: Statistics, options: StatsFormatOptions): str
       '',
       `  Nearly the same (${plural(steps.similar.length, 'group')})`,
       ...similarLines(similar.shown),
-      ...more(similar.hidden, 'groups'),
+      ...more(similar.hidden, 'group'),
     );
   }
 
@@ -240,13 +240,13 @@ export function toText(statistics: Statistics, options: StatsFormatOptions): str
       '',
       '  Most used',
       ...listing(tagsUsed.shown.map((tag) => ({count: tag.count, text: tag.name}))),
-      ...more(tagsUsed.hidden, 'tags'),
+      ...more(tagsUsed.hidden, 'tag'),
     );
   }
 
   const tagsOnce = head(tags.usedOnce, options.top);
   if (tagsOnce.shown.length > 0) {
-    lines.push('', '  Written once', `    ${tagsOnce.shown.join(', ')}`, ...more(tagsOnce.hidden, 'tags'));
+    lines.push('', '  Written once', `    ${tagsOnce.shown.join(', ')}`, ...more(tagsOnce.hidden, 'tag'));
   }
 
   if (languages.length > 1) {
@@ -271,7 +271,7 @@ export function toText(statistics: Statistics, options: StatsFormatOptions): str
       ...unreadable.shown.map(
         (file) => `    ${location(file.file, file.line)}  ${style.gray(file.reason)}`,
       ),
-      ...more(unreadable.hidden, 'files'),
+      ...more(unreadable.hidden, 'file'),
     );
   }
 
