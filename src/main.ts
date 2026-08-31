@@ -16,7 +16,8 @@ import {
 } from './formatters/index.ts';
 import {isKnownLanguage} from './gherkin/dialects.ts';
 import {hasErrors, lint, lintStream} from './linter.ts';
-import * as logger from './logger.ts';
+import {SILENT, TO_STDERR} from './diagnostics.ts';
+import type {Diagnostics} from './diagnostics.ts';
 import {loadRules} from './rules.ts';
 import type {StreamingFormatter} from './formatters/index.ts';
 import type {Configuration, RuleRegistry} from './types.ts';
@@ -50,12 +51,22 @@ function usage(): string {
   ].join('\n');
 }
 
-export async function run(argv: readonly string[]): Promise<number> {
+/**
+ * Runs the command line.
+ *
+ * Anything said about the run goes through `diagnostics`, which says nothing
+ * unless it is given somewhere to say it - so calling this from a test or a
+ * library leaves the console alone until you ask for it.
+ */
+export async function run(
+  argv: readonly string[],
+  diagnostics: Diagnostics = SILENT,
+): Promise<number> {
   // Subcommands are matched before the options are read, so that `stats` can
   // accept a --format of its own without the two sets of names colliding.
   // A directory really called `stats` is still lintable, as `./stats`.
   if (argv[0] === 'stats') {
-    return runStats(argv.slice(1));
+    return runStats(argv.slice(1), diagnostics);
   }
 
   let parsed;
@@ -74,8 +85,11 @@ export async function run(argv: readonly string[]): Promise<number> {
       allowPositionals: true,
     });
   } catch (thrown) {
-    logger.boldError(thrown instanceof Error ? thrown.message : String(thrown));
-    console.error(usage());
+    diagnostics.report({
+      level: 'error',
+      message: thrown instanceof Error ? thrown.message : String(thrown),
+    });
+    diagnostics.report({level: 'notice', message: usage()});
     return EXIT_USAGE;
   }
 
@@ -95,16 +109,20 @@ export async function run(argv: readonly string[]): Promise<number> {
   try {
     rules = await loadRules(additionalRulesDirs);
   } catch (thrown) {
-    logger.boldError(thrown instanceof Error ? thrown.message : String(thrown));
+    diagnostics.report({
+      level: 'error',
+      message: thrown instanceof Error ? thrown.message : String(thrown),
+    });
     return EXIT_USAGE;
   }
 
   const configuration = await readConfiguration(values.config, rules);
   if (!configuration.ok) {
-    logger.boldError(configuration.message);
-    for (const detail of configuration.details) {
-      logger.error(`- ${detail}`);
-    }
+    diagnostics.report({
+      level: 'error',
+      message: configuration.message,
+      details: configuration.details,
+    });
     return EXIT_USAGE;
   }
 
@@ -115,9 +133,15 @@ export async function run(argv: readonly string[]): Promise<number> {
 
   if (invalidPatterns.length > 0) {
     for (const pattern of invalidPatterns) {
-      logger.boldError(`Invalid format of the feature file path/pattern: "${pattern}".`);
+      diagnostics.report({
+        level: 'error',
+        message: `Invalid format of the feature file path/pattern: "${pattern}".`,
+      });
     }
-    logger.error('To run the linter please specify an existing feature file, directory or glob.');
+    diagnostics.report({
+      level: 'detail',
+      message: 'To run the linter please specify an existing feature file, directory or glob.',
+    });
     return EXIT_USAGE;
   }
 
@@ -132,18 +156,31 @@ export async function run(argv: readonly string[]): Promise<number> {
       formatter = await loadFormatter(values.format);
     }
   } catch (thrown) {
-    logger.boldError(thrown instanceof Error ? thrown.message : String(thrown));
+    diagnostics.report({
+      level: 'error',
+      message: thrown instanceof Error ? thrown.message : String(thrown),
+    });
     return EXIT_USAGE;
   }
 
   const language = values.language ?? configuration.language;
   if (language !== undefined && !isKnownLanguage(language)) {
-    logger.boldError(`Unknown language "${language}". Use a Gherkin language code, such as "fr".`);
+    diagnostics.report({
+      level: 'error',
+      message: `Unknown language "${language}". Use a Gherkin language code, such as "fr".`,
+    });
     return EXIT_USAGE;
   }
 
   if (streaming !== undefined) {
-    return await runStreaming(streaming, files, configuration.configuration, rules, language);
+    return await runStreaming(
+      streaming,
+      files,
+      configuration.configuration,
+      rules,
+      language,
+      diagnostics,
+    );
   }
 
   const results = await lint(files, configuration.configuration, rules, {language});
@@ -153,9 +190,10 @@ export async function run(argv: readonly string[]): Promise<number> {
   try {
     output = await formatter!(results);
   } catch (thrown) {
-    logger.boldError(
-      `The formatter failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
-    );
+    diagnostics.report({
+      level: 'error',
+      message: `The formatter failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+    });
     return EXIT_USAGE;
   }
   if (typeof output === 'string' && output !== '') {
@@ -177,6 +215,7 @@ async function runStreaming(
   configuration: Configuration,
   rules: RuleRegistry,
   language: string | undefined,
+  diagnostics: Diagnostics,
 ): Promise<number> {
   const write = (text: string | undefined): void => {
     if (text !== undefined && text !== '') {
@@ -194,9 +233,10 @@ async function runStreaming(
     }
     write(run.end?.());
   } catch (thrown) {
-    logger.boldError(
-      `The formatter failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
-    );
+    diagnostics.report({
+      level: 'error',
+      message: `The formatter failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+    });
     return EXIT_USAGE;
   }
 
@@ -232,10 +272,16 @@ function isMainModule(): boolean {
  */
 async function main(argv: readonly string[]): Promise<number> {
   try {
-    return await run(argv);
+    return await run(argv, TO_STDERR);
   } catch (thrown) {
-    logger.boldError('gurkencheck stopped unexpectedly. This is a bug, please report it:');
-    logger.error(thrown instanceof Error ? (thrown.stack ?? thrown.message) : String(thrown));
+    TO_STDERR.report({
+      level: 'error',
+      message: 'gurkencheck stopped unexpectedly. This is a bug, please report it:',
+    });
+    TO_STDERR.report({
+      level: 'detail',
+      message: thrown instanceof Error ? (thrown.stack ?? thrown.message) : String(thrown),
+    });
     return EXIT_USAGE;
   }
 }

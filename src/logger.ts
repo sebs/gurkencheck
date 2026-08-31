@@ -24,6 +24,11 @@ export function boldError(message: string): void {
   console.error(paint(`${ESC}31m${ESC}1m`, message));
 }
 
+/** Writes a message to stderr without colouring it. */
+export function note(message: string): void {
+  console.error(message);
+}
+
 /** Text decorations used by the stylish formatter. */
 export const style = {
   gray: (text: string): string => paint(`${ESC}38;5;243m`, text),

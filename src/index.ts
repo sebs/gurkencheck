@@ -51,6 +51,13 @@ export {getNeutralKeyword, getNodeType} from './gherkin/keywords.ts';
 export {DEFAULT_LANGUAGE, detectLanguage, getDialect, isKnownLanguage} from './gherkin/dialects.ts';
 export {backgroundsOf, rulesOf, scenariosOf, stepContainersOf} from './gherkin/traverse.ts';
 export {EXIT_LINT_ERRORS, EXIT_OK, EXIT_USAGE} from './exit-codes.ts';
+export {SILENT, TO_STDERR, collectDiagnostics} from './diagnostics.ts';
+export type {
+  CollectedDiagnostics,
+  Diagnostic,
+  DiagnosticLevel,
+  Diagnostics,
+} from './diagnostics.ts';
 export {mapWithWindow} from './util/stream.ts';
 export type {Sequence} from './util/stream.ts';
 export {globStream, globSync} from './util/glob.ts';

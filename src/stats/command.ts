@@ -11,7 +11,8 @@ import {EXIT_OK, EXIT_USAGE} from '../exit-codes.ts';
 import {DEFAULT_IGNORE_FILE_NAME, findFeatureFileStream} from '../feature-finder.ts';
 import {isKnownLanguage} from '../gherkin/dialects.ts';
 import {readAndParseFiles} from '../gherkin/parse.ts';
-import * as logger from '../logger.ts';
+import {SILENT} from '../diagnostics.ts';
+import type {Diagnostics} from '../diagnostics.ts';
 import {collectStatisticsFrom} from './collect.ts';
 import {
   DEFAULT_STATS_FORMAT,
@@ -41,7 +42,10 @@ export function statsUsage(): string {
   ].join('\n');
 }
 
-export async function runStats(argv: readonly string[]): Promise<number> {
+export async function runStats(
+  argv: readonly string[],
+  diagnostics: Diagnostics = SILENT,
+): Promise<number> {
   let parsed;
   try {
     parsed = parseArgs({
@@ -56,8 +60,11 @@ export async function runStats(argv: readonly string[]): Promise<number> {
       allowPositionals: true,
     });
   } catch (thrown) {
-    logger.boldError(thrown instanceof Error ? thrown.message : String(thrown));
-    console.error(statsUsage());
+    diagnostics.report({
+      level: 'error',
+      message: thrown instanceof Error ? thrown.message : String(thrown),
+    });
+    diagnostics.report({level: 'notice', message: statsUsage()});
     return EXIT_USAGE;
   }
 
@@ -70,9 +77,10 @@ export async function runStats(argv: readonly string[]): Promise<number> {
 
   const formatter = getStatsFormatter(values.format);
   if (formatter === undefined) {
-    logger.boldError(
-      `Unsupported format "${values.format}". Use one of ${Object.keys(STATS_FORMATTERS).join(', ')}.`,
-    );
+    diagnostics.report({
+      level: 'error',
+      message: `Unsupported format "${values.format}". Use one of ${Object.keys(STATS_FORMATTERS).join(', ')}.`,
+    });
     return EXIT_USAGE;
   }
 
@@ -80,14 +88,20 @@ export async function runStats(argv: readonly string[]): Promise<number> {
   if (values.top !== undefined) {
     top = Number(values.top);
     if (!Number.isInteger(top) || top < 1) {
-      logger.boldError(`--top needs a whole number of at least 1, not "${values.top}".`);
+      diagnostics.report({
+        level: 'error',
+        message: `--top needs a whole number of at least 1, not "${values.top}".`,
+      });
       return EXIT_USAGE;
     }
   }
 
   const language = values.language;
   if (language !== undefined && !isKnownLanguage(language)) {
-    logger.boldError(`Unknown language "${language}". Use a Gherkin language code, such as "fr".`);
+    diagnostics.report({
+      level: 'error',
+      message: `Unknown language "${language}". Use a Gherkin language code, such as "fr".`,
+    });
     return EXIT_USAGE;
   }
 
@@ -96,9 +110,15 @@ export async function runStats(argv: readonly string[]): Promise<number> {
 
   if (invalidPatterns.length > 0) {
     for (const pattern of invalidPatterns) {
-      logger.boldError(`Invalid format of the feature file path/pattern: "${pattern}".`);
+      diagnostics.report({
+        level: 'error',
+        message: `Invalid format of the feature file path/pattern: "${pattern}".`,
+      });
     }
-    logger.error('To run the linter please specify an existing feature file, directory or glob.');
+    diagnostics.report({
+      level: 'detail',
+      message: 'To run the linter please specify an existing feature file, directory or glob.',
+    });
     return EXIT_USAGE;
   }
 
