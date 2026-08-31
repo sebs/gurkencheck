@@ -1,6 +1,6 @@
 {
   "name": "gurkencheck",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "A Gherkin linter/validator written in TypeScript, with no build step beyond tsc",
   "keywords": [
     "gherkin",
