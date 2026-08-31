@@ -35,7 +35,7 @@ export {getNeutralKeyword, getNodeType} from './gherkin/keywords.ts';
 export {DEFAULT_LANGUAGE, detectLanguage, getDialect, isKnownLanguage} from './gherkin/dialects.ts';
 export {backgroundsOf, rulesOf, scenariosOf, stepContainersOf} from './gherkin/traverse.ts';
 export {EXIT_LINT_ERRORS, EXIT_OK, EXIT_USAGE} from './exit-codes.ts';
-export {countBySeverity, hasErrors, lint} from './linter.ts';
+export {countBySeverity, hasErrors, lint, lintStream} from './linter.ts';
 export type {LintOptions} from './linter.ts';
 export {readSuppressions} from './suppressions.ts';
 export type {Suppressions} from './suppressions.ts';
