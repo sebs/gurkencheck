@@ -40,6 +40,7 @@ async function withWatch(
   const diagnostics = collectDiagnostics();
   let passes = 0;
 
+  const guard = setTimeout(() => controller.abort(), 20000);
   const stopped = watch(
     [directory],
     CONFIG,
@@ -62,6 +63,7 @@ async function withWatch(
       notices: () => diagnostics.reported.map((entry) => entry.message),
     });
   } finally {
+    clearTimeout(guard);
     controller.abort();
     await stopped;
     fs.rmSync(directory, {recursive: true, force: true});
@@ -190,16 +192,58 @@ test('stopping resolves, so the caller can exit tidily', async () => {
   }
 });
 
-test('a directory that cannot be watched is reported rather than thrown', async () => {
+// This one used to hang the whole run on Linux. fs.watch throws on a missing
+// directory on macOS and reports it later on Linux, so there the watcher was
+// created, nothing was actually being watched, and the wait never ended.
+// The signal is a safety net: if this ever waits again, it fails rather than
+// hanging the suite.
+test('a directory that cannot be watched is reported rather than waited on', async () => {
   const diagnostics = collectDiagnostics();
   const missing = path.join(os.tmpdir(), 'gurkencheck-watch-nowhere-at-all');
-  const code = await watch([missing], CONFIG, {diagnostics}, async () => undefined);
+  const controller = new AbortController();
+  const guard = setTimeout(() => controller.abort(), 5000);
 
-  assert.equal(code, 0);
-  assert.ok(
-    diagnostics.reported.some((entry) => entry.message.includes('Could not watch')),
-    'it should say which directory it could not watch',
-  );
+  try {
+    const code = await watch(
+      [missing],
+      CONFIG,
+      {diagnostics, signal: controller.signal},
+      async () => undefined,
+    );
+
+    assert.equal(code, 0);
+    assert.ok(!controller.signal.aborted, 'it should have returned on its own, not been rescued');
+    assert.ok(
+      diagnostics.reported.some((entry) => entry.message.includes('Could not watch')),
+      'it should say which directory it could not watch',
+    );
+  } finally {
+    clearTimeout(guard);
+  }
+});
+
+test('a file given where a directory belongs is reported, not watched', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-watch-'));
+  const file = path.join(directory, 'Example.feature');
+  fs.writeFileSync(file, 'Feature: A\n');
+
+  const diagnostics = collectDiagnostics();
+  const controller = new AbortController();
+  const guard = setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const code = await watch(
+      [file],
+      CONFIG,
+      {diagnostics, signal: controller.signal},
+      async () => undefined,
+    );
+    assert.equal(code, 0);
+    assert.ok(!controller.signal.aborted, 'it should have returned on its own');
+  } finally {
+    clearTimeout(guard);
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
 });
 
 test('isInteresting picks feature files and the configuration', () => {

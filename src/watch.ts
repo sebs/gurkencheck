@@ -70,6 +70,8 @@ export async function watch(
 
   const watchers: fs.FSWatcher[] = [];
   const changed = new Set<string>();
+  /** Set once the watch is waiting, so a watcher failing then can end it. */
+  let stopWatching: (() => void) | undefined;
   let timer: NodeJS.Timeout | undefined;
   let running = false;
   let againAfterThis = false;
@@ -125,7 +127,28 @@ export async function watch(
     timer.unref?.();
   };
 
+  /** Watchers still working. A watcher that gives up takes itself out. */
+  const living = new Set<fs.FSWatcher>();
+
   for (const root of roots) {
+    // Checked before watching rather than left to fs.watch, because what
+    // fs.watch does about a missing directory is not the same everywhere: it
+    // throws on some platforms and reports an error event later on others,
+    // and the second kind would leave this waiting on a watch of nothing.
+    let directory = false;
+    try {
+      directory = fs.statSync(root).isDirectory();
+    } catch {
+      directory = false;
+    }
+    if (!directory) {
+      diagnostics.report({
+        level: 'error',
+        message: `Could not watch "${root}": it is not a directory.`,
+      });
+      continue;
+    }
+
     try {
       const watcher = fs.watch(root, {recursive: true}, (_event, filename) => {
         // Some platforms hand over no name; there is nothing to filter on, so
@@ -142,13 +165,21 @@ export async function watch(
         schedule();
       });
       watcher.on('error', (thrown: Error) => {
-        // One watch giving up should not take the others with it.
+        // One watch giving up should not take the others with it - but if
+        // they all give up there is nothing left to wait for, and waiting
+        // anyway would be a process that never returns.
         diagnostics.report({
           level: 'detail',
           message: `No longer watching "${root}": ${thrown.message}`,
         });
+        watcher.close();
+        living.delete(watcher);
+        if (living.size === 0) {
+          stopWatching?.();
+        }
       });
       watchers.push(watcher);
+      living.add(watcher);
     } catch (thrown) {
       diagnostics.report({
         level: 'error',
@@ -192,8 +223,17 @@ export async function watch(
       resolve(EXIT_OK);
     };
 
+    stopWatching = stop;
     process.on('SIGINT', stop);
     process.on('SIGTERM', stop);
+
+    // A watcher may have given up while the first pass was running, in which
+    // case there is nothing left to wait for.
+    if (living.size === 0) {
+      stop();
+      return;
+    }
+
     if (options.signal?.aborted === true) {
       stop();
     } else {

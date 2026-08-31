@@ -312,6 +312,31 @@ test('a config extending a package that throws on import exits 2 with the reason
   });
 });
 
+/**
+ * Interrupts a watching process and waits for it to go.
+ *
+ * With a deadline, and SIGKILL behind it: a process that will not stop is a
+ * failure worth seeing, not a run that never finishes.
+ */
+async function stop(child: ReturnType<typeof spawn>): Promise<number | null> {
+  child.kill('SIGINT');
+
+  const exited = new Promise<number | null>((resolve) => {
+    child.on('exit', (code) => resolve(code));
+  });
+  const gaveUp = new Promise<'timeout'>((resolve) => {
+    setTimeout(() => resolve('timeout'), 10000).unref();
+  });
+
+  const outcome = await Promise.race([exited, gaveUp]);
+  if (outcome === 'timeout') {
+    child.kill('SIGKILL');
+    await exited;
+    assert.fail('the watching process did not stop when it was interrupted');
+  }
+  return outcome;
+}
+
 test('--help mentions watching', async () => {
   const {code, stdout} = await cli(['--help']);
   assert.equal(code, 0);
@@ -351,8 +376,7 @@ test('--watch checks, waits, then checks again when a file changes', async () =>
       await waitFor(/Second\.feature/u);
       await waitFor(/Missing Scenario name/u);
     } finally {
-      child.kill('SIGINT');
-      await new Promise((resolve) => child.on('exit', resolve));
+      await stop(child);
     }
   });
 });
@@ -369,10 +393,8 @@ test('--watch exits 0 when it is stopped', async () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
 
-    child.kill('SIGINT');
-    const code = await new Promise((resolve) => child.on('exit', resolve));
     // A run that found something is the normal state of affairs while you are
     // fixing it, so stopping the watch is not itself a failure.
-    assert.equal(code, 0);
+    assert.equal(await stop(child), 0);
   });
 });
