@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {DEFAULT_FORMAT, getFormatter, loadFormatter} from '../src/formatters/index.ts';
+import {
+  DEFAULT_FORMAT,
+  STREAMING_FORMATTERS,
+  getFormatter,
+  getStreamingFormatter,
+  loadFormatter,
+  loadStreamingFormatter,
+} from '../src/formatters/index.ts';
+import type {StreamingFormatter} from '../src/formatters/index.ts';
 import {toSarif} from '../src/formatters/sarif.ts';
 import type {FileResult, Formatter} from '../src/index.ts';
 
@@ -183,11 +191,13 @@ test('loadFormatter explains a module that is not a formatter', async () => {
 });
 
 // https://github.com/gherkin-lint/gherkin-lint/issues/95
-test('tap reports one test point per file, with a plan', () => {
+// The plan comes last: test points are written as the files are checked, so
+// the count is only known once they have been. TAP 13 allows either end.
+test('tap reports one test point per file, with a trailing plan', () => {
   const output = capture(getFormatter('tap')!, RESULTS);
   const lines = output.split('\n');
   assert.equal(lines[0], 'TAP version 13');
-  assert.equal(lines[1], '1..2');
+  assert.equal(lines.at(-1), '1..2');
   assert.match(output, /^not ok 1 - \/features\/Login\.feature$/mu);
   assert.match(output, /^ok 2 - \/features\/Clean\.feature$/mu);
 });
@@ -339,4 +349,67 @@ test('sarif marks a warning as a warning', () => {
 test('sarif is valid JSON when printed', () => {
   const output = capture(getFormatter('sarif')!, RESULTS);
   assert.equal((JSON.parse(output) as {version: string}).version, '2.1.0');
+});
+
+/** Drives a streaming formatter over the results, one file at a time. */
+function stream(start: StreamingFormatter, results: readonly FileResult[]): string {
+  const run = start();
+  return [run.start?.() ?? '', ...results.map((result) => run.file(result)), run.end?.() ?? ''].join('');
+}
+
+test('the streaming formats are the ones that can be written as they go', () => {
+  assert.deepEqual(Object.keys(STREAMING_FORMATTERS).sort(), ['stylish', 'tap']);
+  // A single document with a root element and counts over the whole run has
+  // nothing it can write early.
+  for (const format of ['json', 'sarif', 'junit', 'xunit']) {
+    assert.equal(getStreamingFormatter(format), undefined, `${format} should not stream`);
+  }
+});
+
+test('streaming tap writes the same report the batch one does', () => {
+  assert.equal(stream(getStreamingFormatter('tap')!, RESULTS).trimEnd(), capture(getFormatter('tap')!, RESULTS));
+});
+
+test('streaming tap numbers its test points as they arrive', () => {
+  const run = getStreamingFormatter('tap')!();
+  assert.equal(run.start?.(), 'TAP version 13\n');
+  assert.match(run.file(RESULTS[0]!), /^not ok 1 - /u);
+  assert.match(run.file(RESULTS[1]!), /^ok 2 - /u);
+  assert.equal(run.end?.(), '1..2\n');
+});
+
+// Two runs at once must not number each other's test points.
+test('each tap run counts on its own', () => {
+  const first = getStreamingFormatter('tap')!();
+  const second = getStreamingFormatter('tap')!();
+
+  first.file(RESULTS[0]!);
+  first.file(RESULTS[1]!);
+  second.file(RESULTS[0]!);
+
+  assert.equal(first.end?.(), '1..2\n');
+  assert.equal(second.end?.(), '1..1\n');
+});
+
+test('streaming stylish writes byte for byte what the batch one does', () => {
+  // capture() joins the lines console.log wrote, which drops the final break.
+  assert.equal(
+    stream(getStreamingFormatter('stylish')!, RESULTS).trimEnd(),
+    capture(getFormatter('stylish')!, RESULTS).trimEnd(),
+  );
+});
+
+test('streaming stylish writes nothing for a clean file', () => {
+  const run = getStreamingFormatter('stylish')!();
+  assert.equal(run.file({filePath: '/Clean.feature', errors: []}), '');
+});
+
+test('a custom formatter exporting startRun is used as a streaming one', async () => {
+  const loaded = await loadStreamingFormatter('./test/formatters/streaming.mjs');
+  assert.ok(loaded, 'the module exports startRun, so it should stream');
+  assert.equal(stream(loaded, RESULTS), 'start|/features/Login.feature|/features/Clean.feature|end');
+});
+
+test('a custom formatter without startRun is left as a batch one', async () => {
+  assert.equal(await loadStreamingFormatter('./test/formatters/batch.mjs'), undefined);
 });

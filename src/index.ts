@@ -23,8 +23,16 @@ export {
   readIgnorePatterns,
 } from './feature-finder.ts';
 export type {FeatureSearch} from './feature-finder.ts';
-export {DEFAULT_FORMAT, FORMATTERS, getFormatter, loadFormatter} from './formatters/index.ts';
-export type {Formatter} from './formatters/index.ts';
+export {
+  DEFAULT_FORMAT,
+  FORMATTERS,
+  STREAMING_FORMATTERS,
+  getFormatter,
+  getStreamingFormatter,
+  loadFormatter,
+  loadStreamingFormatter,
+} from './formatters/index.ts';
+export type {Formatter, FormatterRun, StreamingFormatter} from './formatters/index.ts';
 export {toJson} from './formatters/json.ts';
 export {toSarif} from './formatters/sarif.ts';
 export {version} from './version.ts';

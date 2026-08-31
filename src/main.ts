@@ -8,11 +8,18 @@ import {parseArgs} from 'node:util';
 import {DEFAULT_CONFIG_FILE_NAME, readConfiguration} from './config-parser.ts';
 import {EXIT_LINT_ERRORS, EXIT_OK, EXIT_USAGE} from './exit-codes.ts';
 import {DEFAULT_IGNORE_FILE_NAME, findFeatureFiles} from './feature-finder.ts';
-import {DEFAULT_FORMAT, FORMATTERS, loadFormatter} from './formatters/index.ts';
+import {
+  DEFAULT_FORMAT,
+  FORMATTERS,
+  loadFormatter,
+  loadStreamingFormatter,
+} from './formatters/index.ts';
 import {isKnownLanguage} from './gherkin/dialects.ts';
-import {hasErrors, lint} from './linter.ts';
+import {hasErrors, lint, lintStream} from './linter.ts';
 import * as logger from './logger.ts';
 import {loadRules} from './rules.ts';
+import type {StreamingFormatter} from './formatters/index.ts';
+import type {Configuration, RuleRegistry} from './types.ts';
 import {runStats} from './stats/command.ts';
 import {version} from './version.ts';
 
@@ -111,9 +118,16 @@ export async function run(argv: readonly string[]): Promise<number> {
     return EXIT_USAGE;
   }
 
+  // A format that can write as the run goes on is driven from the stream, so
+  // the first findings appear while the rest of the files are still being
+  // checked. The others are handed the whole run at the end, as before.
   let formatter;
+  let streaming;
   try {
-    formatter = await loadFormatter(values.format);
+    streaming = await loadStreamingFormatter(values.format);
+    if (streaming === undefined) {
+      formatter = await loadFormatter(values.format);
+    }
   } catch (thrown) {
     logger.boldError(thrown instanceof Error ? thrown.message : String(thrown));
     return EXIT_USAGE;
@@ -125,12 +139,16 @@ export async function run(argv: readonly string[]): Promise<number> {
     return EXIT_USAGE;
   }
 
+  if (streaming !== undefined) {
+    return await runStreaming(streaming, files, configuration.configuration, rules, language);
+  }
+
   const results = await lint(files, configuration.configuration, rules, {language});
 
   // A formatter may print the output itself or hand it back as a string.
   let output;
   try {
-    output = await formatter(results);
+    output = await formatter!(results);
   } catch (thrown) {
     logger.boldError(
       `The formatter failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
@@ -142,6 +160,44 @@ export async function run(argv: readonly string[]): Promise<number> {
   }
 
   return hasErrors(results) ? EXIT_LINT_ERRORS : EXIT_OK;
+}
+
+/**
+ * Lints while writing, so a long run says something before it is over.
+ *
+ * Nothing is kept but whether anything has failed: holding every result to
+ * count them at the end would give back the memory the stream just saved.
+ */
+async function runStreaming(
+  streaming: StreamingFormatter,
+  files: readonly string[],
+  configuration: Configuration,
+  rules: RuleRegistry,
+  language: string | undefined,
+): Promise<number> {
+  const write = (text: string | undefined): void => {
+    if (text !== undefined && text !== '') {
+      process.stdout.write(text);
+    }
+  };
+
+  let failed = false;
+  try {
+    const run = streaming();
+    write(run.start?.());
+    for await (const result of lintStream(files, configuration, rules, {language})) {
+      failed ||= result.errors.some((error) => (error.severity ?? 'error') === 'error');
+      write(run.file(result));
+    }
+    write(run.end?.());
+  } catch (thrown) {
+    logger.boldError(
+      `The formatter failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+    );
+    return EXIT_USAGE;
+  }
+
+  return failed ? EXIT_LINT_ERRORS : EXIT_OK;
 }
 
 /**

@@ -151,7 +151,7 @@ at [`src/stats/command.ts:125`](src/stats/command.ts#L125). One fix, two call si
 
 ---
 
-## 3. `lint()` is all-or-nothing: nothing is observable until every file is done
+## 3. `lint()` is all-or-nothing: nothing is observable until every file is done — **FIXED**
 
 **Where:** [`src/linter.ts:25-58`](src/linter.ts#L25-L58)
 
@@ -204,7 +204,7 @@ stops the reads.
 
 ---
 
-## 4. Cross-file rule state lives in module-scope singletons, and `reset()` is a lifecycle event in disguise
+## 4. Cross-file rule state lives in module-scope singletons, and `reset()` is a lifecycle event in disguise — **FIXED**
 
 **Where:** [`src/rules/no-dupe-feature-names.ts:7`](src/rules/no-dupe-feature-names.ts#L7),
 [`src/rules/no-dupe-file-names.ts:13`](src/rules/no-dupe-file-names.ts#L13),
@@ -288,7 +288,7 @@ rules keep working untouched.
 
 ---
 
-## 5. Formatters take the complete array, so nothing can stream — and TAP is advertised as a stream but isn't one
+## 5. Formatters take the complete array, so nothing can stream — and TAP is advertised as a stream but isn't one — **FIXED**
 
 **Where:** [`src/formatters/index.ts:20-22`](src/formatters/index.ts#L20-L22),
 [`src/formatters/tap.ts`](src/formatters/tap.ts)
@@ -558,9 +558,9 @@ supported indefinitely by calling it from the default `onRunStart`.
 |---|---|---|---|---|
 | 1 | ~~`try/catch` per read — **fix the crash**~~ **DONE** | **High** | Trivial | No |
 | 2 | Bounded read-ahead, shared with `stats` | High | Small | No |
-| 3 | `lintStream()` async generator | High | Small | No |
-| 4 | Per-run rule state + `onRunStart`/`onRunEnd` | High | Medium | Additive |
-| 5 | Streaming formatter shape (TAP, stylish) | Medium | Medium | Additive |
+| 3 | ~~`lintStream()` async generator~~ **DONE** | High | Small | No |
+| 4 | ~~Per-run rule state + `onRunStart`/`onRunEnd`~~ **DONE** | High | Medium | Additive |
+| 5 | ~~Streaming formatter shape (TAP, stylish)~~ **DONE** | Medium | Medium | Additive |
 | 6 | `globStream` discovery | Low–Medium | Medium | Additive |
 | 7 | Watch mode | — | Large | New feature |
 | 8 | Diagnostic events replacing direct `logger` | Low | Small | Additive |
@@ -578,3 +578,43 @@ less so otherwise. Settle that question first.
 Item 9 is a genuine improvement to rule authoring and the natural end state for a linter that
 mirrors ESLint this closely — but it is a large change touching all 36 rules, justified by
 ergonomics rather than the performance framing it invites. Last, if at all.
+
+---
+
+## What has been done since
+
+Findings 1, 3, 4 and 5 are implemented. What shipped, and where it differs from
+what this document proposed:
+
+**#4, the rule lifecycle.** Rules get a `RunContext` - one per rule per run - instead of keeping
+state in the module, so two `lint()` calls at once no longer corrupt each other. `beginRun` and
+`finishRun` bracket a run; `onRunStart` and `onRunEnd` are optional hooks. The three `no-dupe-*`
+rules now report from `onRunEnd`, so every file involved in a duplicate is told about the
+others rather than the second one being blamed for arriving second. Their message changed from
+"is already used in" to "is also used in", since neither file is the later one any more. All
+additive: a rule with only a `name` and a `run` still works, and `reset()` is deprecated rather
+than removed.
+
+**#3, `lintStream`.** An async generator yielding each result as its file is checked; `lint()`
+collects it and is otherwise unchanged. Breaking out of the loop stops the checking.
+
+One thing this document did not anticipate: **a cross-file rule and a result stream pull against
+each other.** A rule reporting from `onRunEnd` cannot know what it has found until every file has
+been seen, so a result handed over early would have to be taken back. Rather than invent a
+retraction, enabling such a rule holds every result until the end - and with none enabled,
+results arrive as each file is checked. That is the honest cost of the question those rules
+answer, and it is worth knowing before building anything on the stream.
+
+Reading is still done up front, so this streams the checking rather than the whole pipeline.
+Finding #2 is what would fix that, and it is untouched.
+
+**#5, streaming formatters.** `StreamingFormatter` is a *factory* returning `{start?, file, end?}`
+- a factory rather than an object, so a TAP counter belongs to its run and two runs at once
+cannot number each other's test points. The same reasoning as #4, one layer up. TAP now writes
+test points as they arrive with a trailing plan, and stylish writes each block as its file is
+done, byte for byte what it printed before. json, sarif and junit stay as they are, exactly as
+argued above. A formatter of your own joins in by exporting `startRun`.
+
+**Still open:** #2 (bounded read-ahead), #6 (streaming discovery), #7 (watch mode), #8
+(diagnostic events), #9 (visitor rule API). The argument for each stands as written - including
+the recommendation that #9 go last, if at all.
