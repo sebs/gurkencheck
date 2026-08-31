@@ -2,7 +2,7 @@
  * Running the rules over a set of feature files.
  */
 import path from 'node:path';
-import {readAndParseFile} from './gherkin/parse.ts';
+import {readAndParseFiles} from './gherkin/parse.ts';
 import {beginRun, finishRun, isRuleEnabled, runEnabledRules} from './rules.ts';
 import {readSuppressions} from './suppressions.ts';
 import type {Suppressions} from './suppressions.ts';
@@ -18,6 +18,11 @@ export interface LintOptions {
    * for projects written entirely in one language.
    */
   language?: string;
+  /**
+   * How many files to read ahead of the one being checked. Left out, a
+   * sensible default is used; there is rarely a reason to set it.
+   */
+  readAhead?: number;
 }
 
 /** True when a rule that only reports once every file has been seen is on. */
@@ -44,10 +49,12 @@ function reportsAcrossFiles(rules: RuleRegistry, configuration: Configuration): 
  * have to be taken back. With no such rule on, each result arrives as its
  * file is checked.
  *
- * Reading is still done up front. Streaming that too is a separate change,
- * and would need a bounded read-ahead to be worth anything.
+ * Files are read ahead of being checked, a bounded number at a time, so the
+ * next one is on its way while this one is being checked without the whole
+ * suite being held in memory at once.
  *
- * Stopping early - `break` in a `for await` - stops the checking too.
+ * Stopping early - `break` in a `for await` - stops the reading as well as
+ * the checking, rather than running on to the last file.
  */
 export async function* lintStream(
   files: readonly string[],
@@ -58,14 +65,14 @@ export async function* lintStream(
   const run = beginRun(rules, configuration);
   const held = reportsAcrossFiles(rules, configuration);
 
-  const parsed = await Promise.all(
-    files.map((file) => readAndParseFile(file, options.language)),
-  );
   const waiting: FileResult[] = [];
   /** Where to put a finding that names a file, and what may hide it there. */
   const byPath = new Map<string, {result: FileResult; suppressions: Suppressions}>();
 
-  for (const result of parsed) {
+  for await (const result of readAndParseFiles(files, {
+    language: options.language,
+    readAhead: options.readAhead,
+  })) {
     // Parse errors are not suppressible: the file could not be read, so
     // hiding the message would leave nothing in its place.
     let errors = result.errors;

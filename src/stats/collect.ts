@@ -91,7 +91,7 @@ function testCases(scenario: Scenario): number {
   return scenario.examples.reduce((total, examples) => total + examples.tableBody.length, 0);
 }
 
-function tally<T>(counts: Map<T, number>, key: T): void {
+function tallyOne<T>(counts: Map<T, number>, key: T): void {
   counts.set(key, (counts.get(key) ?? 0) + 1);
 }
 
@@ -198,21 +198,37 @@ function collectFile(
 
   for (const {node} of taggedNodesOf(feature)) {
     for (const tag of node.tags) {
-      tally(into.tags, tag.name);
+      tallyOne(into.tags, tag.name);
     }
   }
 }
 
 /**
- * Counts a set of parsed feature files.
+ * Everything counted so far.
  *
- * Files the parser refused are listed rather than counted: half a broken file
- * is worse than none of it, because the numbers would quietly be wrong.
+ * Held apart from the files it was counted from, so the parsed documents can
+ * be let go of as they are counted rather than every one of them being held
+ * until the end.
  */
-export function collectStatistics(
-  parsed: readonly ParseResult[],
-  options: CollectOptions = {},
-): Statistics {
+interface Tally {
+  into: {
+    inventory: Inventory;
+    steps: Map<string, Sighting>;
+    keywords: KeywordMix;
+    stepWords: number[];
+    stepsPerScenario: number[];
+    scenarios: ScenarioRef[];
+    tags: Map<string, number>;
+    effective: number;
+    untagged: number;
+  };
+  unreadable: UnreadableFile[];
+  languages: Map<string, number>;
+  readable: number;
+  total: number;
+}
+
+function newTally(): Tally {
   const inventory: Inventory = {
     features: 0,
     rules: 0,
@@ -225,39 +241,51 @@ export function collectStatistics(
     dataTables: 0,
     docStrings: 0,
   };
-  const into = {
-    inventory,
-    steps: new Map<string, Sighting>(),
-    keywords: {given: 0, when: 0, then: 0, other: 0},
-    stepWords: [] as number[],
-    stepsPerScenario: [] as number[],
-    scenarios: [] as ScenarioRef[],
-    tags: new Map<string, number>(),
-    effective: 0,
-    untagged: 0,
+
+  return {
+    into: {
+      inventory,
+      steps: new Map<string, Sighting>(),
+      keywords: {given: 0, when: 0, then: 0, other: 0},
+      stepWords: [],
+      stepsPerScenario: [],
+      scenarios: [],
+      tags: new Map<string, number>(),
+      effective: 0,
+      untagged: 0,
+    },
+    unreadable: [],
+    languages: new Map<string, number>(),
+    readable: 0,
+    total: 0,
   };
+}
 
-  const unreadable: UnreadableFile[] = [];
-  const languages = new Map<string, number>();
-  let readable = 0;
+/** Counts one file into the tally. */
+function absorb(tally: Tally, result: ParseResult): void {
+  tally.total += 1;
 
-  for (const result of parsed) {
-    const file = result.file.relativePath;
-    const failure = result.errors[0];
-    if (failure !== undefined) {
-      unreadable.push({file, reason: failure.message, line: failure.line});
-      continue;
-    }
-
-    readable += 1;
-    // An empty file parses without complaint and holds nothing to count.
-    if (result.feature === undefined) {
-      continue;
-    }
-
-    tally(languages, result.feature.language);
-    collectFile(result.feature, file, into);
+  const file = result.file.relativePath;
+  const failure = result.errors[0];
+  if (failure !== undefined) {
+    tally.unreadable.push({file, reason: failure.message, line: failure.line});
+    return;
   }
+
+  tally.readable += 1;
+  // An empty file parses without complaint and holds nothing to count.
+  if (result.feature === undefined) {
+    return;
+  }
+
+  tallyOne(tally.languages, result.feature.language);
+  collectFile(result.feature, file, tally.into);
+}
+
+/** Turns the running totals into the report. */
+function summarise(tally: Tally, options: CollectOptions): Statistics {
+  const {into, unreadable, languages} = tally;
+  const {inventory} = into;
 
   const vocabulary: StepEntry[] = [...into.steps]
     .map(([text, sighting]) => ({text, ...sighting}))
@@ -278,7 +306,7 @@ export function collectStatistics(
     .sort(byCountThenName<TagEntry>((entry) => entry.name));
 
   return {
-    files: {total: parsed.length, parsed: readable, unreadable},
+    files: {total: tally.total, parsed: tally.readable, unreadable},
     inventory,
     scenarios: {
       effective: into.effective,
@@ -306,4 +334,38 @@ export function collectStatistics(
       .map(([code, files]) => ({code, files}))
       .sort((a, b) => b.files - a.files || (a.code < b.code ? -1 : 1)),
   };
+}
+
+/**
+ * Counts a set of parsed feature files.
+ *
+ * Files the parser refused are listed rather than counted: half a broken file
+ * is worse than none of it, because the numbers would quietly be wrong.
+ */
+export function collectStatistics(
+  parsed: readonly ParseResult[],
+  options: CollectOptions = {},
+): Statistics {
+  const tally = newTally();
+  for (const result of parsed) {
+    absorb(tally, result);
+  }
+  return summarise(tally, options);
+}
+
+/**
+ * The same count, over files arriving one at a time.
+ *
+ * Nothing here holds on to a parsed document once it has been counted, so a
+ * suite of any size costs the same as the report it produces.
+ */
+export async function collectStatisticsFrom(
+  parsed: AsyncIterable<ParseResult>,
+  options: CollectOptions = {},
+): Promise<Statistics> {
+  const tally = newTally();
+  for await (const result of parsed) {
+    absorb(tally, result);
+  }
+  return summarise(tally, options);
 }

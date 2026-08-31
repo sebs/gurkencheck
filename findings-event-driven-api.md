@@ -89,7 +89,7 @@ structural. A streaming pipeline is what would make it structural.
 
 ---
 
-## 2. The same `Promise.all` reads and parses the entire suite into memory before checking anything
+## 2. The same `Promise.all` reads and parses the entire suite into memory before checking anything — **FIXED**
 
 **Where:** [`src/linter.ts:33-35`](src/linter.ts#L33-L35),
 [`src/stats/command.ts:125`](src/stats/command.ts#L125)
@@ -557,7 +557,7 @@ supported indefinitely by calling it from the default `onRunStart`.
 | # | Change | Value | Cost | Breaking |
 |---|---|---|---|---|
 | 1 | ~~`try/catch` per read — **fix the crash**~~ **DONE** | **High** | Trivial | No |
-| 2 | Bounded read-ahead, shared with `stats` | High | Small | No |
+| 2 | ~~Bounded read-ahead, shared with `stats`~~ **DONE** | High | Small | No |
 | 3 | ~~`lintStream()` async generator~~ **DONE** | High | Small | No |
 | 4 | ~~Per-run rule state + `onRunStart`/`onRunEnd`~~ **DONE** | High | Medium | Additive |
 | 5 | ~~Streaming formatter shape (TAP, stylish)~~ **DONE** | Medium | Medium | Additive |
@@ -615,6 +615,34 @@ test points as they arrive with a trailing plan, and stylish writes each block a
 done, byte for byte what it printed before. json, sarif and junit stay as they are, exactly as
 argued above. A formatter of your own joins in by exporting `startRun`.
 
-**Still open:** #2 (bounded read-ahead), #6 (streaming discovery), #7 (watch mode), #8
-(diagnostic events), #9 (visitor rule API). The argument for each stands as written - including
-the recommendation that #9 go last, if at all.
+**#2, the bounded read-ahead.** `mapWithWindow` keeps at most a fixed number of reads in flight
+and hands results over in the order the files were given. `readAndParseFiles` is that applied to
+feature files; `lintStream` and `stats` both go through it, so the duplicated `Promise.all` this
+document complained about is gone from both.
+
+Measured on a generated suite, peak RSS:
+
+| files | before | after |
+|---|---|---|
+| 4,000 | 384 MB | 158 MB |
+| 12,000 | 811 MB | 210 MB |
+
+Tripling the suite costs the old path 2.1x the memory and the new one 1.33x - what is left
+growing is the accumulated results and the cross-file rule state, not the syntax trees. It is
+also about 20% faster, which was not the point but is welcome.
+
+Two things worth recording:
+
+- The windowing lives in `src/util/stream.ts` rather than inside the parser, because a window
+  holding *started* promises can only be tested by holding the work still and watching it. The
+  first attempt at that test monkey-patched `fs.promises.readFile`, which does nothing to a
+  static ESM import - so it passed while observing zero open files. The bound is now tested
+  against an injected map, and the file-level tests only claim what they can actually see.
+- `mapWithWindow` requires that its map never rejects, because a result is started before
+  anything awaits it and a rejection would be unhandled. `readAndParseFile` was already
+  non-throwing for read failures; it now covers the parse call too, so that promise is real
+  rather than nearly true.
+
+**Still open:** #6 (streaming discovery), #7 (watch mode), #8 (diagnostic events), #9 (visitor
+rule API). The argument for each stands as written - including the recommendation that #9 go
+last, if at all.

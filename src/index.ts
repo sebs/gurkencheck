@@ -37,12 +37,20 @@ export {toJson} from './formatters/json.ts';
 export {toSarif} from './formatters/sarif.ts';
 export {version} from './version.ts';
 export type {JsonMessage, JsonResult} from './formatters/json.ts';
-export {ALWAYS_ON_RULES, PARSER_RULES, parseFeature, readAndParseFile} from './gherkin/parse.ts';
-export type {ParseResult} from './gherkin/parse.ts';
+export {
+  ALWAYS_ON_RULES,
+  DEFAULT_READ_AHEAD,
+  PARSER_RULES,
+  parseFeature,
+  readAndParseFile,
+  readAndParseFiles,
+} from './gherkin/parse.ts';
+export type {ParseResult, ReadOptions} from './gherkin/parse.ts';
 export {getNeutralKeyword, getNodeType} from './gherkin/keywords.ts';
 export {DEFAULT_LANGUAGE, detectLanguage, getDialect, isKnownLanguage} from './gherkin/dialects.ts';
 export {backgroundsOf, rulesOf, scenariosOf, stepContainersOf} from './gherkin/traverse.ts';
 export {EXIT_LINT_ERRORS, EXIT_OK, EXIT_USAGE} from './exit-codes.ts';
+export {mapWithWindow} from './util/stream.ts';
 export {countBySeverity, hasErrors, lint, lintStream} from './linter.ts';
 export type {LintOptions} from './linter.ts';
 export {readSuppressions} from './suppressions.ts';
@@ -60,7 +68,7 @@ export {
 } from './rules.ts';
 export type {Run} from './rules.ts';
 export {BUILT_IN_RULES} from './rules/index.ts';
-export {collectStatistics, distribution} from './stats/collect.ts';
+export {collectStatistics, collectStatisticsFrom, distribution} from './stats/collect.ts';
 export type {CollectOptions} from './stats/collect.ts';
 export {DEFAULT_SIMILARITY, boundedEditDistance, groupSimilar} from './stats/similar.ts';
 export type {SimilarityOptions} from './stats/similar.ts';

@@ -10,9 +10,9 @@ import {parseArgs} from 'node:util';
 import {EXIT_OK, EXIT_USAGE} from '../exit-codes.ts';
 import {DEFAULT_IGNORE_FILE_NAME, findFeatureFiles} from '../feature-finder.ts';
 import {isKnownLanguage} from '../gherkin/dialects.ts';
-import {readAndParseFile} from '../gherkin/parse.ts';
+import {readAndParseFiles} from '../gherkin/parse.ts';
 import * as logger from '../logger.ts';
-import {collectStatistics} from './collect.ts';
+import {collectStatisticsFrom} from './collect.ts';
 import {
   DEFAULT_STATS_FORMAT,
   DEFAULT_TOP,
@@ -102,8 +102,9 @@ export async function runStats(argv: readonly string[]): Promise<number> {
     return EXIT_USAGE;
   }
 
-  const results = await Promise.all(files.map((file) => readAndParseFile(file, language)));
-  const statistics = collectStatistics(results);
+  // Counted as they arrive, so a suite of any size costs what the report
+  // costs rather than what the suite does.
+  const statistics = await collectStatisticsFrom(readAndParseFiles(files, {language}));
 
   console.log(formatter(statistics, {top}));
   return EXIT_OK;

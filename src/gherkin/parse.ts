@@ -12,6 +12,7 @@ import {AstBuilder, GherkinClassicTokenMatcher, Parser} from '@cucumber/gherkin'
 import {IdGenerator} from '@cucumber/messages';
 import type {Feature} from '@cucumber/messages';
 import {readFile} from 'node:fs/promises';
+import {mapWithWindow} from '../util/stream.ts';
 import type {FeatureFile, RuleError} from '../types.ts';
 import type {Dialect} from './dialects.ts';
 import {DEFAULT_LANGUAGE, detectLanguage, getDialect} from './dialects.ts';
@@ -299,6 +300,21 @@ export function parseFeature(
   return {file, feature: undefined, errors};
 }
 
+/** A file that could not be turned into a feature, and why. */
+function unreadable(relativePath: string, lines: string[], thrown: unknown): ParseResult {
+  return {
+    file: {relativePath, lines},
+    feature: undefined,
+    errors: [
+      {
+        message: thrown instanceof Error ? thrown.message : String(thrown),
+        rule: 'unexpected-error',
+        line: 0,
+      },
+    ],
+  };
+}
+
 /**
  * Reads a feature file from disk and parses it.
  *
@@ -307,6 +323,10 @@ export function parseFeature(
  * exactly as a file the parser rejected does. Nothing here throws: one
  * unreadable file among a thousand should cost you that file's findings, not
  * every other file's as well.
+ *
+ * That promise is what lets `readAndParseFiles` hold started reads in a
+ * window. A promise that rejected before anything awaited it would be an
+ * unhandled rejection, and take the process with it.
  */
 export async function readAndParseFile(
   relativePath: string,
@@ -316,17 +336,50 @@ export async function readAndParseFile(
   try {
     source = await readFile(relativePath, 'utf8');
   } catch (thrown) {
-    return {
-      file: {relativePath, lines: []},
-      feature: undefined,
-      errors: [
-        {
-          message: thrown instanceof Error ? thrown.message : String(thrown),
-          rule: 'unexpected-error',
-          line: 0,
-        },
-      ],
-    };
+    return unreadable(relativePath, [], thrown);
   }
-  return parseFeature(relativePath, source, defaultLanguage);
+
+  try {
+    return parseFeature(relativePath, source, defaultLanguage);
+  } catch (thrown) {
+    // parseFeature turns the parser's complaints into findings rather than
+    // throwing, so getting here means gurkencheck itself went wrong. Even
+    // then, one file is one file.
+    return unreadable(relativePath, toLines(source), thrown);
+  }
+}
+
+/**
+ * How many files are read ahead of the one being handed over.
+ *
+ * Enough to keep the disk busy while a file is checked, few enough that the
+ * memory held is a property of this number rather than of the size of the
+ * suite. Reading every file at once - which is what a `Promise.all` over the
+ * whole list does - holds the entire suite's source and syntax trees at once,
+ * and opens a file descriptor per file while it is at it.
+ */
+export const DEFAULT_READ_AHEAD = 16;
+
+export interface ReadOptions {
+  /** The dialect for files carrying no `# language:` header of their own. */
+  language?: string;
+  /** How many files to keep reading ahead of the one handed over. */
+  readAhead?: number;
+}
+
+/**
+ * Reads and parses a list of feature files, handing each one over in turn.
+ *
+ * Files are read ahead of being handed over, so the next one is on its way
+ * while this one is being used, but only so many at a time. Results come in
+ * the order the files were given whatever order they finish reading in, which
+ * is what the rules looking across files need.
+ */
+export function readAndParseFiles(
+  files: readonly string[],
+  options: ReadOptions = {},
+): AsyncGenerator<ParseResult> {
+  return mapWithWindow(files, options.readAhead ?? DEFAULT_READ_AHEAD, (file) =>
+    readAndParseFile(file, options.language),
+  );
 }
