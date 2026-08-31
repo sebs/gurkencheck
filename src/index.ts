@@ -19,6 +19,7 @@ export {PRESETS, RECOMMENDED} from './presets.ts';
 export {
   DEFAULT_IGNORE_FILE_NAME,
   DEFAULT_IGNORED_PATTERNS,
+  featureRoots,
   findFeatureFileStream,
   findFeatureFiles,
   readIgnorePatterns,
@@ -58,9 +59,11 @@ export type {
   DiagnosticLevel,
   Diagnostics,
 } from './diagnostics.ts';
+export {DEFAULT_SETTLE_MS, isInteresting, watch} from './watch.ts';
+export type {WatchOptions} from './watch.ts';
 export {mapWithWindow} from './util/stream.ts';
 export type {Sequence} from './util/stream.ts';
-export {globStream, globSync} from './util/glob.ts';
+export {globRoot, globStream, globSync} from './util/glob.ts';
 export {countBySeverity, hasErrors, lint, lintStream} from './linter.ts';
 export type {LintOptions} from './linter.ts';
 export {readSuppressions} from './suppressions.ts';

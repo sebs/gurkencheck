@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {uniq} from './util/collections.ts';
-import {globStream, globSync} from './util/glob.ts';
+import {globRoot, globStream, globSync} from './util/glob.ts';
 
 /** The ignore file looked for when `--ignore` is not given. */
 export const DEFAULT_IGNORE_FILE_NAME = '.gurkencheckignore';
@@ -156,4 +156,40 @@ export function findFeatureFileStream(
   }
 
   return {files: files(), invalidPatterns};
+}
+
+/**
+ * The directories a set of patterns could draw feature files from.
+ *
+ * What to watch, in other words. A directory rather than the files
+ * themselves, so that a file created after the run started is noticed too -
+ * watching only what was found would never hear about anything new.
+ *
+ * A directory inside another one in the list is dropped: a recursive watch on
+ * the parent already covers it, and two watches over one place would report
+ * every change twice.
+ */
+export function featureRoots(patterns: readonly string[]): string[] {
+  const searched = patterns.length > 0 ? patterns : ['.'];
+  const roots = new Set<string>();
+
+  for (const pattern of searched) {
+    const featureGlob = toFeatureGlob(pattern);
+    if (featureGlob !== undefined) {
+      roots.add(globRoot(featureGlob));
+    }
+  }
+
+  // Shorter paths sort first, so a parent is always seen before its children.
+  const sorted = [...roots].sort();
+  const kept: string[] = [];
+  for (const root of sorted) {
+    const covered = kept.some(
+      (parent) => root === parent || root.startsWith(`${parent}${path.sep}`),
+    );
+    if (!covered) {
+      kept.push(root);
+    }
+  }
+  return kept;
 }

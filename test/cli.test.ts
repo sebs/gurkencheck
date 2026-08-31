@@ -2,7 +2,7 @@
  * End to end tests: the command line interface is run as a real process.
  */
 import assert from 'node:assert/strict';
-import {execFile} from 'node:child_process';
+import {execFile, spawn} from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -309,5 +309,70 @@ test('a config extending a package that throws on import exits 2 with the reason
     assert.equal(code, 2);
     assert.match(stderr, /config module is broken/u);
     assert.doesNotMatch(stderr, /at async/u, 'a stack trace should never reach the user');
+  });
+});
+
+test('--help mentions watching', async () => {
+  const {code, stdout} = await cli(['--help']);
+  assert.equal(code, 0);
+  assert.match(stdout, /--watch/u);
+});
+
+test('--watch checks, waits, then checks again when a file changes', async () => {
+  await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
+    const child = spawn(process.execPath, [CLI, '--watch', '.'], {cwd});
+    let output = '';
+    child.stdout.on('data', (chunk) => (output += String(chunk)));
+    child.stderr.on('data', (chunk) => (output += String(chunk)));
+
+    /** Waits for the output to say something, rather than for a fixed time. */
+    const waitFor = async (pattern: RegExp): Promise<void> => {
+      const deadline = Date.now() + 10000;
+      while (!pattern.test(output)) {
+        if (Date.now() > deadline) {
+          assert.fail(`timed out waiting for ${String(pattern)} in:\n${output}`);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+    };
+
+    try {
+      await waitFor(/Missing Scenario name/u);
+      await waitFor(/Watching for changes/u);
+
+      output = '';
+      fs.writeFileSync(path.join(cwd, 'Example.feature'), CLEAN_FEATURE);
+      await waitFor(/Example\.feature changed/u);
+
+      // A file that appears after the run started is noticed too, which is
+      // why the watch is on the directory rather than on what it found.
+      output = '';
+      fs.writeFileSync(path.join(cwd, 'Second.feature'), DIRTY_FEATURE);
+      await waitFor(/Second\.feature/u);
+      await waitFor(/Missing Scenario name/u);
+    } finally {
+      child.kill('SIGINT');
+      await new Promise((resolve) => child.on('exit', resolve));
+    }
+  });
+});
+
+test('--watch exits 0 when it is stopped', async () => {
+  await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
+    const child = spawn(process.execPath, [CLI, '--watch', '.'], {cwd});
+    let output = '';
+    child.stderr.on('data', (chunk) => (output += String(chunk)));
+
+    const deadline = Date.now() + 10000;
+    while (!/Watching for changes/u.test(output)) {
+      if (Date.now() > deadline) assert.fail(`timed out, saw:\n${output}`);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+
+    child.kill('SIGINT');
+    const code = await new Promise((resolve) => child.on('exit', resolve));
+    // A run that found something is the normal state of affairs while you are
+    // fixing it, so stopping the watch is not itself a failure.
+    assert.equal(code, 0);
   });
 });

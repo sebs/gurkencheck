@@ -111,6 +111,15 @@ function staticPrefix(pattern: string): string {
   return literal.join('/');
 }
 
+/**
+ * The directory a pattern's search starts from - the leading run of literal
+ * segments, resolved against `cwd`. What you would watch to be told about
+ * anything the pattern could match.
+ */
+export function globRoot(pattern: string, cwd: string = process.cwd()): string {
+  return path.resolve(cwd, staticPrefix(pattern.split(path.sep).join('/')));
+}
+
 function isHidden(name: string): boolean {
   return name.startsWith('.');
 }

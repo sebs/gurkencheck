@@ -381,7 +381,7 @@ pipeline findings: it only pays off on large trees, and it is the most code.
 
 ---
 
-## 7. Watch mode is the thing these findings add up to
+## 7. Watch mode is the thing these findings add up to — **DONE**
 
 There is no watch mode, and the current architecture cannot cheaply grow one. Everything is a
 single-shot pipeline terminating in `process.exitCode`
@@ -410,7 +410,7 @@ cached set.
 
 ---
 
-## 8. `logger` is hard-wired to the console (minor)
+## 8. `logger` is hard-wired to the console (minor) — **DONE**
 
 **Where:** [`src/logger.ts`](src/logger.ts)
 
@@ -562,8 +562,8 @@ supported indefinitely by calling it from the default `onRunStart`.
 | 4 | ~~Per-run rule state + `onRunStart`/`onRunEnd`~~ **DONE** | High | Medium | Additive |
 | 5 | ~~Streaming formatter shape (TAP, stylish)~~ **DONE** | Medium | Medium | Additive |
 | 6 | ~~`globStream` discovery~~ **DONE** | Low–Medium (see below) | Medium | Additive |
-| 7 | Watch mode | — | Large | New feature |
-| 8 | Diagnostic events replacing direct `logger` | Low | Small | Additive |
+| 7 | ~~Watch mode~~ **DONE** | — | Large | New feature |
+| 8 | ~~Diagnostic events replacing direct `logger`~~ **DONE** | Low | Small | Additive |
 | 9 | Visitor rule API | Medium (ergonomics) | **Large** | Additive |
 
 **Item 1 is done**, along with the five other instances of the same defect the audit turned up.
@@ -678,6 +678,40 @@ The honest summary: #6 delivers responsiveness, not throughput, and the case for
 that. If total time in CI matters more than first feedback, `findFeatureFiles` is still there and
 still faster.
 
-**Still open:** #7 (watch mode), #8 (diagnostic events), #9 (visitor rule API). The argument for
-each stands as written - including the recommendation that #9 go last, if at all. Watch mode now
-has every piece it needs, #6 included.
+**#8, diagnostics.** Anything said *about* a run goes through a `Diagnostics` sink that is silent
+unless given somewhere to report; the command line passes one writing to stderr, so its output is
+unchanged. The README's promise that the library writes nothing to the console now holds by
+construction rather than by nobody having called the logger. Three levels - error, detail, notice
+- because that is what the existing output actually used. An `EventEmitter` was suggested above
+and is not what shipped: there is one subscriber, and a typed sink is simpler and cheaper than an
+emitter whose events nobody can see the type of.
+
+**#7, watch mode.** `--watch` checks, waits, and checks again whenever a feature file or the
+configuration changes, until Ctrl-C. `watch()` knows about watching and nothing about linting; it
+takes something to run and runs it. Changes are settled for 80ms first, because saving a file is
+rarely one event.
+
+**This document's design for it was wrong, and it is worth saying why.** The plan above was to
+"keep per-file parse results cached, re-run only the edited file's per-file rules, then re-run the
+run-end pass over the cached set". The first half does not work: a rule that reports across files
+rebuilds its state by seeing *every* file through `run`, so nothing can be skipped while one is
+enabled. What caching would actually save is the reading and parsing - and it saves it by holding
+every syntax tree for the life of the process, which measured at 384 MB for 4,000 files while
+finding #2 was busy getting that number down to 158 MB for a single pass. For a process sitting
+idle between keystrokes that is the wrong thing to spend. Every pass is a whole run; a few
+thousand files take well under a second.
+
+Watching is on the directories rather than on the files found at startup, so a file created later
+is noticed - the case that watching what you found can never handle.
+
+Two bugs the tests caught, both worth recording:
+
+- A pass that threw escaped as an unhandled rejection and would have taken the process down,
+  directly contradicting the docstring that said a failing pass does not stop the watch. Same
+  isolation failure as the first commit in this series, in new code written after it.
+- The first version reported "watching for changes" before the first pass had finished, so a
+  caller could act on a watch that was not ready. `watch` takes an `AbortSignal` now as well as
+  answering to Ctrl-C, which is what made it testable without hijacking process signals.
+
+**Still open:** #9 (visitor rule API), and the recommendation that it go last - if at all - still
+stands.

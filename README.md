@@ -73,6 +73,7 @@ gurkencheck [options] <feature-files>
   -i, --ignore <globs>    comma separated globs to skip, overriding .gurkencheckignore
   -r, --rulesdir <dir>    directory of custom rules; may be given more than once
   -l, --language <code>   dialect for files with no "# language:" header
+  -w, --watch             keep running, checking again whenever a file changes
   -h, --help              show this message
   -v, --version           show the version number
 
@@ -210,6 +211,24 @@ npx gurkencheck stats features --format json > stats.json
 ```
 
 `--format md` writes the same report as Markdown tables, for pasting into a pull request.
+
+## Watching for changes
+
+`--watch` checks once, then again whenever a feature file or your configuration
+changes, until you stop it with Ctrl-C.
+
+```sh
+npx gurkencheck --watch features
+```
+
+Every pass is a whole run rather than an update of the last one. Rules that look
+across files — two files sharing a name, a scenario name used twice — have to see
+every file to know what they have found, so there is little to reuse between
+passes, and keeping every parsed file in memory between keystrokes costs more
+than reading them again.
+
+Directories are watched rather than the files found at startup, so a feature file
+created after it started is picked up too. `node_modules` and `.git` are skipped.
 
 ## Reporting to GitHub code scanning
 

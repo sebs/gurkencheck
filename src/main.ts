@@ -7,7 +7,12 @@ import {pathToFileURL} from 'node:url';
 import {parseArgs} from 'node:util';
 import {DEFAULT_CONFIG_FILE_NAME, readConfiguration} from './config-parser.ts';
 import {EXIT_LINT_ERRORS, EXIT_OK, EXIT_USAGE} from './exit-codes.ts';
-import {DEFAULT_IGNORE_FILE_NAME, findFeatureFileStream} from './feature-finder.ts';
+import {
+  DEFAULT_IGNORE_FILE_NAME,
+  featureRoots,
+  findFeatureFileStream,
+} from './feature-finder.ts';
+import {watch} from './watch.ts';
 import {
   DEFAULT_FORMAT,
   FORMATTERS,
@@ -25,6 +30,9 @@ import type {Sequence} from './util/stream.ts';
 import {runStats} from './stats/command.ts';
 import {version} from './version.ts';
 
+/** Directory names a watch takes no notice of, however deep they turn up. */
+const DEFAULT_IGNORED_NAMES = ['node_modules', '.git'];
+
 function usage(): string {
   return [
     'Usage: gurkencheck [options] <feature-files>',
@@ -39,6 +47,7 @@ function usage(): string {
     `  -i, --ignore <globs>    comma separated globs to skip, overriding ${DEFAULT_IGNORE_FILE_NAME}`,
     '  -r, --rulesdir <dir>    directory of custom rules; may be given more than once',
     '  -l, --language <code>   dialect for files with no "# language:" header',
+    '  -w, --watch             keep running, checking again whenever a file changes',
     '  -h, --help              show this message',
     '  -v, --version           show the version number',
     '',
@@ -79,6 +88,7 @@ export async function run(
         ignore: {type: 'string', short: 'i'},
         rulesdir: {type: 'string', short: 'r', multiple: true},
         language: {type: 'string', short: 'l'},
+        watch: {type: 'boolean', short: 'w'},
         help: {type: 'boolean', short: 'h'},
         version: {type: 'boolean', short: 'v'},
       },
@@ -128,8 +138,9 @@ export async function run(
 
   const ignore = values.ignore?.split(',').map((pattern) => pattern.trim());
   // Files are handed over as the walk finds them, so reading and checking
-  // start on the first one rather than after the last.
-  const {files, invalidPatterns} = findFeatureFileStream(positionals, ignore);
+  // start on the first one rather than after the last. Only the patterns are
+  // checked here; the walk itself happens once per pass.
+  const {invalidPatterns} = findFeatureFileStream(positionals, ignore);
 
   if (invalidPatterns.length > 0) {
     for (const pattern of invalidPatterns) {
@@ -172,35 +183,56 @@ export async function run(
     return EXIT_USAGE;
   }
 
-  if (streaming !== undefined) {
-    return await runStreaming(
-      streaming,
-      files,
-      configuration.configuration,
-      rules,
-      language,
-      diagnostics,
+  // Discovery is a stream, and a stream can only be read once - so a run that
+  // may happen more than once is given a fresh one each time.
+  const discover = (): Sequence<string> =>
+    findFeatureFileStream(positionals, ignore).files;
+
+  const checkOnce = async (): Promise<number> => {
+    if (streaming !== undefined) {
+      return await runStreaming(
+        streaming,
+        discover(),
+        configuration.configuration,
+        rules,
+        language,
+        diagnostics,
+      );
+    }
+
+    const results = await lint(discover(), configuration.configuration, rules, {language});
+
+    // A formatter may print the output itself or hand it back as a string.
+    let output;
+    try {
+      output = await formatter!(results);
+    } catch (thrown) {
+      diagnostics.report({
+        level: 'error',
+        message: `The formatter failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+      });
+      return EXIT_USAGE;
+    }
+    if (typeof output === 'string' && output !== '') {
+      console.log(output);
+    }
+
+    return hasErrors(results) ? EXIT_LINT_ERRORS : EXIT_OK;
+  };
+
+  if (values.watch === true) {
+    // Watching never fails: a run that found something is the normal state of
+    // affairs while you are fixing it, and the exit code is only read once,
+    // when you stop.
+    return await watch(
+      featureRoots(positionals),
+      values.config ?? DEFAULT_CONFIG_FILE_NAME,
+      {diagnostics, ignore: DEFAULT_IGNORED_NAMES},
+      checkOnce,
     );
   }
 
-  const results = await lint(files, configuration.configuration, rules, {language});
-
-  // A formatter may print the output itself or hand it back as a string.
-  let output;
-  try {
-    output = await formatter!(results);
-  } catch (thrown) {
-    diagnostics.report({
-      level: 'error',
-      message: `The formatter failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
-    });
-    return EXIT_USAGE;
-  }
-  if (typeof output === 'string' && output !== '') {
-    console.log(output);
-  }
-
-  return hasErrors(results) ? EXIT_LINT_ERRORS : EXIT_OK;
+  return await checkOnce();
 }
 
 /**
