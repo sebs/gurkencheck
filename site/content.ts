@@ -192,7 +192,7 @@ export const RULE_DOCS: RuleDoc[] = [
     config: '{\n  "no-dupe-feature-names": "on"\n}',
     good: '# LoggingIn.feature\nFeature: Logging in\n\n# LoggingOut.feature\nFeature: Logging out',
     bad: '# LoggingIn.feature\nFeature: Logging in\n\n# LoggingInAgain.feature\nFeature: Logging in',
-    message: 'Feature name is already used in: LoggingIn.feature',
+    message: 'Feature name is also used in: LoggingIn.feature',
   },
   {
     name: 'no-dupe-file-names',
@@ -205,7 +205,7 @@ export const RULE_DOCS: RuleDoc[] = [
     config: '{\n  "no-dupe-file-names": "on"\n}',
     good: 'features/accounts/Login.feature\nfeatures/admin/AdminLogin.feature',
     bad: 'features/accounts/Login.feature\nfeatures/admin/Login.feature',
-    message: 'File name is already used in: features/accounts/Login.feature',
+    message: 'File name is also used in: features/accounts/Login.feature',
   },
   {
     name: 'no-dupe-scenario-names',
@@ -225,7 +225,7 @@ export const RULE_DOCS: RuleDoc[] = [
     config: '{\n  "no-dupe-scenario-names": ["on", "anywhere"]\n}',
     good: 'Feature: Logging in\n\n  Scenario: A known user logs in\n    Given I am a known user\n\n  Scenario: An unknown user is turned away\n    Given I am not a known user',
     bad: 'Feature: Logging in\n\n  Scenario: A known user logs in\n    Given I am a known user\n\n  Scenario: A known user logs in\n    Given I am a known user on a phone',
-    message: 'Scenario name is already used in: LoggingIn.feature:3',
+    message: 'Scenario name is also used in: LoggingIn.feature:3',
   },
   {
     name: 'no-duplicate-tags',

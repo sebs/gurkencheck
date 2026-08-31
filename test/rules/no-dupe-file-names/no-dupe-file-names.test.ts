@@ -1,33 +1,46 @@
-import {beforeEach, test} from 'node:test';
+import assert from 'node:assert/strict';
+import {test} from 'node:test';
 import rule from '../../../src/rules/no-dupe-file-names.ts';
-import {checkRule} from '../../helpers.ts';
+import {runAcrossFiles} from '../../helpers.ts';
 
-const DIR = 'test/rules/no-dupe-file-names';
-
-beforeEach(() => rule.reset?.());
+const DIR = 'no-dupe-file-names';
+const ROOT = `test/rules/${DIR}`;
 
 // https://github.com/gherkin-lint/gherkin-lint/issues/272
 test('accepts file names that differ', async () => {
-  await checkRule(rule, 'no-dupe-file-names/Login.feature', {}, []);
-  await checkRule(rule, 'no-dupe-file-names/Logout.feature', {}, []);
+  const findings = await runAcrossFiles(rule, [
+    `${DIR}/Login.feature`,
+    `${DIR}/Logout.feature`,
+  ]);
+  assert.deepEqual(findings, []);
 });
 
-test('reports the same file name used in another folder', async () => {
-  await checkRule(rule, 'no-dupe-file-names/Login.feature', {}, []);
-  await checkRule(rule, 'no-dupe-file-names/nested/Login.feature', {}, [
-    {message: `File name is already used in: ${DIR}/Login.feature`, line: 0},
+test('tells both files when a name is used in another folder', async () => {
+  const findings = await runAcrossFiles(rule, [
+    `${DIR}/Login.feature`,
+    `${DIR}/nested/Login.feature`,
   ]);
-});
 
-test('names every earlier file when the same name comes round again', async () => {
-  await checkRule(rule, 'no-dupe-file-names/Login.feature', {}, []);
-  await checkRule(rule, 'no-dupe-file-names/nested/Login.feature', {}, [
-    {message: `File name is already used in: ${DIR}/Login.feature`, line: 0},
-  ]);
-  await checkRule(rule, 'no-dupe-file-names/Login.feature', {}, [
+  assert.deepEqual(findings, [
     {
-      message: `File name is already used in: ${DIR}/Login.feature, ${DIR}/nested/Login.feature`,
+      message: `File name is also used in: ${ROOT}/nested/Login.feature`,
+      rule: 'no-dupe-file-names',
       line: 0,
+      filePath: `${ROOT}/Login.feature`,
+    },
+    {
+      message: `File name is also used in: ${ROOT}/Login.feature`,
+      rule: 'no-dupe-file-names',
+      line: 0,
+      filePath: `${ROOT}/nested/Login.feature`,
     },
   ]);
+});
+
+test('the same file given twice is not a clash with itself', async () => {
+  const findings = await runAcrossFiles(rule, [
+    `${DIR}/Login.feature`,
+    `${DIR}/Login.feature`,
+  ]);
+  assert.deepEqual(findings, []);
 });
