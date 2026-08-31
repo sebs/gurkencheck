@@ -13,6 +13,7 @@ import {IdGenerator} from '@cucumber/messages';
 import type {Feature} from '@cucumber/messages';
 import {readFile} from 'node:fs/promises';
 import {mapWithWindow} from '../util/stream.ts';
+import type {Sequence} from '../util/stream.ts';
 import type {FeatureFile, RuleError} from '../types.ts';
 import type {Dialect} from './dialects.ts';
 import {DEFAULT_LANGUAGE, detectLanguage, getDialect} from './dialects.ts';
@@ -368,7 +369,10 @@ export interface ReadOptions {
 }
 
 /**
- * Reads and parses a list of feature files, handing each one over in turn.
+ * Reads and parses feature files, handing each one over in turn.
+ *
+ * The files may be an array or something finding them as it goes, so a walk
+ * of a directory tree can feed this without being collected first.
  *
  * Files are read ahead of being handed over, so the next one is on its way
  * while this one is being used, but only so many at a time. Results come in
@@ -376,7 +380,7 @@ export interface ReadOptions {
  * is what the rules looking across files need.
  */
 export function readAndParseFiles(
-  files: readonly string[],
+  files: Sequence<string>,
   options: ReadOptions = {},
 ): AsyncGenerator<ParseResult> {
   return mapWithWindow(files, options.readAhead ?? DEFAULT_READ_AHEAD, (file) =>

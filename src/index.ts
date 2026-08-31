@@ -19,10 +19,11 @@ export {PRESETS, RECOMMENDED} from './presets.ts';
 export {
   DEFAULT_IGNORE_FILE_NAME,
   DEFAULT_IGNORED_PATTERNS,
+  findFeatureFileStream,
   findFeatureFiles,
   readIgnorePatterns,
 } from './feature-finder.ts';
-export type {FeatureSearch} from './feature-finder.ts';
+export type {FeatureFileStream, FeatureSearch} from './feature-finder.ts';
 export {
   DEFAULT_FORMAT,
   FORMATTERS,
@@ -51,6 +52,8 @@ export {DEFAULT_LANGUAGE, detectLanguage, getDialect, isKnownLanguage} from './g
 export {backgroundsOf, rulesOf, scenariosOf, stepContainersOf} from './gherkin/traverse.ts';
 export {EXIT_LINT_ERRORS, EXIT_OK, EXIT_USAGE} from './exit-codes.ts';
 export {mapWithWindow} from './util/stream.ts';
+export type {Sequence} from './util/stream.ts';
+export {globStream, globSync} from './util/glob.ts';
 export {countBySeverity, hasErrors, lint, lintStream} from './linter.ts';
 export type {LintOptions} from './linter.ts';
 export {readSuppressions} from './suppressions.ts';

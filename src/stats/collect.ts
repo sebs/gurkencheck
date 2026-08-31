@@ -22,6 +22,7 @@ import {
 import {countWords, normaliseStepText} from './normalise.ts';
 import {DEFAULT_SIMILARITY, groupSimilar} from './similar.ts';
 import type {SimilarityOptions} from './similar.ts';
+import type {Sequence} from '../util/stream.ts';
 import type {
   Distribution,
   Inventory,
@@ -360,7 +361,7 @@ export function collectStatistics(
  * suite of any size costs the same as the report it produces.
  */
 export async function collectStatisticsFrom(
-  parsed: AsyncIterable<ParseResult>,
+  parsed: Sequence<ParseResult>,
   options: CollectOptions = {},
 ): Promise<Statistics> {
   const tally = newTally();

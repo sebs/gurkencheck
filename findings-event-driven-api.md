@@ -346,7 +346,7 @@ the README are unaffected.
 
 ---
 
-## 6. Discovery is synchronous, buffers everything, and is already push-shaped internally
+## 6. Discovery is synchronous, buffers everything, and is already push-shaped internally — **DONE, but the reasoning here was wrong**
 
 **Where:** [`src/util/glob.ts:118-138`](src/util/glob.ts#L118-L138),
 [`src/util/glob.ts:177-212`](src/util/glob.ts#L177-L212),
@@ -561,7 +561,7 @@ supported indefinitely by calling it from the default `onRunStart`.
 | 3 | ~~`lintStream()` async generator~~ **DONE** | High | Small | No |
 | 4 | ~~Per-run rule state + `onRunStart`/`onRunEnd`~~ **DONE** | High | Medium | Additive |
 | 5 | ~~Streaming formatter shape (TAP, stylish)~~ **DONE** | Medium | Medium | Additive |
-| 6 | `globStream` discovery | Low–Medium | Medium | Additive |
+| 6 | ~~`globStream` discovery~~ **DONE** | Low–Medium (see below) | Medium | Additive |
 | 7 | Watch mode | — | Large | New feature |
 | 8 | Diagnostic events replacing direct `logger` | Low | Small | Additive |
 | 9 | Visitor rule API | Medium (ergonomics) | **Large** | Additive |
@@ -643,6 +643,41 @@ Two things worth recording:
   non-throwing for read failures; it now covers the parse call too, so that promise is real
   rather than nearly true.
 
-**Still open:** #6 (streaming discovery), #7 (watch mode), #8 (diagnostic events), #9 (visitor
-rule API). The argument for each stands as written - including the recommendation that #9 go
-last, if at all.
+**#6, streaming discovery — built, and it disproved two of the claims made for it above.**
+
+`globStream` and `findFeatureFileStream` hand files over as the walk reaches them, and
+`mapWithWindow` now takes anything iterable, so discovery feeds reading directly and the four
+phases are one pipeline. What the measurements said, on a tree of 2,000 feature files across
+2,000 directories:
+
+| | total time | time to first output |
+|---|---|---|
+| collecting first | 0.360s | 229 ms |
+| streaming | 0.400s (**+11%**) | 119 ms (**-48%**) |
+
+So the trade is the opposite way round from what this document assumed. Streaming discovery
+costs a little total time and halves the time until the first finding is on screen. Worth having
+for a linter someone is watching; not the free win "pays off on large trees" implied.
+
+Two claims above were simply wrong, and both cost time to find out:
+
+- **"`walk` already sorts each directory's entries, so a depth-first walk emits in sorted order."**
+  It does not. Everything under a directory `b` has a path starting `b/`, and `-` sorts before
+  `/`, so a sibling file `b-1.feature` comes *after* `b` by entry name and *before* `b/x.feature`
+  by path. Streaming naively would have quietly reordered every report. Directory entries are now
+  ordered as `name + '/'`, which makes the walk's order and the sorted order the same thing;
+  there is a test on exactly those names.
+- **"`readdirSync` blocks the event loop, so making it async is the fix."** Making it async made
+  discovery ~40% slower - a promise per directory costs more than reading the directory - and
+  bought nothing, because the only thing waiting on the walk is the work being fed by it. The
+  walk reads each directory synchronously and gives way at every file instead. Flattening the
+  recursion was tried too and changed nothing: the remaining cost is per-item async iteration,
+  which is what streaming *is*.
+
+The honest summary: #6 delivers responsiveness, not throughput, and the case for it rests on
+that. If total time in CI matters more than first feedback, `findFeatureFiles` is still there and
+still faster.
+
+**Still open:** #7 (watch mode), #8 (diagnostic events), #9 (visitor rule API). The argument for
+each stands as written - including the recommendation that #9 go last, if at all. Watch mode now
+has every piece it needs, #6 included.

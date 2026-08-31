@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {uniq} from './util/collections.ts';
-import {globSync} from './util/glob.ts';
+import {globStream, globSync} from './util/glob.ts';
 
 /** The ignore file looked for when `--ignore` is not given. */
 export const DEFAULT_IGNORE_FILE_NAME = '.gurkencheckignore';
@@ -17,6 +17,21 @@ export interface FeatureSearch {
   /** Matching feature files, relative to the working directory. */
   files: string[];
   /** Arguments that were neither a feature file, a directory nor a glob. */
+  invalidPatterns: string[];
+}
+
+export interface FeatureFileStream {
+  /**
+   * Matching feature files, found as the walk reaches them, in the order
+   * `findFeatureFiles` returns them in.
+   */
+  files: AsyncGenerator<string>;
+  /**
+   * Arguments that were neither a feature file, a directory nor a glob.
+   *
+   * Known before anything is walked, so a caller can give up on a bad
+   * argument without having searched for the good ones.
+   */
   invalidPatterns: string[];
 }
 
@@ -94,4 +109,51 @@ export function findFeatureFiles(
   }
 
   return {files: uniq(files), invalidPatterns};
+}
+
+/**
+ * The same search, handing each file over as it is found.
+ *
+ * Walking a large tree to the end before anything else starts is time in
+ * which nothing is read, parsed or checked. Handing files over as they turn
+ * up lets the rest of the work begin on the first one.
+ *
+ * Only a run given more than one pattern remembers what it has already
+ * handed over: one walk cannot reach the same file twice, and remembering is
+ * what a stream is trying to avoid.
+ */
+export function findFeatureFileStream(
+  patterns: readonly string[],
+  ignoreArgument?: readonly string[],
+): FeatureFileStream {
+  const searched = patterns.length > 0 ? patterns : ['.'];
+  const ignore = readIgnorePatterns(ignoreArgument);
+
+  const globs: string[] = [];
+  const invalidPatterns: string[] = [];
+
+  for (const pattern of searched) {
+    const featureGlob = toFeatureGlob(pattern);
+    if (featureGlob === undefined) {
+      invalidPatterns.push(pattern);
+    } else {
+      globs.push(featureGlob);
+    }
+  }
+
+  async function* files(): AsyncGenerator<string> {
+    const seen = globs.length > 1 ? new Set<string>() : undefined;
+
+    for (const featureGlob of globs) {
+      for await (const file of globStream(featureGlob, {ignore})) {
+        if (seen !== undefined) {
+          if (seen.has(file)) continue;
+          seen.add(file);
+        }
+        yield file;
+      }
+    }
+  }
+
+  return {files: files(), invalidPatterns};
 }

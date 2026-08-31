@@ -7,7 +7,7 @@ import {pathToFileURL} from 'node:url';
 import {parseArgs} from 'node:util';
 import {DEFAULT_CONFIG_FILE_NAME, readConfiguration} from './config-parser.ts';
 import {EXIT_LINT_ERRORS, EXIT_OK, EXIT_USAGE} from './exit-codes.ts';
-import {DEFAULT_IGNORE_FILE_NAME, findFeatureFiles} from './feature-finder.ts';
+import {DEFAULT_IGNORE_FILE_NAME, findFeatureFileStream} from './feature-finder.ts';
 import {
   DEFAULT_FORMAT,
   FORMATTERS,
@@ -20,6 +20,7 @@ import * as logger from './logger.ts';
 import {loadRules} from './rules.ts';
 import type {StreamingFormatter} from './formatters/index.ts';
 import type {Configuration, RuleRegistry} from './types.ts';
+import type {Sequence} from './util/stream.ts';
 import {runStats} from './stats/command.ts';
 import {version} from './version.ts';
 
@@ -108,7 +109,9 @@ export async function run(argv: readonly string[]): Promise<number> {
   }
 
   const ignore = values.ignore?.split(',').map((pattern) => pattern.trim());
-  const {files, invalidPatterns} = findFeatureFiles(positionals, ignore);
+  // Files are handed over as the walk finds them, so reading and checking
+  // start on the first one rather than after the last.
+  const {files, invalidPatterns} = findFeatureFileStream(positionals, ignore);
 
   if (invalidPatterns.length > 0) {
     for (const pattern of invalidPatterns) {
@@ -170,7 +173,7 @@ export async function run(argv: readonly string[]): Promise<number> {
  */
 async function runStreaming(
   streaming: StreamingFormatter,
-  files: readonly string[],
+  files: Sequence<string>,
   configuration: Configuration,
   rules: RuleRegistry,
   language: string | undefined,

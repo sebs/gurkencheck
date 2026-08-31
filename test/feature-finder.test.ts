@@ -6,6 +6,7 @@ import {after, before, beforeEach, test} from 'node:test';
 import {
   DEFAULT_IGNORED_PATTERNS,
   DEFAULT_IGNORE_FILE_NAME,
+  findFeatureFileStream,
   findFeatureFiles,
   readIgnorePatterns,
 } from '../src/feature-finder.ts';
@@ -139,4 +140,51 @@ test('an ignore file that cannot be read falls back to the defaults', () => {
     fs.chmodSync(DEFAULT_IGNORE_FILE_NAME, 0o644);
     fs.rmSync(DEFAULT_IGNORE_FILE_NAME, {force: true});
   }
+});
+
+/** Everything the streaming search finds, in the order it finds it. */
+async function streamed(
+  patterns: readonly string[],
+  ignore?: readonly string[],
+): Promise<string[]> {
+  const found: string[] = [];
+  for await (const file of findFeatureFileStream(patterns, ignore).files) {
+    found.push(file);
+  }
+  return found;
+}
+
+test('the streaming search finds what the collected one finds', async () => {
+  buildTree();
+  for (const patterns of [[], ['.'], [FOUND], [`${FOUND}/**`], ['**/*.feature']]) {
+    assert.deepEqual(
+      await streamed(patterns),
+      findFeatureFiles(patterns).files,
+      `patterns: ${JSON.stringify(patterns)}`,
+    );
+  }
+});
+
+test('the streaming search honours the ignore patterns', async () => {
+  buildTree();
+  assert.deepEqual(
+    await streamed(['.'], ['**/folder/**']),
+    findFeatureFiles(['.'], ['**/folder/**']).files,
+  );
+});
+
+test('the streaming search reports a bad pattern before walking anything', () => {
+  buildTree();
+  const {invalidPatterns} = findFeatureFileStream(['badpattern**']);
+  // Known without the stream having been touched, so a bad argument can be
+  // given up on before any searching is done.
+  assert.deepEqual(invalidPatterns, ['badpattern**']);
+});
+
+test('the streaming search hands the same file over only once', async () => {
+  buildTree();
+  // Two patterns reaching the same files: the overlap must not be repeated.
+  const found = await streamed([FOUND, `${FOUND}/**`, '.']);
+  assert.deepEqual(found, [...new Set(found)]);
+  assert.deepEqual(found.sort(), findFeatureFiles(['.']).files.sort());
 });

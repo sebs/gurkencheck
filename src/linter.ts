@@ -8,6 +8,7 @@ import {readSuppressions} from './suppressions.ts';
 import type {Suppressions} from './suppressions.ts';
 import type {Configuration, FileResult, RuleRegistry} from './types.ts';
 import {sortBy} from './util/collections.ts';
+import type {Sequence} from './util/stream.ts';
 
 /** Stands in for a file whose directives were never read, and hides nothing. */
 const EMPTY_SUPPRESSIONS: Suppressions = {isEmpty: true, isSuppressed: () => false};
@@ -57,7 +58,7 @@ function reportsAcrossFiles(rules: RuleRegistry, configuration: Configuration): 
  * the checking, rather than running on to the last file.
  */
 export async function* lintStream(
-  files: readonly string[],
+  files: Sequence<string>,
   configuration: Configuration,
   rules: RuleRegistry,
   options: LintOptions = {},
@@ -125,7 +126,7 @@ export async function* lintStream(
  * editor, stopping at the first error - use `lintStream`.
  */
 export async function lint(
-  files: readonly string[],
+  files: Sequence<string>,
   configuration: Configuration,
   rules: RuleRegistry,
   options: LintOptions = {},

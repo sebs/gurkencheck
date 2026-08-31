@@ -8,7 +8,7 @@
  */
 import {parseArgs} from 'node:util';
 import {EXIT_OK, EXIT_USAGE} from '../exit-codes.ts';
-import {DEFAULT_IGNORE_FILE_NAME, findFeatureFiles} from '../feature-finder.ts';
+import {DEFAULT_IGNORE_FILE_NAME, findFeatureFileStream} from '../feature-finder.ts';
 import {isKnownLanguage} from '../gherkin/dialects.ts';
 import {readAndParseFiles} from '../gherkin/parse.ts';
 import * as logger from '../logger.ts';
@@ -92,7 +92,7 @@ export async function runStats(argv: readonly string[]): Promise<number> {
   }
 
   const ignore = values.ignore?.split(',').map((pattern) => pattern.trim());
-  const {files, invalidPatterns} = findFeatureFiles(positionals, ignore);
+  const {files, invalidPatterns} = findFeatureFileStream(positionals, ignore);
 
   if (invalidPatterns.length > 0) {
     for (const pattern of invalidPatterns) {
