@@ -3,10 +3,14 @@
  */
 import path from 'node:path';
 import {readAndParseFile} from './gherkin/parse.ts';
-import {resetRules, runEnabledRules} from './rules.ts';
+import {beginRun, finishRun, runEnabledRules} from './rules.ts';
 import {readSuppressions} from './suppressions.ts';
+import type {Suppressions} from './suppressions.ts';
 import type {Configuration, FileResult, RuleRegistry} from './types.ts';
 import {sortBy} from './util/collections.ts';
+
+/** Stands in for a file whose directives were never read, and hides nothing. */
+const EMPTY_SUPPRESSIONS: Suppressions = {isEmpty: true, isSuppressed: () => false};
 
 export interface LintOptions {
   /**
@@ -28,30 +32,51 @@ export async function lint(
   rules: RuleRegistry,
   options: LintOptions = {},
 ): Promise<FileResult[]> {
-  resetRules(rules);
+  const run = beginRun(rules, configuration);
 
   const parsed = await Promise.all(
     files.map((file) => readAndParseFile(file, options.language)),
   );
   const results: FileResult[] = [];
+  /** Where to put a finding that names a file, and what may hide it there. */
+  const byPath = new Map<string, {result: FileResult; suppressions: Suppressions}>();
 
   for (const result of parsed) {
     // Parse errors are not suppressible: the file could not be read, so
     // hiding the message would leave nothing in its place.
     let errors = result.errors;
+    let suppressions = EMPTY_SUPPRESSIONS;
 
     if (errors.length === 0) {
-      errors = await runEnabledRules(result.feature, result.file, configuration, rules);
-      const suppressions = readSuppressions(result.file.lines);
+      errors = await runEnabledRules(result.feature, result.file, configuration, rules, run);
+      suppressions = readSuppressions(result.file.lines);
       if (!suppressions.isEmpty) {
         errors = errors.filter((error) => !suppressions.isSuppressed(error));
       }
     }
 
-    results.push({
-      filePath: path.resolve(result.file.relativePath),
-      errors: sortBy(errors, (error) => error.line),
-    });
+    const fileResult: FileResult = {filePath: path.resolve(result.file.relativePath), errors};
+    results.push(fileResult);
+    byPath.set(result.file.relativePath, {result: fileResult, suppressions});
+  }
+
+  // What only the whole run could show: two files sharing a name, and the
+  // like. A finding naming no file is about the run itself - a rule that
+  // failed looking back over it - and goes against the first file so that it
+  // is seen at all.
+  for (const {filePath, ...error} of await finishRun(rules, configuration, run)) {
+    const target = filePath === undefined ? undefined : byPath.get(filePath);
+    if (target === undefined) {
+      results[0]?.errors.push(error);
+      continue;
+    }
+    if (!target.suppressions.isSuppressed(error)) {
+      target.result.errors.push(error);
+    }
+  }
+
+  for (const result of results) {
+    result.errors = sortBy(result.errors, (error) => error.line);
   }
 
   return results;

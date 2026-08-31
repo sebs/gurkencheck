@@ -59,6 +59,32 @@ export type RuleConfig = RuleState | readonly [RuleState, unknown];
 export type Configuration = Record<string, RuleConfig>;
 
 /**
+ * Somewhere for a rule to keep what it learns as a run goes on.
+ *
+ * A rule looking for duplicates has to remember what it has already seen.
+ * Keeping that in the module makes it process-global, so two runs at once - a
+ * language server checking two folders, a test suite running cases side by
+ * side - quietly corrupt each other's state. A context belongs to one rule in
+ * one run, so there is nothing shared and nothing to reset.
+ */
+export interface RunContext {
+  /** This rule's state for this run, made the first time it is asked for. */
+  state<T>(create: () => T): T;
+}
+
+/**
+ * A finding that could only be worked out once every file had been seen, so
+ * it has to say which file it is about.
+ */
+export interface RunFinding extends RuleError {
+  /**
+   * The file this is about, as it was given to the linter. Left out for a
+   * finding about the run as a whole rather than about any one file.
+   */
+  filePath?: string;
+}
+
+/**
  * A lint rule.
  *
  * `run` is called once per feature file. `feature` is `undefined` when the
@@ -76,15 +102,39 @@ export interface LintRule {
   /**
    * Returns the violations found in this file. A rule that needs to wait for
    * something - reading a file, asking a service - may return a promise.
+   *
+   * `context` is the same object for every file of a run, and a different one
+   * for every other run, so it is where anything remembered between files
+   * belongs.
    */
   run(
     feature: Feature | undefined,
     file: FeatureFile,
     configuration: unknown,
+    context: RunContext,
   ): RuleError[] | Promise<RuleError[]>;
   /**
-   * Clears any state kept between files. Implemented by the rules that look
-   * for duplicates across a whole run; called once before each lint run.
+   * Called once before the first file, for a rule with something to set up.
+   * Rules that only accumulate as they go need nothing here: the context
+   * makes their state the first time they ask for it.
+   */
+  onRunStart?(configuration: unknown, context: RunContext): void;
+  /**
+   * The findings that could only be worked out once every file had been seen,
+   * such as two files sharing a name. Called once after the last file, and
+   * only for a rule the configuration switched on.
+   */
+  onRunEnd?(
+    configuration: unknown,
+    context: RunContext,
+  ): RunFinding[] | Promise<RunFinding[]>;
+  /**
+   * Clears any state kept between files.
+   *
+   * @deprecated Keep state in the `RunContext` handed to `run` instead. State
+   * in the module is shared by every run in the process, so two at once tread
+   * on each other. Still called before each run, for rules written before
+   * contexts existed.
    */
   reset?(): void;
 }

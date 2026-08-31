@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {test} from 'node:test';
 import {parseFeature} from '../src/gherkin/parse.ts';
+import {newRunContext} from '../src/rules.ts';
 import {BUILT_IN_RULES} from '../src/rules/index.ts';
 import type {LintRule} from '../src/types.ts';
 
@@ -23,7 +24,7 @@ for (const rule of BUILT_IN_RULES) {
     test(`${rule.name} copes with ${fixture}`, () => {
       const relativePath = `test/rules/all-rules/${fixture}.feature`;
       const {feature, file} = parseFeature(relativePath, readFileSync(relativePath, 'utf8'));
-      const errors = rule.run(feature, file, settingsFor(rule));
+      const errors = rule.run(feature, file, settingsFor(rule), newRunContext());
       assert.ok(Array.isArray(errors), `${rule.name} should always return an array`);
     });
   }

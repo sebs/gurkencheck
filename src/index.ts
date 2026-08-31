@@ -40,13 +40,17 @@ export type {LintOptions} from './linter.ts';
 export {readSuppressions} from './suppressions.ts';
 export type {Suppressions} from './suppressions.ts';
 export {
+  beginRun,
+  finishRun,
   getRuleSettings,
   getRuleSeverity,
   isRuleEnabled,
   loadRules,
+  newRunContext,
   resetRules,
   runEnabledRules,
 } from './rules.ts';
+export type {Run} from './rules.ts';
 export {BUILT_IN_RULES} from './rules/index.ts';
 export {collectStatistics, distribution} from './stats/collect.ts';
 export type {CollectOptions} from './stats/collect.ts';
@@ -94,5 +98,7 @@ export type {
   RuleError,
   RuleRegistry,
   RuleState,
+  RunContext,
+  RunFinding,
   Severity,
 } from './types.ts';

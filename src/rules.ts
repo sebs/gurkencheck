@@ -11,6 +11,8 @@ import type {
   RuleConfig,
   RuleError,
   RuleRegistry,
+  RunContext,
+  RunFinding,
   Severity,
 } from './types.ts';
 import type {Feature} from '@cucumber/messages';
@@ -106,11 +108,113 @@ export function getRuleSettings(config: RuleConfig | undefined): unknown {
   return Array.isArray(config) ? config[1] : undefined;
 }
 
-/** Clears the state kept by rules that look for duplicates across files. */
+/**
+ * Clears the state kept by rules that look for duplicates across files.
+ *
+ * @deprecated Use `beginRun`, which does this and hands each rule a context
+ * of its own besides.
+ */
 export function resetRules(rules: RuleRegistry): void {
   for (const rule of rules.values()) {
     rule.reset?.();
   }
+}
+
+/**
+ * One rule's state for one run, made the first time the rule asks for it.
+ *
+ * Exported because testing a rule on its own means handing it one of these.
+ */
+export function newRunContext(): RunContext {
+  let state: unknown;
+  let made = false;
+  return {
+    state<T>(create: () => T): T {
+      if (!made) {
+        state = create();
+        made = true;
+      }
+      return state as T;
+    },
+  };
+}
+
+/**
+ * What one run of the rules keeps for itself.
+ *
+ * Two runs in the same process have two of these, so a rule remembering what
+ * it has seen cannot see what another run has seen.
+ */
+export interface Run {
+  /** The context for one rule, made the first time it is asked for. */
+  contextFor(ruleName: string): RunContext;
+}
+
+/** Starts a run, telling every enabled rule that one is beginning. */
+export function beginRun(rules: RuleRegistry, configuration: Configuration): Run {
+  // Rules written before contexts existed keep their state in the module and
+  // clear it here. Deprecated, but still honoured.
+  resetRules(rules);
+
+  const contexts = new Map<string, RunContext>();
+  const run: Run = {
+    contextFor(ruleName: string): RunContext {
+      let context = contexts.get(ruleName);
+      if (context === undefined) {
+        context = newRunContext();
+        contexts.set(ruleName, context);
+      }
+      return context;
+    },
+  };
+
+  for (const rule of rules.values()) {
+    const config = configuration[rule.name];
+    if (isRuleEnabled(config)) {
+      rule.onRunStart?.(getRuleSettings(config), run.contextFor(rule.name));
+    }
+  }
+
+  return run;
+}
+
+/**
+ * Ends a run, collecting what could only be worked out once every file had
+ * been seen.
+ *
+ * As while checking a file, a rule that throws costs you its own findings
+ * rather than everyone else's.
+ */
+export async function finishRun(
+  rules: RuleRegistry,
+  configuration: Configuration,
+  run: Run,
+): Promise<RunFinding[]> {
+  const findings: RunFinding[] = [];
+
+  for (const rule of rules.values()) {
+    const config = configuration[rule.name];
+    if (!isRuleEnabled(config) || rule.onRunEnd === undefined) {
+      continue;
+    }
+    const severity = getRuleSeverity(config);
+
+    try {
+      const found = await rule.onRunEnd(getRuleSettings(config), run.contextFor(rule.name));
+      for (const finding of found) {
+        findings.push({severity, ...finding});
+      }
+    } catch (thrown) {
+      // No file to blame: what failed was the look back over all of them.
+      findings.push({
+        message: `Rule "${rule.name}" failed at the end of the run: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+        rule: 'unexpected-error',
+        line: 0,
+      });
+    }
+  }
+
+  return findings;
 }
 
 /**
@@ -122,12 +226,17 @@ export function resetRules(rules: RuleRegistry): void {
  *
  * A rule that throws is reported as an `unexpected-error` finding naming it,
  * and the remaining rules still run.
+ *
+ * `run` carries the state the rules keep between the files of one run. Left
+ * out, a run of this one file alone is started, which is what a caller
+ * checking a single file wants.
  */
 export async function runEnabledRules(
   feature: Feature | undefined,
   file: FeatureFile,
   configuration: Configuration,
   rules: RuleRegistry,
+  run: Run = beginRun(rules, configuration),
 ): Promise<RuleError[]> {
   const errors: RuleError[] = [];
 
@@ -140,7 +249,12 @@ export async function runEnabledRules(
 
     let found: RuleError[];
     try {
-      found = await rule.run(feature, file, getRuleSettings(config));
+      found = await rule.run(
+        feature,
+        file,
+        getRuleSettings(config),
+        run.contextFor(rule.name),
+      );
     } catch (thrown) {
       // A rule that throws - one of your own from --rulesdir, or a built-in
       // one meeting a file it did not expect - costs you that rule's findings
