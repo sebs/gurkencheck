@@ -111,7 +111,14 @@ async function loadExtended(
     return {configuration: parseFile(resolved), source: resolved};
   }
 
-  const module = (await import(pathToFileURL(resolved).href)) as Record<string, unknown>;
+  let module: Record<string, unknown>;
+  try {
+    module = (await import(pathToFileURL(resolved).href)) as Record<string, unknown>;
+  } catch (thrown) {
+    throw new ConfigurationError(
+      `Could not load "${specifier}", extended from "${fromFile}": ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+    );
+  }
   const exported = module['default'] ?? module;
   if (!isConfigurationObject(exported)) {
     throw new ConfigurationError(

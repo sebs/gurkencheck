@@ -299,11 +299,34 @@ export function parseFeature(
   return {file, feature: undefined, errors};
 }
 
-/** Reads a feature file from disk and parses it. */
+/**
+ * Reads a feature file from disk and parses it.
+ *
+ * A file that cannot be read at all - missing, unreadable, deleted between
+ * being found and being opened - comes back as a result carrying the reason,
+ * exactly as a file the parser rejected does. Nothing here throws: one
+ * unreadable file among a thousand should cost you that file's findings, not
+ * every other file's as well.
+ */
 export async function readAndParseFile(
   relativePath: string,
   defaultLanguage?: string,
 ): Promise<ParseResult> {
-  const source = await readFile(relativePath, 'utf8');
+  let source: string;
+  try {
+    source = await readFile(relativePath, 'utf8');
+  } catch (thrown) {
+    return {
+      file: {relativePath, lines: []},
+      feature: undefined,
+      errors: [
+        {
+          message: thrown instanceof Error ? thrown.message : String(thrown),
+          rule: 'unexpected-error',
+          line: 0,
+        },
+      ],
+    };
+  }
   return parseFeature(relativePath, source, defaultLanguage);
 }

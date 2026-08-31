@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {after, before, beforeEach, test} from 'node:test';
 import {
+  DEFAULT_IGNORED_PATTERNS,
   DEFAULT_IGNORE_FILE_NAME,
   findFeatureFiles,
   readIgnorePatterns,
@@ -120,4 +121,22 @@ test('a bare directory name in the ignore file skips the whole directory', () =>
 test('a wildcard directory pattern in the ignore file skips the whole directory', () => {
   fs.writeFileSync(DEFAULT_IGNORE_FILE_NAME, 'f*r\n');
   assert.deepEqual(findFeatureFiles([]).files, []);
+});
+
+test('an ignore file that cannot be read falls back to the defaults', () => {
+  fs.writeFileSync(DEFAULT_IGNORE_FILE_NAME, 'build\n');
+  fs.chmodSync(DEFAULT_IGNORE_FILE_NAME, 0o000);
+  try {
+    // Running as root defeats the permission bits, so there is nothing to test.
+    try {
+      fs.readFileSync(DEFAULT_IGNORE_FILE_NAME, 'utf8');
+      return;
+    } catch {
+      // Good: it really is unreadable.
+    }
+    assert.deepEqual(readIgnorePatterns(undefined), DEFAULT_IGNORED_PATTERNS);
+  } finally {
+    fs.chmodSync(DEFAULT_IGNORE_FILE_NAME, 0o644);
+    fs.rmSync(DEFAULT_IGNORE_FILE_NAME, {force: true});
+  }
 });

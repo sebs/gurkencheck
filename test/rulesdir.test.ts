@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import {test} from 'node:test';
 import {readConfiguration} from '../src/config-parser.ts';
-import {lint} from '../src/linter.ts';
+import {hasErrors, lint} from '../src/linter.ts';
 import {loadRules} from '../src/rules.ts';
+import type {LintRule} from '../src/types.ts';
 
 const RULES_DIRS = [
   path.resolve('test/rulesdir/rules'), // absolute path
@@ -64,8 +65,12 @@ test('a custom rule may return a promise', async () => {
   ]);
 });
 
-test('an async rule that rejects surfaces the error rather than being swallowed', async () => {
-  const rules = new Map([
+// A rule that throws used to reject the whole `lint` call, which cost you
+// every other rule's findings and every other file's as well. It is reported
+// in place of that rule's findings instead - still loudly, and still failing
+// the run, but without taking the rest of the run with it.
+test('a rule that throws is reported rather than swallowed, and fails the run', async () => {
+  const rules = new Map<string, LintRule>([
     [
       'exploding',
       {
@@ -76,8 +81,45 @@ test('an async rule that rejects surfaces the error rather than being swallowed'
       },
     ],
   ]);
-  await assert.rejects(
-    () => lint(['test/linter/NoViolations.feature'], {exploding: 'on'}, rules),
-    /the issue tracker is down/u,
+  const results = await lint(['test/linter/NoViolations.feature'], {exploding: 'on'}, rules);
+
+  assert.deepEqual(results[0]?.errors, [
+    {
+      line: 0,
+      message: 'Rule "exploding" failed: the issue tracker is down',
+      rule: 'unexpected-error',
+    },
+  ]);
+  assert.ok(hasErrors(results), 'a rule that throws should still fail the run');
+});
+
+test('a rule that throws does not cost the other rules their findings', async () => {
+  const rules = new Map<string, LintRule>([
+    [
+      'exploding',
+      {
+        name: 'exploding',
+        run: () => {
+          throw new Error('boom');
+        },
+      },
+    ],
+    [
+      'working',
+      {
+        name: 'working',
+        run: () => [{message: 'still checked', rule: 'working', line: 3}],
+      },
+    ],
+  ]);
+  const results = await lint(
+    ['test/linter/NoViolations.feature'],
+    {exploding: 'on', working: 'on'},
+    rules,
+  );
+
+  assert.deepEqual(
+    results[0]?.errors.map((error) => error.rule),
+    ['unexpected-error', 'working'],
   );
 });

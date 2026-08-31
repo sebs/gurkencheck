@@ -52,14 +52,22 @@ export function readIgnorePatterns(
   if (ignoreArgument !== undefined && ignoreArgument.length > 0) {
     return [...ignoreArgument];
   }
-  if (fs.existsSync(ignoreFileName)) {
-    return fs
-      .readFileSync(ignoreFileName, 'utf8')
-      .split(/\r\n|\r|\n/)
-      .map((line) => line.trim())
-      .filter((line) => line !== '' && !line.startsWith('#'));
+
+  let contents: string;
+  try {
+    contents = fs.readFileSync(ignoreFileName, 'utf8');
+  } catch {
+    // No ignore file, or one that cannot be read: fall back to the defaults
+    // rather than stopping the run, so that node_modules stays skipped either
+    // way. Reading it outright rather than checking that it exists first also
+    // closes the gap between the two, in which it can be moved or removed.
+    return [...DEFAULT_IGNORED_PATTERNS];
   }
-  return [...DEFAULT_IGNORED_PATTERNS];
+
+  return contents
+    .split(/\r\n|\r|\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== '' && !line.startsWith('#'));
 }
 
 /**

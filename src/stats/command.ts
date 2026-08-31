@@ -11,7 +11,6 @@ import {EXIT_OK, EXIT_USAGE} from '../exit-codes.ts';
 import {DEFAULT_IGNORE_FILE_NAME, findFeatureFiles} from '../feature-finder.ts';
 import {isKnownLanguage} from '../gherkin/dialects.ts';
 import {readAndParseFile} from '../gherkin/parse.ts';
-import type {ParseResult} from '../gherkin/parse.ts';
 import * as logger from '../logger.ts';
 import {collectStatistics} from './collect.ts';
 import {
@@ -40,25 +39,6 @@ export function statsUsage(): string {
     'The report goes to stdout, and always exits 0: it describes the files',
     'rather than judging them. Use the linter itself to fail a build.',
   ].join('\n');
-}
-
-/** Reads and parses a file, turning a file that cannot be read into a result. */
-async function read(file: string, language: string | undefined): Promise<ParseResult> {
-  try {
-    return await readAndParseFile(file, language);
-  } catch (thrown) {
-    return {
-      file: {relativePath: file, lines: []},
-      feature: undefined,
-      errors: [
-        {
-          message: thrown instanceof Error ? thrown.message : String(thrown),
-          rule: 'unexpected-error',
-          line: 0,
-        },
-      ],
-    };
-  }
 }
 
 export async function runStats(argv: readonly string[]): Promise<number> {
@@ -122,7 +102,7 @@ export async function runStats(argv: readonly string[]): Promise<number> {
     return EXIT_USAGE;
   }
 
-  const results = await Promise.all(files.map((file) => read(file, language)));
+  const results = await Promise.all(files.map((file) => readAndParseFile(file, language)));
   const statistics = collectStatistics(results);
 
   console.log(formatter(statistics, {top}));

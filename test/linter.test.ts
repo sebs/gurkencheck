@@ -191,3 +191,59 @@ test('parse errors are always errors, whatever the configuration says', async ()
   );
   assert.ok(hasErrors(results));
 });
+
+/**
+ * A file that cannot be read at all.
+ *
+ * These used to reject the whole `lint` call, so one unreadable file among a
+ * thousand cost you every other file's findings - and the crash exited 1,
+ * which is also the code for "the linter found something".
+ */
+function withUnreadableFile(body: (directory: string, unreadable: string) => Promise<void>) {
+  return async () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-unreadable-'));
+    const unreadable = path.join(directory, 'Unreadable.feature');
+    try {
+      fs.writeFileSync(unreadable, 'Feature: A\n\n  Scenario: B\n    Given something\n');
+      fs.chmodSync(unreadable, 0o000);
+      // Running as root defeats the permission bits, so there is nothing to test.
+      try {
+        fs.readFileSync(unreadable, 'utf8');
+        return;
+      } catch {
+        // Good: it really is unreadable.
+      }
+      await body(directory, unreadable);
+    } finally {
+      fs.chmodSync(unreadable, 0o644);
+      fs.rmSync(directory, {recursive: true, force: true});
+    }
+  };
+}
+
+test(
+  'a file that cannot be read is reported rather than throwing',
+  withUnreadableFile(async (_directory, unreadable) => {
+    const results = await lint([unreadable], {}, rules);
+
+    assert.equal(results.length, 1);
+    assert.equal(results[0]?.errors.length, 1);
+    assert.equal(results[0]?.errors[0]?.rule, 'unexpected-error');
+    assert.equal(results[0]?.errors[0]?.line, 0);
+    assert.match(String(results[0]?.errors[0]?.message), /EACCES|permission denied/u);
+    assert.ok(hasErrors(results), 'an unreadable file should fail the run');
+  }),
+);
+
+test(
+  'one unreadable file does not cost the other files their findings',
+  withUnreadableFile(async (_directory, unreadable) => {
+    const files = [unreadable, 'test/linter/MultipleFeatures.feature'];
+    const results = await lint(files, {}, rules);
+
+    assert.equal(results.length, 2, 'both files should come back');
+    assert.equal(results[0]?.errors[0]?.rule, 'unexpected-error');
+    // The readable file is still checked, and still reports its own problem.
+    assert.equal(results[1]?.errors[0]?.rule, 'one-feature-per-file');
+  }),
+);

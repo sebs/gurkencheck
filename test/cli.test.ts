@@ -252,3 +252,62 @@ test('an unknown language is reported rather than silently ignored', async () =>
     assert.match(stderr, /Unknown language "klingon"/u);
   });
 });
+
+test('an unreadable file is reported cleanly, without a stack trace', async () => {
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    const unreadable = path.join(cwd, 'Unreadable.feature');
+    fs.writeFileSync(unreadable, CLEAN_FEATURE);
+    fs.chmodSync(unreadable, 0o000);
+    try {
+      // Running as root defeats the permission bits, so there is nothing to test.
+      try {
+        fs.readFileSync(unreadable, 'utf8');
+        return;
+      } catch {
+        // Good: it really is unreadable.
+      }
+
+      const {code, stdout, stderr} = await cli(['.'], cwd);
+      assert.equal(code, 1, 'an unreadable file is a finding, so the run fails');
+      assert.match(stdout, /unexpected-error/u);
+      assert.doesNotMatch(stderr, /at async/u, 'a stack trace should never reach the user');
+    } finally {
+      fs.chmodSync(unreadable, 0o644);
+    }
+  });
+});
+
+test('a formatter that throws exits 2 rather than crashing', async () => {
+  await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
+    const formatter = path.join(cwd, 'broken-formatter.mjs');
+    fs.writeFileSync(
+      formatter,
+      'export default function () {\n  throw new Error("formatter is broken");\n}\n',
+    );
+
+    const {code, stderr} = await cli(['--format', './broken-formatter.mjs', '.'], cwd);
+    assert.equal(code, 2, 'a broken formatter is a usage problem, not a finding');
+    assert.match(stderr, /The formatter failed: formatter is broken/u);
+    assert.doesNotMatch(stderr, /at async/u, 'a stack trace should never reach the user');
+  });
+});
+
+test('a config extending a package that throws on import exits 2 with the reason', async () => {
+  await withProject(CLEAN_FEATURE, '{"extends": "broken-config"}', async (cwd) => {
+    const packageDirectory = path.join(cwd, 'node_modules', 'broken-config');
+    fs.mkdirSync(packageDirectory, {recursive: true});
+    fs.writeFileSync(
+      path.join(packageDirectory, 'package.json'),
+      '{"name": "broken-config", "version": "1.0.0", "main": "index.js"}',
+    );
+    fs.writeFileSync(
+      path.join(packageDirectory, 'index.js'),
+      'throw new Error("config module is broken");\n',
+    );
+
+    const {code, stderr} = await cli(['.'], cwd);
+    assert.equal(code, 2);
+    assert.match(stderr, /config module is broken/u);
+    assert.doesNotMatch(stderr, /at async/u, 'a stack trace should never reach the user');
+  });
+});

@@ -50,7 +50,14 @@ async function loadRulesFrom(directory: string): Promise<LintRule[]> {
 
   for (const file of files) {
     const absolute = path.join(resolved, file);
-    const module = (await import(pathToFileURL(absolute).href)) as Record<string, unknown>;
+    let module: Record<string, unknown>;
+    try {
+      module = (await import(pathToFileURL(absolute).href)) as Record<string, unknown>;
+    } catch (thrown) {
+      throw new Error(
+        `Could not load the rule "${absolute}": ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+      );
+    }
     loaded.push(extractRule(module, absolute));
   }
 
@@ -112,6 +119,9 @@ export function resetRules(rules: RuleRegistry): void {
  * Rules are awaited one at a time. Most return an array outright, in which
  * case awaiting costs nothing; a rule that needs to wait for something can
  * return a promise instead.
+ *
+ * A rule that throws is reported as an `unexpected-error` finding naming it,
+ * and the remaining rules still run.
  */
 export async function runEnabledRules(
   feature: Feature | undefined,
@@ -127,7 +137,24 @@ export async function runEnabledRules(
       continue;
     }
     const severity = getRuleSeverity(config);
-    for (const error of await rule.run(feature, file, getRuleSettings(config))) {
+
+    let found: RuleError[];
+    try {
+      found = await rule.run(feature, file, getRuleSettings(config));
+    } catch (thrown) {
+      // A rule that throws - one of your own from --rulesdir, or a built-in
+      // one meeting a file it did not expect - costs you that rule's findings
+      // for this file, not every other rule's. The failure is reported in
+      // their place so that it cannot pass unnoticed.
+      errors.push({
+        message: `Rule "${rule.name}" failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+        rule: 'unexpected-error',
+        line: 0,
+      });
+      continue;
+    }
+
+    for (const error of found) {
       // The configuration decides how loudly a rule reports, so a custom rule
       // needs no say in it - but one that sets a severity itself is respected.
       errors.push({severity, ...error});

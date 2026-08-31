@@ -128,7 +128,15 @@ export async function run(argv: readonly string[]): Promise<number> {
   const results = await lint(files, configuration.configuration, rules, {language});
 
   // A formatter may print the output itself or hand it back as a string.
-  const output = await formatter(results);
+  let output;
+  try {
+    output = await formatter(results);
+  } catch (thrown) {
+    logger.boldError(
+      `The formatter failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+    );
+    return EXIT_USAGE;
+  }
   if (typeof output === 'string' && output !== '') {
     console.log(output);
   }
@@ -155,7 +163,25 @@ function isMainModule(): boolean {
   }
 }
 
+/**
+ * Runs the command line, turning anything unexpected into a usage failure.
+ *
+ * Without this, a crash leaves node to exit 1 - which is the code for "the
+ * linter found something" - so a broken run and a dirty feature file would
+ * look identical to CI. Anything reaching this handler is a bug rather than a
+ * finding, so the whole error is printed and the run fails as unusable.
+ */
+async function main(argv: readonly string[]): Promise<number> {
+  try {
+    return await run(argv);
+  } catch (thrown) {
+    logger.boldError('gurkencheck stopped unexpectedly. This is a bug, please report it:');
+    logger.error(thrown instanceof Error ? (thrown.stack ?? thrown.message) : String(thrown));
+    return EXIT_USAGE;
+  }
+}
+
 // Only take over the process when run as a command, not when imported.
 if (isMainModule()) {
-  process.exitCode = await run(process.argv.slice(2));
+  process.exitCode = await main(process.argv.slice(2));
 }
