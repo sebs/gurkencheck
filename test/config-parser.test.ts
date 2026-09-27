@@ -93,7 +93,16 @@ test('the recommended preset names only rules that exist', async () => {
 
 test('the recommended preset holds no style rules', async () => {
   // Style is a decision for a team, not a default to inherit.
-  for (const styleRule of ['indentation', 'name-length', 'use-and', 'file-name']) {
+  for (const styleRule of [
+    'indentation',
+    'name-length',
+    'use-and',
+    'file-name',
+    'new-line-at-eof',
+    'no-trailing-spaces',
+    'no-multiple-empty-lines',
+    'one-space-between-tags',
+  ]) {
     assert.ok(!(styleRule in RECOMMENDED), `${styleRule} should not be recommended`);
   }
 });
@@ -132,7 +141,9 @@ test('extends a list, with later entries winning', async () => {
   const result = await readConfiguration(`${FIXTURES}/extends-list.gurkencheckrc`, rules);
   assert.ok(result.ok);
   assert.equal(result.configuration['no-empty-file'], 'on');
-  assert.equal(result.configuration['one-space-between-tags'], 'on');
+  // One from the preset, one only the shared file adds.
+  assert.equal(result.configuration['no-unnamed-scenarios'], 'on');
+  assert.equal(result.configuration['no-trailing-spaces'], 'on');
 });
 
 test('reports a preset that does not exist', async () => {

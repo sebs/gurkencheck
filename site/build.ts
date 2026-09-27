@@ -323,10 +323,9 @@ ${codeBlock('npm install --save-dev gurkencheck')}
 <h2>Get started</h2>
 <p>Run it. With no configuration file, gurkencheck uses its <strong>recommended</strong>
 rules: the ones that catch a mistake rather than express a preference &mdash; an empty file,
-a scenario with no name, a variable that will never be substituted. It also asks for basic
-whitespace hygiene: no trailing spaces, no runs of empty lines, one space between tags and a
-new line at the end of each file. Beyond that, nothing in it depends on how you lay a file
-out.</p>
+a scenario with no name, a variable that will never be substituted. Nothing in that set
+depends on how you lay a file out, so it should be quiet on a codebase that has never been
+linted.</p>
 ${codeBlock('npx gurkencheck')}
 <p>When you want something different, create a file called
 <code>${DEFAULT_CONFIG_FILE_NAME}</code> and list the rules you want. A configuration file
@@ -364,7 +363,7 @@ over what it extends, and later entries in a list win over earlier ones.</p>
 ${codeBlock(`{
   "extends": "gurkencheck:recommended",
   "indentation": ["on", {"Step": 4}],
-  "no-trailing-spaces": "off"
+  "no-dupe-scenario-names": ["on", "in-feature"]
 }`)}
 <p>An entry is one of three things:</p>
 <div class="wide"><table>
