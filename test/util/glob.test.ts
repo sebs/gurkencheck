@@ -47,6 +47,12 @@ test('dots and other regex characters are literal', () => {
   assert.ok(matches('a+b.feature', 'a+b.feature'));
 });
 
+test('a brace that is never closed is taken literally', () => {
+  assert.ok(matches('foo{bar.feature', 'foo{bar.feature'));
+  assert.ok(matches('{a,b}{.feature', 'a{.feature'));
+  assert.ok(matches('x}.feature', 'x}.feature'));
+});
+
 const originalCwd = process.cwd();
 let root: string;
 

@@ -63,8 +63,14 @@ export function globToRegExp(pattern: string): RegExp {
         index = closing + 1;
       }
     } else if (character === '{') {
-      braceDepth++;
-      source += '(?:';
+      // A brace with nothing closing it is taken literally, as an unclosed
+      // `[` is, rather than leaving a group open in the regular expression.
+      if (findClosingBrace(pattern, index) === -1) {
+        source += '\\{';
+      } else {
+        braceDepth++;
+        source += '(?:';
+      }
     } else if (character === '}' && braceDepth > 0) {
       braceDepth--;
       source += ')';
@@ -83,6 +89,22 @@ export function globToRegExp(pattern: string): RegExp {
 
 function escapeLiteral(character: string): string {
   return REGEXP_SPECIAL_CHARACTERS.has(character) ? `\\${character}` : character;
+}
+
+/** Where the brace opened just before `from` closes, or -1 when it never does. */
+function findClosingBrace(pattern: string, from: number): number {
+  let depth = 1;
+  for (let index = from; index < pattern.length; index++) {
+    const character = pattern[index];
+    if (character === '\\') {
+      index++;
+    } else if (character === '{') {
+      depth++;
+    } else if (character === '}' && --depth === 0) {
+      return index;
+    }
+  }
+  return -1;
 }
 
 function findClosingBracket(pattern: string, from: number): number {
