@@ -6,13 +6,33 @@ import {andMore, head, location, percent, plural, summarise} from './shared.ts';
 import type {StatsFormatOptions} from './shared.ts';
 
 /** A pipe inside a cell would start a column of its own. */
-function cell(text: string): string {
+function inCell(text: string): string {
   return text.replace(/\|/gu, '\\|');
 }
 
-/** ``` `text` ```, so step text keeps its quotes and angle brackets. */
-function code(text: string): string {
-  return `\`${cell(text)}\``;
+/**
+ * Text written into a table cell as it is: Markdown's own characters escaped,
+ * so a scenario called `*important*` is not shown in italics, and a line
+ * break, which would end the row, made a space.
+ */
+function cell(text: string): string {
+  return inCell(text.replace(/[\\`*_{}[\]<>#!~]/gu, '\\$&').replace(/\r?\n/gu, ' '));
+}
+
+/**
+ * ``` `text` ```, so step text keeps its quotes and angle brackets.
+ *
+ * The fence is one backtick longer than the longest run inside the text, so a
+ * backtick in the step cannot close it early; a space pads a text starting or
+ * ending with one, as CommonMark asks. Pipes are only escaped inside a table,
+ * because anywhere else the backslash would be shown.
+ */
+function code(text: string, inTable = true): string {
+  const longest = Math.max(0, ...(text.match(/`+/gu) ?? []).map((run) => run.length));
+  const fence = '`'.repeat(longest + 1);
+  const padding = text.startsWith('`') || text.endsWith('`') ? ' ' : '';
+  const span = `${fence}${padding}${text}${padding}${fence}`;
+  return inTable ? inCell(span) : span;
 }
 
 function table(headings: readonly string[], alignments: readonly string[], rows: readonly string[][]): string[] {
@@ -192,7 +212,7 @@ export function toMarkdown(statistics: Statistics, options: StatsFormatOptions):
       '',
       '### Tags written exactly once',
       '',
-      tagsOnce.shown.map(code).join(', '),
+      tagsOnce.shown.map((tag) => code(tag, false)).join(', '),
       ...more(tagsOnce.hidden, 'tag'),
     );
   }

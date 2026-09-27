@@ -75,6 +75,28 @@ test('a pipe in a step does not start a column of its own', () => {
   assert.match(toMarkdown(piped, options), /`a \\\| b`/u);
 });
 
+test('a backtick in a step does not end its code span', () => {
+  const ticked = collectStatistics([
+    parseFeature('Tick.feature', 'Feature: A\n\n  Scenario: B\n    Given I run `ls` twice\n    Given I run `ls` twice\n'),
+  ]);
+  assert.match(toMarkdown(ticked, options), /^\| ``i run `ls` twice`` \| 2 \|/mu);
+});
+
+test('a pipe is only escaped inside a table', () => {
+  const tagged = collectStatistics([
+    parseFeature('Tag.feature', '@t|x\nFeature: A\n\n  Scenario: B\n    Given something\n'),
+  ]);
+  const onceSection = /### Tags written exactly once\n\n(.*)/u.exec(toMarkdown(tagged, options))?.[1];
+  assert.equal(onceSection, '`@t|x`');
+});
+
+test('scenario names are escaped as Markdown text', () => {
+  const named = collectStatistics([
+    parseFeature('Name.feature', 'Feature: A\n\n  Scenario: *bold* and _under_ <tag>\n    Given something\n'),
+  ]);
+  assert.match(toMarkdown(named, options), /\\\*bold\\\* and \\_under\\_ \\<tag\\>/u);
+});
+
 test('the JSON report is the whole dataset, not the shortened lists', () => {
   const report = JSON.parse(toJson(statistics));
   assert.equal(report.steps.vocabulary.length, report.steps.unique);
