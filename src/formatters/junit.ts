@@ -9,6 +9,7 @@
  * A warning does not fail the run, so it is reported as a passing test case
  * carrying its message, rather than as a failure the build would trip over.
  */
+import path from 'node:path';
 import type {FileResult, RuleError} from '../types.ts';
 import {attributes, escapeXml, indent, XML_DECLARATION} from '../util/xml.ts';
 
@@ -25,18 +26,30 @@ function classNameFor(filePath: string): string {
     .join('.');
 }
 
+/**
+ * The path to show for a file: relative to the working directory, as a CI
+ * server shows the repository, so suites read `features/Login.feature` and
+ * group as `features.Login` rather than by where the build machine keeps its
+ * checkout. A file outside the working directory keeps its absolute path.
+ */
+function displayPath(filePath: string, cwd: string): string {
+  const relative = path.relative(cwd, filePath);
+  if (relative === '' || relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    return filePath;
+  }
+  return relative.split(path.sep).join('/');
+}
+
 function positionOf(error: RuleError): string {
   return error.column === undefined ? `${error.line}` : `${error.line}:${error.column}`;
 }
 
-function testCase(result: FileResult, error: RuleError): string {
+function testCase(filePath: string, error: RuleError): string {
   const open = `<testcase${attributes({
     name: `${error.rule} (${positionOf(error)})`,
-    classname: classNameFor(result.filePath),
+    classname: classNameFor(filePath),
   })}>`;
-  const detail = escapeXml(
-    `${result.filePath}:${positionOf(error)} (${error.rule}) ${error.message}`,
-  );
+  const detail = escapeXml(`${filePath}:${positionOf(error)} (${error.rule}) ${error.message}`);
 
   const body =
     severityOf(error) === 'warning'
@@ -46,20 +59,21 @@ function testCase(result: FileResult, error: RuleError): string {
   return `${open}\n${indent(body, 1)}\n</testcase>`;
 }
 
-function testSuite(result: FileResult): string {
+function testSuite(result: FileResult, cwd: string): string {
+  const filePath = displayPath(result.filePath, cwd);
   const failures = result.errors.filter((error) => severityOf(error) === 'error').length;
   const cases =
     result.errors.length > 0
-      ? result.errors.map((error) => testCase(result, error))
+      ? result.errors.map((error) => testCase(filePath, error))
       : [
           `<testcase${attributes({
-            name: result.filePath,
-            classname: classNameFor(result.filePath),
+            name: filePath,
+            classname: classNameFor(filePath),
           })}/>`,
         ];
 
   const open = `<testsuite${attributes({
-    name: result.filePath,
+    name: filePath,
     tests: Math.max(result.errors.length, 1),
     failures,
     errors: 0,
@@ -70,7 +84,7 @@ function testSuite(result: FileResult): string {
 }
 
 /** Renders the results as a JUnit report. */
-export function format(results: readonly FileResult[]): string {
+export function format(results: readonly FileResult[], cwd: string = process.cwd()): string {
   const tests = results.reduce((total, result) => total + Math.max(result.errors.length, 1), 0);
   const failures = results.reduce(
     (total, result) =>
@@ -80,7 +94,7 @@ export function format(results: readonly FileResult[]): string {
 
   const body = [
     `<testsuites${attributes({name: 'gurkencheck', tests, failures, errors: 0})}>`,
-    ...results.map((result) => indent(testSuite(result), 1)),
+    ...results.map((result) => indent(testSuite(result, cwd), 1)),
     '</testsuites>',
   ].join('\n');
 

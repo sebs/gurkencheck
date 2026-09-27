@@ -9,6 +9,7 @@ import {
   loadStreamingFormatter,
 } from '../src/formatters/index.ts';
 import type {StreamingFormatter} from '../src/formatters/index.ts';
+import {format as formatJunit} from '../src/formatters/junit.ts';
 import {toSarif} from '../src/formatters/sarif.ts';
 import type {FileResult, Formatter} from '../src/index.ts';
 
@@ -279,6 +280,16 @@ test('junit reports a warning without failing the suite', () => {
   assert.match(output, /failures="0"/u);
   assert.doesNotMatch(output, /<failure/u);
   assert.match(output, /<system-out>\/a\.feature:1 \(use-and\) gentle advice<\/system-out>/u);
+});
+
+test('junit names files relative to the working directory', () => {
+  const output = formatJunit(
+    [{filePath: '/repo/features/Login.feature', errors: [{line: 3, message: 'm', rule: 'r'}]}],
+    '/repo',
+  );
+  assert.match(output, /<testsuite name="features\/Login\.feature"/u);
+  assert.match(output, /classname="features\.Login"/u);
+  assert.match(output, />features\/Login\.feature:3 \(r\) m</u);
 });
 
 test('xunit is still accepted as a name for the JUnit report', () => {

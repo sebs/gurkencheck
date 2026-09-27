@@ -170,8 +170,8 @@ column, so if you match on its shape, that is one more field:
 +  3:3    error      Missing Scenario name    no-unnamed-scenarios
 ```
 
-In the xunit report a warning's `type` is `gurkencheck-warning` rather than
-`gurkencheck-error`.
+In the JUnit report a warning does not fail: it is a passing test case whose message is
+in `<system-out>`, rather than a `<failure>`.
 
 ## New checks in existing rules
 
