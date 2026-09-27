@@ -521,7 +521,9 @@ export const RULE_DOCS: RuleDoc[] = [
     summary: 'Requires each scenario to carry certain tags.',
     explanation:
       'Useful when every scenario has to be traceable, for example to a ticket number. ' +
-      'Each entry is a pattern, and a scenario must have at least one tag matching it.',
+      'Each entry is a pattern, and a scenario must have at least one tag matching it. ' +
+      'Tags on the Feature or Rule count, since the scenario runs with them; for a ' +
+      'Scenario Outline, so do the tags on an Examples table, as long as every table has one.',
     settings: [
       {
         name: 'tags',

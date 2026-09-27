@@ -41,3 +41,11 @@ test('reports untagged scenarios when ignoreUntagged is off', async () => {
     ],
   );
 });
+
+test('counts the tags a scenario inherits from its Feature, Rule and Examples', async () => {
+  await checkRule(rule, 'required-tags/Inherited.feature', {tags: ['^@ticket-', '^@release-']}, [
+    missing('^@release-', 'Scenario', 5),
+    missing('^@release-', 'Scenario', 12),
+    missing('^@release-', 'Scenario Outline', 32),
+  ]);
+});
