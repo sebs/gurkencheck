@@ -236,6 +236,13 @@ test('tap escapes a message holding characters YAML cannot quote plainly', () =>
   assert.match(output, /message: "a\\x01 \\"b\\"\\x0ac\\\\"$/mu);
 });
 
+test('tap escapes a # in a path, so it is not read as a directive', () => {
+  const output = capture(getFormatter('tap')!, [
+    {filePath: '/x # TODO later\\y.feature', errors: [{line: 1, message: 'm', rule: 'r'}]},
+  ]);
+  assert.match(output, /^not ok 1 - \/x \\# TODO later\\\\y\.feature$/mu);
+});
+
 test('tap emits an empty plan when there is nothing to report', () => {
   assert.equal(capture(getFormatter('tap')!, []), 'TAP version 13\n1..0');
 });

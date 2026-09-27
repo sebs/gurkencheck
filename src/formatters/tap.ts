@@ -47,6 +47,15 @@ function quote(value: string): string {
   return `"${escaped}"`;
 }
 
+/**
+ * Escapes a test point's description. An unescaped `#` starts a directive, so
+ * a failing file whose path holds `# TODO` or `# SKIP` would be read as one
+ * that is allowed to fail, and the run would pass.
+ */
+function description(text: string): string {
+  return text.replace(/[\\#]/g, '\\$&');
+}
+
 function severityOf(error: RuleError): string {
   return error.severity ?? 'error';
 }
@@ -88,7 +97,7 @@ export function startRun(): FormatterRun {
     file(result: FileResult): string {
       count++;
       const status = fails(result) ? 'not ok' : 'ok';
-      return [`${status} ${count} - ${result.filePath}`, ...diagnostics(result), ''].join('\n');
+      return [`${status} ${count} - ${description(result.filePath)}`, ...diagnostics(result), ''].join('\n');
     },
     end: () => `1..${count}\n`,
   };
