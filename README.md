@@ -268,7 +268,7 @@ Write a comment in the feature file:
 | Directive | What it covers |
 |---|---|
 | `gurkencheck-disable-next-line` | The line directly below the comment |
-| `gurkencheck-disable` | From the comment to the end of the file, or to the next `gurkencheck-enable` |
+| `gurkencheck-disable` | From the comment to the end of the file, or to the next `gurkencheck-enable`. Written above the `Feature`, it also covers findings about the whole file, such as `file-name` |
 | `gurkencheck-enable` | Resumes the rules a `gurkencheck-disable` switched off |
 | `gurkencheck-disable-file` | The whole file, wherever the comment appears |
 

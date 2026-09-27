@@ -65,6 +65,14 @@ export function readSuppressions(lines: readonly string[]): Suppressions {
   const nextLine = new Map<number, Set<string>>();
   const switches: Switch[] = [];
   let found = false;
+  /**
+   * The first line that is neither blank nor a comment. A finding about the
+   * whole file belongs to no line, so it is taken to sit here: a `disable`
+   * written in the comments at the top of the file covers it, one further
+   * down does not.
+   */
+  const firstContent = lines.findIndex((text) => text.trim() !== '' && !text.trim().startsWith('#'));
+  const wholeFileLine = firstContent === -1 ? lines.length + 1 : firstContent + 1;
 
   lines.forEach((text, index) => {
     if (inDocString[index] === true) {
@@ -109,9 +117,10 @@ export function readSuppressions(lines: readonly string[]): Suppressions {
       // So `enable use-and` after a bare `disable` switches use-and back on
       // and leaves every other rule off, and `enable` with no names switches
       // everything back on.
+      const line = error.line === 0 ? wholeFileLine : error.line;
       let off = false;
       for (const change of switches) {
-        if (change.line > error.line) break;
+        if (change.line > line) break;
         if (covers(error.rule, change.rule)) {
           off = change.off;
         }

@@ -449,7 +449,7 @@ ${codeBlock(`# gurkencheck-disable-next-line name-length
 <thead><tr><th>Directive</th><th>What it covers</th></tr></thead>
 <tbody>
 <tr><td><code>gurkencheck-disable-next-line</code></td><td>The line directly below the comment.</td></tr>
-<tr><td><code>gurkencheck-disable</code></td><td>From the comment to the end of the file, or to the next <code>gurkencheck-enable</code>.</td></tr>
+<tr><td><code>gurkencheck-disable</code></td><td>From the comment to the end of the file, or to the next <code>gurkencheck-enable</code>. Written above the <code>Feature</code>, it also covers findings about the whole file, such as <code>file-name</code>.</td></tr>
 <tr><td><code>gurkencheck-enable</code></td><td>Resumes the rules a <code>gurkencheck-disable</code> switched off.</td></tr>
 <tr><td><code>gurkencheck-disable-file</code></td><td>The whole file, wherever the comment appears.</td></tr>
 </tbody>

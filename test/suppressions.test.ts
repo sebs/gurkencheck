@@ -128,3 +128,14 @@ test('a misspelled directive is not read as a shorter one', () => {
     assert.ok(!found.isSuppressed(error('name-length', 4)), typo);
   }
 });
+
+test('a disable above the Feature covers findings about the whole file', () => {
+  const found = suppressions(['# gurkencheck-disable file-name', '', 'Feature: A'].join('\n'));
+  assert.ok(found.isSuppressed(error('file-name', 0)));
+  assert.ok(!found.isSuppressed(error('use-and', 0)), 'only the rule it names');
+});
+
+test('a disable further down does not cover findings about the whole file', () => {
+  const found = suppressions(['Feature: A', '# gurkencheck-disable file-name', 'x'].join('\n'));
+  assert.ok(!found.isSuppressed(error('file-name', 0)));
+});
