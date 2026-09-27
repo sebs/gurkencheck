@@ -13,6 +13,12 @@ test('reports a comment started part way along a tag line', async () => {
     {message, line: 1},
     {message, line: 7},
     {message, line: 12},
-    {message, line: 15},
+    // Line 15, @tag#@commented-out-tag, comments nothing out: with no space
+    // before the #, Gherkin reads it as the two tags @tag# and
+    // @commented-out-tag.
   ]);
+});
+
+test('a # inside a tag is part of the tag, not a comment', async () => {
+  await checkRule(rule, 'no-partially-commented-tag-lines/HashInsideTag.feature', {}, []);
 });

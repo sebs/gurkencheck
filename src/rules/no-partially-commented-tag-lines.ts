@@ -34,13 +34,15 @@ const rule: LintRule = {
 
     const errors: RuleError[] = [];
     for (const line of [...tagLines].sort((a, b) => a - b)) {
-      const comment = file.lines[line - 1]?.indexOf('#') ?? -1;
-      if (comment !== -1) {
+      // As in Gherkin itself, only a # after whitespace starts a comment;
+      // one inside a tag, as in @issue#123, is part of the tag.
+      const comment = /\s#/u.exec(file.lines[line - 1] ?? '');
+      if (comment !== null) {
         errors.push({
           message: 'Partially commented tag lines not allowed',
           rule: name,
           // Point at the '#' itself: that is the character to remove.
-          ...atLineColumn(line, comment + 1),
+          ...atLineColumn(line, comment.index + 2),
         });
       }
     }

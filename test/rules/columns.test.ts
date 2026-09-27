@@ -75,7 +75,6 @@ test('a partially commented tag line points at the hash', async () => {
       {line: 1, column: 6},
       {line: 7, column: 6},
       {line: 12, column: 6},
-      {line: 15, column: 7},
     ],
   );
 });
