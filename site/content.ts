@@ -432,7 +432,8 @@ export const RULE_DOCS: RuleDoc[] = [
     summary: 'Removes spaces and tabs left at the end of a line.',
     explanation:
       'Trailing whitespace is invisible while you type but shows up in every diff. ' +
-      'Removing it keeps reviews about the actual change.',
+      'Removing it keeps reviews about the actual change. The text inside a doc string is ' +
+      'left alone: it is data, such as expected output, where trailing spaces may matter.',
     config: '{\n  "no-trailing-spaces": "on"\n}',
     good: 'Feature: Logging in\n\n  Scenario: A known user logs in\n    Given I am a known user',
     bad: 'Feature: Logging in\n\n  Scenario: A known user logs in   \n    Given I am a known user ',

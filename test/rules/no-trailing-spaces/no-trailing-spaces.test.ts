@@ -20,3 +20,9 @@ test('reports trailing spaces', async () => {
 test('reports trailing tabs', async () => {
   await checkRule(rule, 'no-trailing-spaces/TrailingTabs.feature', {}, [{message, line: 4}]);
 });
+
+test('leaves the content of a doc string alone, but not its delimiters', async () => {
+  await checkRule(rule, 'no-trailing-spaces/DocString.feature', {}, [
+    {message: 'Trailing spaces are not allowed', line: 7},
+  ]);
+});
