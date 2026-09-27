@@ -1,7 +1,7 @@
 import type {Tag} from '@cucumber/messages';
 import {taggedNodesOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
-import {atLineColumn} from '../util/location.ts';
+import {atLineColumn, columnOf} from '../util/location.ts';
 
 const name = 'no-partially-commented-tag-lines';
 
@@ -36,13 +36,14 @@ const rule: LintRule = {
     for (const line of [...tagLines].sort((a, b) => a - b)) {
       // As in Gherkin itself, only a # after whitespace starts a comment;
       // one inside a tag, as in @issue#123, is part of the tag.
-      const comment = /\s#/u.exec(file.lines[line - 1] ?? '');
+      const text = file.lines[line - 1] ?? '';
+      const comment = /\s#/u.exec(text);
       if (comment !== null) {
         errors.push({
           message: 'Partially commented tag lines not allowed',
           rule: name,
           // Point at the '#' itself: that is the character to remove.
-          ...atLineColumn(line, comment.index + 2),
+          ...atLineColumn(line, columnOf(text, comment.index + 1)),
         });
       }
     }

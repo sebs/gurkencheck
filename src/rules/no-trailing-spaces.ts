@@ -1,5 +1,5 @@
 import type {LintRule, RuleError} from '../types.ts';
-import {atLineColumn} from '../util/location.ts';
+import {atLineColumn, columnOf} from '../util/location.ts';
 
 const name = 'no-trailing-spaces';
 const TRAILING_WHITESPACE = /[\t ]+$/;
@@ -16,7 +16,7 @@ const rule: LintRule = {
           rule: name,
           // Point at the first character of the run, so an editor can
           // underline exactly what has to go.
-          ...atLineColumn(index + 1, trailing.index + 1),
+          ...atLineColumn(index + 1, columnOf(line, trailing.index)),
         });
       }
     });

@@ -101,6 +101,9 @@ export function toSarif(results: readonly FileResult[], cwd: string = process.cw
             ),
           },
         },
+        // Columns count characters, as the Gherkin parser does, not the
+        // UTF-16 units some tools assume.
+        columnKind: 'unicodeCodePoints',
         results: findings,
       },
     ],

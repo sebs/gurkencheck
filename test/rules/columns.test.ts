@@ -87,3 +87,16 @@ test('errors about a whole file carry no column', async () => {
     {line: 5, column: undefined},
   ]);
 });
+
+test('columns found in the raw text count characters, as the parser does', async () => {
+  // Line 5 is '    Given 😀😀 ': the trailing space is the 13th character,
+  // though the 15th UTF-16 unit.
+  assert.deepEqual(await positions(noTrailingSpaces, 'no-trailing-spaces/Emoji.feature'), [
+    {line: 2, column: 15},
+    {line: 5, column: 13},
+  ]);
+  assert.deepEqual(
+    await positions(noPartiallyCommentedTagLines, 'no-partially-commented-tag-lines/Emoji.feature'),
+    [{line: 1, column: 4}],
+  );
+});

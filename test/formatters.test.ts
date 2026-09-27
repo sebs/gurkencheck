@@ -339,6 +339,11 @@ test('sarif lists only the rules that found something, with a link to their page
   assert.match(rules[0]!.helpUri, /rules\/no-trailing-spaces\.html$/u);
 });
 
+test('sarif says its columns count characters', () => {
+  const log = toSarif(RESULTS, '/') as {runs: {columnKind: string}[]};
+  assert.equal(log.runs[0]!.columnKind, 'unicodeCodePoints');
+});
+
 test('sarif links only the rules that have a page', () => {
   const log = toSarif(
     [
