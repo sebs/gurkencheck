@@ -246,6 +246,44 @@ test('a file given where a directory belongs is reported, not watched', async ()
   }
 });
 
+test('checks again when a listed file outside the watched directory changes', async () => {
+  const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-watch-config-'));
+  const config = path.join(elsewhere, 'team.json');
+  fs.writeFileSync(config, '{}');
+
+  const watched = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-watch-'));
+  const controller = new AbortController();
+  let passes = 0;
+  const stopped = watch(
+    [watched],
+    config,
+    {diagnostics: collectDiagnostics(), settleMs: 10, signal: controller.signal, files: () => [config]},
+    async () => {
+      passes += 1;
+    },
+  );
+
+  try {
+    await waitFor('the first pass', () => passes >= 1);
+    // fs.watch can take a moment to start reporting on macOS, so the write is
+    // repeated until a pass shows it was seen.
+    await waitFor('a pass for the configuration', () => {
+      fs.writeFileSync(config, `{"x": ${Date.now()}}`);
+      return passes >= 2;
+    });
+  } finally {
+    controller.abort();
+    await stopped;
+    fs.rmSync(watched, {recursive: true, force: true});
+    fs.rmSync(elsewhere, {recursive: true, force: true});
+  }
+});
+
+test('isInteresting matches a configuration named with a directory', () => {
+  assert.ok(isInteresting('rc.json', 'config/rc.json'));
+  assert.ok(isInteresting('config/rc.json', 'config/rc.json'));
+});
+
 test('isInteresting picks feature files and the configuration', () => {
   assert.ok(isInteresting('features/Login.feature', CONFIG));
   assert.ok(isInteresting(CONFIG, CONFIG));

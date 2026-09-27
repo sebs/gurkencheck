@@ -21,7 +21,18 @@ const LANGUAGE = 'language';
 
 /** Either a usable configuration, or the reason there isn't one. */
 export type ConfigurationResult =
-  | {ok: true; configuration: Configuration; source: string; language?: string}
+  | {
+      ok: true;
+      configuration: Configuration;
+      source: string;
+      language?: string;
+      /**
+       * Every file the configuration was read from - the file itself and
+       * each one it extends, as absolute paths. What a watch has to keep an
+       * eye on to know the configuration changed.
+       */
+      files?: string[];
+    }
   | {ok: false; message: string; details: string[]};
 
 class ConfigurationError extends Error {}
@@ -134,23 +145,31 @@ async function loadExtended(
  * win over earlier ones.
  *
  * `ancestors` holds the chain of files that led here, not every file seen so
- * far: two files extending the same base is sharing, not a cycle.
+ * far: two files extending the same base is sharing, not a cycle. `files`
+ * collects every file read along the way.
  */
 async function flatten(
   configuration: Record<string, unknown>,
   source: string,
   ancestors: Set<string>,
+  files: Set<string>,
 ): Promise<Configuration> {
   if (ancestors.has(source)) {
     throw new ConfigurationError(`"${source}" ends up extending itself.`);
   }
   ancestors.add(source);
+  if (!Object.hasOwn(PRESETS, source)) {
+    files.add(path.resolve(source));
+  }
 
   let merged: Configuration = {};
   try {
     for (const specifier of extendsList(configuration, source)) {
       const extended = await loadExtended(specifier, source);
-      merged = {...merged, ...(await flatten(extended.configuration, extended.source, ancestors))};
+      merged = {
+        ...merged,
+        ...(await flatten(extended.configuration, extended.source, ancestors, files)),
+      };
     }
   } finally {
     ancestors.delete(source);
@@ -189,8 +208,9 @@ export async function readConfiguration(
   }
 
   let flattened: Configuration;
+  const files = new Set<string>();
   try {
-    flattened = await flatten(parseFile(configPath), configPath, new Set());
+    flattened = await flatten(parseFile(configPath), configPath, new Set(), files);
   } catch (thrown) {
     if (thrown instanceof ConfigurationError) {
       return {
@@ -221,5 +241,11 @@ export async function readConfiguration(
     return {ok: false, message: 'Error(s) in configuration file:', details: errors};
   }
 
-  return {ok: true, configuration, source: configPath, ...(language === undefined ? {} : {language})};
+  return {
+    ok: true,
+    configuration,
+    source: configPath,
+    files: [...files],
+    ...(language === undefined ? {} : {language}),
+  };
 }

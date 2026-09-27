@@ -173,6 +173,16 @@ test('two entries extending the same file is not a cycle', async () => {
   assert.equal(result.configuration['no-trailing-spaces'], 'on');
 });
 
+test('lists every file the configuration was read from', async () => {
+  const result = await readConfiguration(`${FIXTURES}/diamond/top.gurkencheckrc`, rules);
+  assert.ok(result.ok);
+  assert.deepEqual(
+    result.files?.map((file) => path.basename(file)).sort(),
+    ['bottom.gurkencheckrc', 'left.gurkencheckrc', 'right.gurkencheckrc', 'top.gurkencheckrc'],
+  );
+  assert.ok(result.files?.every((file) => path.isAbsolute(file)));
+});
+
 test('a preset reached along two paths is not a cycle', async () => {
   const result = await readConfiguration(`${FIXTURES}/diamond/preset-twice.gurkencheckrc`, rules);
   assert.ok(result.ok, JSON.stringify(result));

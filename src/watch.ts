@@ -36,6 +36,17 @@ export interface WatchOptions {
   /** Names to take no notice of, matched against any part of the path. */
   ignore?: readonly string[];
   /**
+   * Other files whose changes count, as absolute paths: a configuration named
+   * with a directory, the files it extends, the ignore file. A function is
+   * asked afresh on every change, so the list can follow a configuration
+   * that has started extending something else.
+   *
+   * A file outside the watched directories has its own directory watched,
+   * not the file itself: an editor saving by writing a new file and renaming
+   * it over the old one would leave a watch on the file looking at nothing.
+   */
+  files?: readonly string[] | (() => readonly string[]);
+  /**
    * Stops the watch when it aborts.
    *
    * Ctrl-C stops it too. This is for a caller that is not a terminal - a test,
@@ -47,7 +58,7 @@ export interface WatchOptions {
 /** True when a change to this path could change what a run would report. */
 export function isInteresting(relativePath: string, configFileName: string): boolean {
   const name = path.basename(relativePath);
-  return relativePath.endsWith('.feature') || name === configFileName;
+  return relativePath.endsWith('.feature') || name === path.basename(configFileName);
 }
 
 /**
@@ -78,6 +89,10 @@ export async function watch(
 
   const ignored = (relativePath: string): boolean =>
     ignore.some((entry) => relativePath.split(path.sep).includes(entry));
+  const files = (): Set<string> => {
+    const listed = typeof options.files === 'function' ? options.files() : (options.files ?? []);
+    return new Set(listed.map((file) => path.resolve(file)));
+  };
 
   /**
    * Runs a pass, and one more afterwards if anything changed while it ran.
@@ -158,7 +173,8 @@ export async function watch(
           return;
         }
         const relativePath = filename.toString();
-        if (ignored(relativePath) || !isInteresting(relativePath, configFileName)) {
+        const listed = files().has(path.resolve(root, relativePath));
+        if (!listed && (ignored(relativePath) || !isInteresting(relativePath, configFileName))) {
           return;
         }
         changed.add(path.basename(relativePath));
@@ -194,6 +210,37 @@ export async function watch(
       message: 'Nothing could be watched, so there would be nothing to wait for.',
     });
     return EXIT_OK;
+  }
+
+  // The directories of listed files the recursive watches do not reach, each
+  // watched on its own. Not counted among the living: they are there to say
+  // the configuration changed, and with no feature files left to watch there
+  // would be nothing for it to change.
+  const outside = new Set<string>();
+  for (const file of files()) {
+    const directory = path.dirname(file);
+    const covered = roots.some((root) => {
+      const resolved = path.resolve(root);
+      return directory === resolved || directory.startsWith(`${resolved}${path.sep}`);
+    });
+    if (!covered) {
+      outside.add(directory);
+    }
+  }
+  for (const directory of outside) {
+    try {
+      const watcher = fs.watch(directory, (_event, filename) => {
+        if (filename === null || files().has(path.join(directory, filename.toString()))) {
+          changed.add(filename === null ? 'a file' : filename.toString());
+          schedule();
+        }
+      });
+      watcher.on('error', () => watcher.close());
+      watchers.push(watcher);
+    } catch {
+      // A configuration that cannot be watched still works; it only means a
+      // change to it is picked up with the next change to a feature file.
+    }
   }
 
   await runCheck();

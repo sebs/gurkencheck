@@ -133,7 +133,7 @@ export async function run(
    * checks again for.
    */
   const readSettings = async (): Promise<
-    {configuration: Configuration; language: string | undefined} | undefined
+    {configuration: Configuration; language: string | undefined; files?: string[]} | undefined
   > => {
     const read = await readConfiguration(values.config, rules);
     if (!read.ok) {
@@ -148,7 +148,7 @@ export async function run(
       });
       return undefined;
     }
-    return {configuration: read.configuration, language};
+    return {configuration: read.configuration, language, files: read.files};
   };
 
   let settings = await readSettings();
@@ -253,10 +253,22 @@ export async function run(
     // Watching never fails: a run that found something is the normal state of
     // affairs while you are fixing it, and the exit code is only read once,
     // when you stop.
+    const configPath = values.config ?? DEFAULT_CONFIG_FILE_NAME;
     return await watch(
       featureRoots(positionals),
-      values.config ?? DEFAULT_CONFIG_FILE_NAME,
-      {diagnostics, ignore: DEFAULT_IGNORED_NAMES},
+      configPath,
+      {
+        diagnostics,
+        ignore: DEFAULT_IGNORED_NAMES,
+        // The configuration is watched even when it does not exist yet, so
+        // writing one is noticed; the ignore file only when --ignore is not
+        // there to overrule it.
+        files: () => [
+          configPath,
+          ...(settings?.files ?? []),
+          ...(ignore === undefined ? [DEFAULT_IGNORE_FILE_NAME] : []),
+        ],
+      },
       checkOnce,
     );
   }
