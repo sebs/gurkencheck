@@ -408,8 +408,11 @@ Each error carries `message`, `rule`, `line` and, where the rule knows one, `col
 both 1-based, so an editor can underline exactly the right text. Errors about a whole file
 or a whole line, such as a missing new line at the end of the file, have no `column`.
 
-Nothing in the library writes to the console or exits the process; that is the command
-line's job.
+Nothing in the library exits the process, and the parts that lint, read configuration or
+find files never write to the console; that is the command line's job. The exceptions are
+the ones whose job is printing: each formatter's `printResults`, the functions in
+`FORMATTERS`, and `runStats`, which runs the `stats` command and writes its report to
+stdout. To get the text instead, use `toJson`, `toSarif`, or `getStatsFormatter`.
 
 ## Developing
 

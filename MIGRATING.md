@@ -185,8 +185,8 @@ level with their step, either move them in or set `docstring` to match `Step`:
 
 ## If you use it as a library
 
-The API is now explicit about loading rules, and nothing writes to the console or exits
-the process.
+The API is now explicit about loading rules. Nothing exits the process, and nothing writes
+to the console except the functions whose job is printing a report.
 
 ```diff
 -const linter = require('gherkin-lint/dist/linter.js');
