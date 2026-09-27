@@ -120,3 +120,11 @@ test('a rule switched off again after being switched back on is off again', () =
   assert.ok(!found.isSuppressed(error('use-and', 3)));
   assert.ok(found.isSuppressed(error('use-and', 5)));
 });
+
+test('a misspelled directive is not read as a shorter one', () => {
+  for (const typo of ['disable-nextline', 'disable-line', 'disable-next-lines', 'enable-all']) {
+    const found = suppressions(['Feature: A', `# gurkencheck-${typo} name-length`, 'x', 'y'].join('\n'));
+    assert.ok(found.isEmpty, typo);
+    assert.ok(!found.isSuppressed(error('name-length', 4)), typo);
+  }
+});

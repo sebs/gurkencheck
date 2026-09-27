@@ -24,7 +24,12 @@
 import type {RuleError} from './types.ts';
 import {markDocStrings} from './util/lines.ts';
 
-const DIRECTIVE = /^\s*#\s*gurkencheck-(disable-next-line|disable-file|disable|enable)\b(.*)$/;
+/**
+ * A directive, then the rules it names. Whitespace or the end of the line has
+ * to follow the directive's name: `\b` would also match before a hyphen, and
+ * read `disable-nextline` as a `disable` of every rule named after it.
+ */
+const DIRECTIVE = /^\s*#\s*gurkencheck-(disable-next-line|disable-file|disable|enable)(?=\s|$)(.*)$/;
 
 /** Stands in for "every rule" when a directive names none. */
 const ALL_RULES = '*';
