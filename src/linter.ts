@@ -81,7 +81,7 @@ export async function* lintStream(
 
     if (errors.length === 0) {
       errors = await runEnabledRules(result.feature, result.file, configuration, rules, run);
-      suppressions = readSuppressions(result.file.lines);
+      suppressions = readSuppressions(result.file.lines, result.feature);
       if (!suppressions.isEmpty) {
         errors = errors.filter((error) => !suppressions.isSuppressed(error));
       }

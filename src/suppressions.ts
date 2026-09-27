@@ -21,6 +21,7 @@
  * breaks one of them cannot be read at all, so hiding the message would leave
  * nothing but silence.
  */
+import type {Feature} from '@cucumber/messages';
 import type {RuleError} from './types.ts';
 import {markDocStrings} from './util/lines.ts';
 
@@ -56,9 +57,12 @@ function parseRuleNames(rest: string): string[] {
   return names.length > 0 ? names : [ALL_RULES];
 }
 
-/** Reads the directives out of a feature file's lines. */
-export function readSuppressions(lines: readonly string[]): Suppressions {
-  const inDocString = markDocStrings(lines);
+/**
+ * Reads the directives out of a feature file's lines. Given the parsed
+ * document, it is used to tell where the doc strings are.
+ */
+export function readSuppressions(lines: readonly string[], feature?: Feature): Suppressions {
+  const inDocString = markDocStrings(lines, feature);
 
   const wholeFile = new Set<string>();
   /** Line number -> the rules switched off on that line only. */

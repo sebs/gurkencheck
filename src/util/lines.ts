@@ -1,6 +1,8 @@
 /**
  * Helpers for looking at a feature file as plain text.
  */
+import type {Feature} from '@cucumber/messages';
+import {stepContainersOf} from '../gherkin/traverse.ts';
 import type {FeatureFile} from '../types.ts';
 
 /**
@@ -25,11 +27,30 @@ const DOC_STRING_DELIMITERS = ['"""', '```'];
  * Text inside a doc string is data belonging to the step, not part of the
  * layout of the file, so rules about formatting have to leave it alone.
  *
- * This reads the raw lines rather than the parsed document so that it still
- * works on a file the parser rejected.
+ * Given the parsed document, the doc strings are taken from it, which is
+ * exact. Without one - a file the parser rejected - the raw lines are read
+ * instead, and a line opening with a delimiter is taken to open a doc
+ * string, which a description line starting with `"""` also does.
  */
-export function markDocStrings(lines: readonly string[]): boolean[] {
+export function markDocStrings(lines: readonly string[], feature?: Feature): boolean[] {
   const inside = new Array<boolean>(lines.length).fill(false);
+
+  if (feature !== undefined) {
+    for (const {node} of stepContainersOf(feature)) {
+      for (const step of node.steps) {
+        if (step.docString === undefined) continue;
+        const {content, location} = step.docString;
+        const contentLines = content === '' ? 0 : content.split('\n').length;
+        // The opening delimiter, the content, and the closing delimiter.
+        const last = location.line + contentLines + 1;
+        for (let line = location.line; line <= last && line <= lines.length; line++) {
+          inside[line - 1] = true;
+        }
+      }
+    }
+    return inside;
+  }
+
   let openDelimiter: string | undefined;
 
   lines.forEach((line, index) => {

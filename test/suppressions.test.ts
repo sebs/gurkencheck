@@ -4,6 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
+import {parseFeature} from '../src/gherkin/parse.ts';
 import {readSuppressions} from '../src/suppressions.ts';
 import type {RuleError} from '../src/types.ts';
 
@@ -138,4 +139,24 @@ test('a disable above the Feature covers findings about the whole file', () => {
 test('a disable further down does not cover findings about the whole file', () => {
   const found = suppressions(['Feature: A', '# gurkencheck-disable file-name', 'x'].join('\n'));
   assert.ok(!found.isSuppressed(error('file-name', 0)));
+});
+
+test('a description line starting with quotes does not hide the directives below it', () => {
+  const source = [
+    'Feature: A',
+    '  """ is how the docs quote things',
+    '',
+    '  Scenario: B',
+    '    # gurkencheck-disable-next-line name-length',
+    '    Given a very long step',
+    '      """',
+    '      # gurkencheck-disable use-and',
+    '      """',
+    '    Then c',
+    '',
+  ].join('\n');
+  const {feature, file} = parseFeature('x.feature', source);
+  const found = readSuppressions(file.lines, feature);
+  assert.ok(found.isSuppressed(error('name-length', 6)));
+  assert.ok(!found.isSuppressed(error('use-and', 10)), 'a directive inside a doc string is still text');
 });

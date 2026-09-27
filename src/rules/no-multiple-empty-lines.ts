@@ -18,10 +18,10 @@ function messageFor(max: number): string {
 const rule: LintRule = {
   name,
   availableConfigs,
-  run(_feature, file, configuration) {
+  run(feature, file, configuration) {
     const {max} = mergeDefaults(availableConfigs, configuration);
     const lines = contentLines(file);
-    const inDocString = markDocStrings(lines);
+    const inDocString = markDocStrings(lines, feature);
     const message = messageFor(max);
 
     const errors: RuleError[] = [];
