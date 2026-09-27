@@ -101,6 +101,7 @@ export function readIgnorePatterns(
   }
 
   return contents
+    .replace(/^\uFEFF/u, '')
     .split(/\r\n|\r|\n/)
     .map((line) => line.trim())
     .filter((line) => line !== '' && !line.startsWith('#'));

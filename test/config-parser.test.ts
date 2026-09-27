@@ -200,3 +200,15 @@ test('reports an extends that is not a name or a list of names', async () => {
     fs.rmSync(file);
   }
 });
+
+test('reads a configuration file starting with a byte order mark', async () => {
+  const file = path.join(os.tmpdir(), `gurkencheck-bom-${process.pid}.json`);
+  fs.writeFileSync(file, '﻿{"no-empty-file": "on"}');
+  try {
+    const result = await readConfiguration(file, rules);
+    assert.ok(result.ok, JSON.stringify(result));
+    assert.equal(result.configuration['no-empty-file'], 'on');
+  } finally {
+    fs.rmSync(file, {force: true});
+  }
+});

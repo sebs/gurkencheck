@@ -44,7 +44,8 @@ function isConfigurationObject(value: unknown): value is Record<string, unknown>
 function parseFile(filePath: string): Record<string, unknown> {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(stripJsonComments(fs.readFileSync(filePath, 'utf8')));
+    // JSON.parse refuses a byte order mark, which some editors write.
+    parsed = JSON.parse(stripJsonComments(fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/u, '')));
   } catch (thrown) {
     throw new ConfigurationError(
       `Could not parse "${filePath}": ${thrown instanceof Error ? thrown.message : String(thrown)}`,

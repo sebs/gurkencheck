@@ -254,7 +254,10 @@ export function parseFeature(
   source: string,
   defaultLanguage: string = DEFAULT_LANGUAGE,
 ): ParseResult {
-  const lines = toLines(source);
+  // A byte order mark, as some Windows editors write, is not text: left in,
+  // it is one more character at the start of line 1, and every column on
+  // that line is one out.
+  const lines = toLines(source.replace(/^\uFEFF/u, ''));
   const file: FeatureFile = {relativePath, lines};
   const dialect = getDialect(detectLanguage(lines, defaultLanguage));
 

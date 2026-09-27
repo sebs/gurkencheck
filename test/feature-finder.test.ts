@@ -228,3 +228,8 @@ test('node_modules is skipped by default at any depth', () => {
   fs.writeFileSync('packages/app/node_modules/dep/vendored.feature', '');
   assert.deepEqual(findFeatureFiles([]).files, bothFeatures);
 });
+
+test('an ignore file starting with a byte order mark still reads its first pattern', () => {
+  fs.writeFileSync(DEFAULT_IGNORE_FILE_NAME, '﻿build\n');
+  assert.deepEqual(readIgnorePatterns(undefined), ['build']);
+});

@@ -175,3 +175,15 @@ test('an unknown default language falls back to English', () => {
   assert.equal(detectLanguage(['Feature: A'], 'klingon'), 'en');
   assert.equal(detectLanguage(['Feature: A'], 'fr'), 'fr');
 });
+
+test('a byte order mark is not part of the first line', () => {
+  const parsed = parseFeature('x.feature', '﻿Feature: A\n\n  Scenario: S\n    Given x\n');
+  assert.deepEqual(parsed.errors, []);
+  assert.equal(parsed.file.lines[0], 'Feature: A');
+  assert.equal(parsed.feature?.location.column, 1);
+});
+
+test('a byte order mark does not hide a language header', () => {
+  const parsed = parseFeature('x.feature', '﻿# language: fr\nFonctionnalité: A\n');
+  assert.equal(parsed.feature?.language, 'fr');
+});
