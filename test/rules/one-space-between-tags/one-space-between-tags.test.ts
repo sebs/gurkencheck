@@ -20,3 +20,9 @@ test('reports extra spacing between tags on one line', async () => {
     tooWide('@examplestag1', '@examplestag2', 16),
   ]);
 });
+
+test('measures a tag in characters, as Gherkin counts its columns', async () => {
+  await checkRule(rule, 'one-space-between-tags/EmojiTags.feature', {}, [
+    {message: 'There is more than one space between the tags @🚀🚀 and @b', line: 1},
+  ]);
+});

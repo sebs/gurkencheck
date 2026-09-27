@@ -12,7 +12,9 @@ function checkTags(tags: readonly Tag[], errors: RuleError[]): void {
     for (let index = 0; index < ordered.length - 1; index++) {
       const current = ordered[index]!;
       const next = ordered[index + 1]!;
-      const endOfCurrent = (current.location.column ?? 0) + current.name.length;
+      // Gherkin counts columns in characters, not in the UTF-16 units that
+      // .length counts, so a tag holding an emoji is measured the same way.
+      const endOfCurrent = (current.location.column ?? 0) + [...current.name].length;
       if (endOfCurrent < (next.location.column ?? 0) - 1) {
         errors.push({
           message: `There is more than one space between the tags ${current.name} and ${next.name}`,
