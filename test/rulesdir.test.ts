@@ -158,3 +158,17 @@ test('declaration files beside TypeScript rules are skipped', async () => {
   const rules = await loadRules(['test/rulesdir/typed_rules']);
   assert.ok(rules.has('typed'));
 });
+
+test('a finding with no line is taken as one about the whole file', async () => {
+  const rules = new Map<string, LintRule>([
+    [
+      'lineless',
+      {
+        name: 'lineless',
+        run: () => [{message: 'no line', rule: 'lineless'} as unknown as {message: string; rule: string; line: number}],
+      },
+    ],
+  ]);
+  const results = await lint(['test/linter/NoViolations.feature'], {lineless: 'on'}, rules);
+  assert.equal(results[0]?.errors[0]?.line, 0);
+});

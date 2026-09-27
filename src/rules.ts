@@ -195,6 +195,16 @@ export function beginRun(rules: RuleRegistry, configuration: Configuration): Run
 }
 
 /**
+ * The line a finding names, or 0 - a finding about the whole file - when a
+ * custom rule gave none, or something that is not a line number. Passed on
+ * as it was, it would print as `undefined` where the line belongs.
+ */
+function lineOf(finding: {line?: unknown}): number {
+  const {line} = finding;
+  return typeof line === 'number' && Number.isInteger(line) && line >= 0 ? line : 0;
+}
+
+/**
  * The finding reported in place of a rule's own when it hands back something
  * other than a list. Iterating it anyway would throw somewhere far from the
  * rule, and the message would name whatever happened to be running there.
@@ -236,7 +246,7 @@ export async function finishRun(
         continue;
       }
       for (const finding of found as RunFinding[]) {
-        findings.push({severity, ...finding});
+        findings.push({severity, ...finding, line: lineOf(finding)});
       }
     } catch (thrown) {
       // No file to blame: what failed was the look back over all of them.
@@ -311,7 +321,7 @@ export async function runEnabledRules(
     for (const error of found as RuleError[]) {
       // The configuration decides how loudly a rule reports, so a custom rule
       // needs no say in it - but one that sets a severity itself is respected.
-      errors.push({severity, ...error});
+      errors.push({severity, ...error, line: lineOf(error)});
     }
   }
 
