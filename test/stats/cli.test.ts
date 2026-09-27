@@ -157,3 +157,11 @@ test('stats reads files in the language the configuration sets', async () => {
     fs.rmSync(cwd, {recursive: true, force: true});
   }
 });
+
+test('--top takes plain digits only', async () => {
+  for (const top of ['0x2', '1e3', ' 3', '99999999999999999999']) {
+    const {code, stderr} = await cli(['stats', FIXTURES, `--top=${top}`]);
+    assert.equal(code, 2, top);
+    assert.match(stderr, /--top needs a whole number/u, top);
+  }
+});

@@ -92,8 +92,10 @@ export async function runStats(
 
   let top = DEFAULT_TOP;
   if (values.top !== undefined) {
-    top = Number(values.top);
-    if (!Number.isInteger(top) || top < 1) {
+    // Digits only: Number() would also take 0x10, 1e3 and ' 3', none of which
+    // anybody means as a count.
+    top = /^\d+$/u.test(values.top) ? Number(values.top) : Number.NaN;
+    if (!Number.isSafeInteger(top) || top < 1) {
       diagnostics.report({
         level: 'error',
         message: `--top needs a whole number of at least 1, not "${values.top}".`,
