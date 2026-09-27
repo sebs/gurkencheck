@@ -380,7 +380,7 @@ ticket. Files are checked one after another, so rules see a predictable order.
 import {findFeatureFiles, lint, loadRules, readConfiguration} from 'gurkencheck';
 
 const rules = await loadRules();
-const config = readConfiguration('.gurkencheckrc', rules);
+const config = await readConfiguration('.gurkencheckrc', rules);
 
 if (config.ok) {
   const {files} = findFeatureFiles(['features']);

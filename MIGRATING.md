@@ -199,7 +199,7 @@ the process.
 +import {findFeatureFiles, lint, loadRules, readConfiguration} from 'gurkencheck';
 +
 +const rules = await loadRules(rulesDirs);
-+const config = readConfiguration(configPath, rules);
++const config = await readConfiguration(configPath, rules);
 +if (!config.ok) throw new Error([config.message, ...config.details].join('\n'));
 +
 +const {files, invalidPatterns} = findFeatureFiles(args, ignore);

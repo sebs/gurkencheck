@@ -5,7 +5,7 @@
  * import {findFeatureFiles, lint, loadRules, readConfiguration} from 'gurkencheck';
  *
  * const rules = await loadRules();
- * const config = readConfiguration('.gurkencheckrc', rules);
+ * const config = await readConfiguration('.gurkencheckrc', rules);
  * if (config.ok) {
  *   const {files} = findFeatureFiles(['features']);
  *   const results = await lint(files, config.configuration, rules);
