@@ -200,7 +200,16 @@ export async function run(
       );
     }
 
-    const results = await lint(discover(), configuration.configuration, rules, {language});
+    let results;
+    try {
+      results = await lint(discover(), configuration.configuration, rules, {language});
+    } catch (thrown) {
+      diagnostics.report({
+        level: 'error',
+        message: `The run failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+      });
+      return EXIT_USAGE;
+    }
 
     // A formatter may print the output itself or hand it back as a string.
     let output;
@@ -255,19 +264,31 @@ async function runStreaming(
     }
   };
 
+  // Linting and writing take turns in one loop, so what failed is recorded
+  // rather than guessed at: a message blaming the formatter for a rule's
+  // mistake sends you looking in the wrong place.
+  let formatting = false;
+  const format = <T>(step: () => T): T => {
+    formatting = true;
+    const written = step();
+    formatting = false;
+    return written;
+  };
+
   let failed = false;
   try {
-    const run = streaming();
-    write(run.start?.());
+    const run = format(() => streaming());
+    write(format(() => run.start?.()));
     for await (const result of lintStream(files, configuration, rules, {language})) {
       failed ||= result.errors.some((error) => (error.severity ?? 'error') === 'error');
-      write(run.file(result));
+      write(format(() => run.file(result)));
     }
-    write(run.end?.());
+    write(format(() => run.end?.()));
   } catch (thrown) {
+    const reason = thrown instanceof Error ? thrown.message : String(thrown);
     diagnostics.report({
       level: 'error',
-      message: `The formatter failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+      message: formatting ? `The formatter failed: ${reason}` : `The run failed: ${reason}`,
     });
     return EXIT_USAGE;
   }

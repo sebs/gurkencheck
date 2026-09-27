@@ -123,3 +123,25 @@ test('a rule that throws does not cost the other rules their findings', async ()
     ['unexpected-error', 'working'],
   );
 });
+
+test('a rule handing back something other than a list is reported by name', async () => {
+  const rules = new Map<string, LintRule>([
+    ['nothing', {name: 'nothing', run: () => null as unknown as []}],
+    ['single', {name: 'single', run: () => ({message: 'm', rule: 'single', line: 1}) as unknown as []}],
+    ['working', {name: 'working', run: () => [{message: 'still checked', rule: 'working', line: 3}]}],
+  ]);
+  const results = await lint(
+    ['test/linter/NoViolations.feature'],
+    {nothing: 'on', single: 'on', working: 'on'},
+    rules,
+  );
+
+  assert.deepEqual(
+    results[0]?.errors.map((error) => error.message),
+    [
+      'Rule "nothing" returned null instead of an array of findings',
+      'Rule "single" returned object instead of an array of findings',
+      'still checked',
+    ],
+  );
+});

@@ -179,6 +179,20 @@ export function beginRun(rules: RuleRegistry, configuration: Configuration): Run
 }
 
 /**
+ * The finding reported in place of a rule's own when it hands back something
+ * other than a list. Iterating it anyway would throw somewhere far from the
+ * rule, and the message would name whatever happened to be running there.
+ */
+function notAList(ruleName: string, found: unknown): RuleError {
+  const what = found === null ? 'null' : typeof found;
+  return {
+    message: `Rule "${ruleName}" returned ${what} instead of an array of findings`,
+    rule: 'unexpected-error',
+    line: 0,
+  };
+}
+
+/**
  * Ends a run, collecting what could only be worked out once every file had
  * been seen.
  *
@@ -200,8 +214,12 @@ export async function finishRun(
     const severity = getRuleSeverity(config);
 
     try {
-      const found = await rule.onRunEnd(getRuleSettings(config), run.contextFor(rule.name));
-      for (const finding of found) {
+      const found: unknown = await rule.onRunEnd(getRuleSettings(config), run.contextFor(rule.name));
+      if (!Array.isArray(found)) {
+        findings.push(notAList(rule.name, found));
+        continue;
+      }
+      for (const finding of found as RunFinding[]) {
         findings.push({severity, ...finding});
       }
     } catch (thrown) {
@@ -247,7 +265,8 @@ export async function runEnabledRules(
     }
     const severity = getRuleSeverity(config);
 
-    let found: RuleError[];
+    // Typed as what a custom rule could really hand back, not what it should.
+    let found: unknown;
     try {
       found = await rule.run(
         feature,
@@ -268,7 +287,12 @@ export async function runEnabledRules(
       continue;
     }
 
-    for (const error of found) {
+    if (!Array.isArray(found)) {
+      errors.push(notAList(rule.name, found));
+      continue;
+    }
+
+    for (const error of found as RuleError[]) {
       // The configuration decides how loudly a rule reports, so a custom rule
       // needs no say in it - but one that sets a severity itself is respected.
       errors.push({severity, ...error});
