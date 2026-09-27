@@ -1,0 +1,4 @@
+{
+  "extends": "gurkencheck:recommended",
+  "indentation": "on"
+}

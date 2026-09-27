@@ -1,0 +1,4 @@
+{
+  "extends": "./bottom.gurkencheckrc",
+  "no-empty-file": "on"
+}

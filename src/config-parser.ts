@@ -132,21 +132,28 @@ async function loadExtended(
  * Flattens a configuration and everything it extends into one object. What a
  * file says wins over what it extends, and later entries in an `extends` list
  * win over earlier ones.
+ *
+ * `ancestors` holds the chain of files that led here, not every file seen so
+ * far: two files extending the same base is sharing, not a cycle.
  */
 async function flatten(
   configuration: Record<string, unknown>,
   source: string,
-  seen: Set<string>,
+  ancestors: Set<string>,
 ): Promise<Configuration> {
-  if (seen.has(source)) {
+  if (ancestors.has(source)) {
     throw new ConfigurationError(`"${source}" ends up extending itself.`);
   }
-  seen.add(source);
+  ancestors.add(source);
 
   let merged: Configuration = {};
-  for (const specifier of extendsList(configuration, source)) {
-    const extended = await loadExtended(specifier, source);
-    merged = {...merged, ...(await flatten(extended.configuration, extended.source, seen))};
+  try {
+    for (const specifier of extendsList(configuration, source)) {
+      const extended = await loadExtended(specifier, source);
+      merged = {...merged, ...(await flatten(extended.configuration, extended.source, ancestors))};
+    }
+  } finally {
+    ancestors.delete(source);
   }
 
   const own = {...configuration};

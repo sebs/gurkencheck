@@ -165,6 +165,20 @@ test('reports a configuration that extends itself', async () => {
   assert.match(result.details[0]!, /ends up extending itself/u);
 });
 
+test('two entries extending the same file is not a cycle', async () => {
+  const result = await readConfiguration(`${FIXTURES}/diamond/top.gurkencheckrc`, rules);
+  assert.ok(result.ok, JSON.stringify(result));
+  assert.equal(result.configuration['no-empty-file'], 'on');
+  assert.equal(result.configuration['one-space-between-tags'], 'on');
+  assert.equal(result.configuration['no-trailing-spaces'], 'on');
+});
+
+test('a preset reached along two paths is not a cycle', async () => {
+  const result = await readConfiguration(`${FIXTURES}/diamond/preset-twice.gurkencheckrc`, rules);
+  assert.ok(result.ok, JSON.stringify(result));
+  assert.equal(result.configuration['indentation'], 'on');
+});
+
 test('reports an extends that is not a name or a list of names', async () => {
   const file = path.join(os.tmpdir(), `gurkencheck-ext-${process.pid}.jsonc`);
   fs.writeFileSync(file, '{"extends": 42}');
