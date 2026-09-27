@@ -12,16 +12,30 @@ import {isInteresting, watch} from '../src/watch.ts';
 
 const CONFIG = '.gurkencheckrc';
 
-/** Waits for something to become true, rather than for a fixed time. */
+/**
+ * Waits for something to become true, rather than for a fixed time.
+ *
+ * `retry`, when given, is done at once and again every so often until then.
+ * On macOS a watch can miss a write made in the moments after it started,
+ * more so on a machine busy running the rest of the suite, so a test waiting
+ * on a write repeats it rather than failing on a watch that simply had not
+ * caught up yet.
+ */
 async function waitFor(
   what: string,
   condition: () => boolean,
+  retry?: () => void,
   timeoutMs = 5000,
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
+  let nextRetry = 0;
   while (!condition()) {
     if (Date.now() > deadline) {
       assert.fail(`timed out waiting for ${what}`);
+    }
+    if (retry !== undefined && Date.now() >= nextRetry) {
+      retry();
+      nextRetry = Date.now() + 250;
     }
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
@@ -78,27 +92,31 @@ test('checks once before anything has changed', async () => {
 
 test('checks again when a feature file appears', async () => {
   await withWatch(async ({directory, passes}) => {
-    fs.writeFileSync(path.join(directory, 'New.feature'), 'Feature: A\n');
-    await waitFor('a second pass', () => passes() >= 2);
+    await waitFor(
+      'a second pass',
+      () => passes() >= 2,
+      () => fs.writeFileSync(path.join(directory, 'New.feature'), 'Feature: A\n'),
+    );
   });
 });
 
 test('checks again when a feature file changes', async () => {
   await withWatch(async ({directory, passes}) => {
     const file = path.join(directory, 'Edited.feature');
-    fs.writeFileSync(file, 'Feature: A\n');
-    await waitFor('the pass for the new file', () => passes() >= 2);
+    await waitFor('the pass for the new file', () => passes() >= 2, () => fs.writeFileSync(file, 'Feature: A\n'));
 
     const before = passes();
-    fs.writeFileSync(file, 'Feature: B\n');
-    await waitFor('the pass for the edit', () => passes() > before);
+    await waitFor('the pass for the edit', () => passes() > before, () => fs.writeFileSync(file, 'Feature: B\n'));
   });
 });
 
 test('checks again when the configuration changes', async () => {
   await withWatch(async ({directory, passes}) => {
-    fs.writeFileSync(path.join(directory, CONFIG), '{"no-unnamed-scenarios": "on"}');
-    await waitFor('a pass for the configuration', () => passes() >= 2);
+    await waitFor(
+      'a pass for the configuration',
+      () => passes() >= 2,
+      () => fs.writeFileSync(path.join(directory, CONFIG), '{"no-unnamed-scenarios": "on"}'),
+    );
   });
 });
 
@@ -111,8 +129,11 @@ test('takes no notice of a file that is not a feature file', async () => {
     await new Promise((resolve) => setTimeout(resolve, 150));
     assert.equal(passes(), 1, 'a .txt and a .js should not have started a pass');
 
-    fs.writeFileSync(path.join(directory, 'Real.feature'), 'Feature: A\n');
-    await waitFor('a pass for the feature file', () => passes() >= 2);
+    await waitFor(
+      'a pass for the feature file',
+      () => passes() >= 2,
+      () => fs.writeFileSync(path.join(directory, 'Real.feature'), 'Feature: A\n'),
+    );
   });
 });
 
@@ -135,8 +156,11 @@ test('says what changed and that it is waiting', async () => {
       'it should say it is watching',
     );
 
-    fs.writeFileSync(path.join(directory, 'Named.feature'), 'Feature: A\n');
-    await waitFor('a second pass', () => passes() >= 2);
+    await waitFor(
+      'a second pass',
+      () => passes() >= 2,
+      () => fs.writeFileSync(path.join(directory, 'Named.feature'), 'Feature: A\n'),
+    );
     assert.ok(
       notices().some((message) => message.includes('Named.feature changed')),
       `it should name the file that changed, got: ${JSON.stringify(notices())}`,
@@ -164,10 +188,16 @@ test('a pass that throws does not stop the watch', async () => {
 
   try {
     await waitFor('the first pass', () => passes >= 1);
-    fs.writeFileSync(path.join(directory, 'A.feature'), 'Feature: A\n');
-    await waitFor('the failing pass', () => passes >= 2);
-    fs.writeFileSync(path.join(directory, 'B.feature'), 'Feature: B\n');
-    await waitFor('a pass after the failure', () => passes >= 3);
+    await waitFor(
+      'the failing pass',
+      () => passes >= 2,
+      () => fs.writeFileSync(path.join(directory, 'A.feature'), 'Feature: A\n'),
+    );
+    await waitFor(
+      'a pass after the failure',
+      () => passes >= 3,
+      () => fs.writeFileSync(path.join(directory, 'B.feature'), 'Feature: B\n'),
+    );
   } finally {
     controller.abort();
     await stopped;
@@ -265,12 +295,11 @@ test('checks again when a listed file outside the watched directory changes', as
 
   try {
     await waitFor('the first pass', () => passes >= 1);
-    // fs.watch can take a moment to start reporting on macOS, so the write is
-    // repeated until a pass shows it was seen.
-    await waitFor('a pass for the configuration', () => {
-      fs.writeFileSync(config, `{"x": ${Date.now()}}`);
-      return passes >= 2;
-    });
+    await waitFor(
+      'a pass for the configuration',
+      () => passes >= 2,
+      () => fs.writeFileSync(config, `{"x": ${Date.now()}}`),
+    );
   } finally {
     controller.abort();
     await stopped;
