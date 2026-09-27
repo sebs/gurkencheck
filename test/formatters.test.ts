@@ -336,6 +336,26 @@ test('sarif reports paths relative to the working directory', () => {
   assert.equal(uri, 'features/Login.feature');
 });
 
+test('sarif percent-encodes the characters a URI would misread', () => {
+  const log = toSarif([{filePath: '/repo/a b/we#1%20ü&.feature', errors: [{line: 1, message: 'm', rule: 'r'}]}], '/repo') as {
+    runs: [{results: [{locations: [{physicalLocation: {artifactLocation: {uri: string}}}]}]}];
+  };
+  assert.equal(
+    log.runs[0].results[0].locations[0].physicalLocation.artifactLocation.uri,
+    'a%20b/we%231%2520%C3%BC%26.feature',
+  );
+});
+
+test('sarif names a file outside the working directory by an absolute URI', () => {
+  const log = toSarif([{filePath: '/elsewhere/q.feature', errors: [{line: 1, message: 'm', rule: 'r'}]}], '/repo') as {
+    runs: [{results: [{locations: [{physicalLocation: {artifactLocation: {uri: string}}}]}]}];
+  };
+  assert.equal(
+    log.runs[0].results[0].locations[0].physicalLocation.artifactLocation.uri,
+    'file:///elsewhere/q.feature',
+  );
+});
+
 test('sarif carries the position as a region, and the severity as a level', () => {
   const log = toSarif(WITH_COLUMNS, '/') as {
     runs: {results: {level: string; locations: {physicalLocation: {region?: object}}[]}[]}[];

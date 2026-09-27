@@ -245,7 +245,8 @@ created after it started is picked up too. `node_modules` and `.git` are skipped
 ```
 
 Paths in the log are relative to the directory gurkencheck ran in, which is what code
-scanning needs to match a finding to a file in the repository.
+scanning needs to match a finding to a file in the repository, so run it from the repository
+root. A file outside that directory is named by an absolute `file:` URI instead.
 
 ## Switching a rule off for one place
 

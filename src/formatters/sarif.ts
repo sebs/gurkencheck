@@ -8,6 +8,7 @@
  * See https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html
  */
 import path from 'node:path';
+import {pathToFileURL} from 'node:url';
 import type {FileResult, RuleError} from '../types.ts';
 import {version} from '../version.ts';
 
@@ -23,14 +24,23 @@ function levelOf(error: RuleError): string {
 }
 
 /**
- * Paths relative to the working directory, with forward slashes.
+ * Paths relative to the working directory, with forward slashes, as a URI.
  *
  * Code scanning matches a result to a file in the repository by this URI, so
  * an absolute path from whichever machine ran the linter would match nothing.
+ * It is a URI rather than a path, so each segment is percent-encoded: a `#`
+ * in a file name would otherwise start a fragment, and `%20` read as a space.
+ *
+ * A file outside the working directory is not in the repository as code
+ * scanning sees it, so a relative `../` path would match nothing either; it
+ * gets an absolute `file:` URI, which at least names the file exactly.
  */
 function uriFor(filePath: string, cwd: string): string {
   const relative = path.relative(cwd, filePath);
-  return relative.split(path.sep).join('/');
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    return pathToFileURL(path.resolve(cwd, filePath)).href;
+  }
+  return relative.split(path.sep).map(encodeURIComponent).join('/');
 }
 
 function toResult(result: FileResult, error: RuleError, cwd: string): unknown {
