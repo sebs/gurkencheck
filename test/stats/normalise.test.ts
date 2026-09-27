@@ -59,3 +59,23 @@ test('countWords counts words, not characters', () => {
   assert.equal(countWords('I have 3 items'), 4);
   assert.equal(countWords('   '), 0);
 });
+
+test('a quoted string may hold escaped quotes', () => {
+  assert.equal(normaliseStepText('I say "a \\"quoted\\" word" now'), 'i say "" now');
+});
+
+test('a negative number is masked whole', () => {
+  assert.equal(normaliseStepText('the total is -5'), normaliseStepText('the total is 7'));
+});
+
+test('a step of nothing but punctuation keeps its text', () => {
+  assert.equal(normaliseStepText('...'), '...');
+});
+
+test('a long run of trailing punctuation takes linear time', () => {
+  const step = `a${' .'.repeat(50000)}x`;
+  const started = performance.now();
+  normaliseStepText(step);
+  normaliseStepText(`${step} .`);
+  assert.ok(performance.now() - started < 500, 'took too long');
+});

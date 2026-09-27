@@ -30,19 +30,37 @@ export const STRING_MARKER = '""';
 export const NUMBER_MARKER = '0';
 
 const PLACEHOLDER = /<[^<>]*>/gu;
-const QUOTED = /"[^"]*"/gu;
+/** A double quoted string, which may hold quotes escaped with a backslash. */
+const QUOTED = /"(?:[^"\\]|\\.)*"/gu;
 
 /**
- * A whole number or decimal standing on its own. The word boundaries keep
- * `1st` and `v2` intact, where the digits are part of a name rather than a
- * value a step definition would capture.
+ * A whole number or decimal standing on its own, with its minus sign. The
+ * word boundaries keep `1st` and `v2` intact, where the digits are part of a
+ * name rather than a value a step definition would capture.
  */
-const NUMBER = /\b\d+(?:[.,]\d+)*\b/gu;
+const NUMBER = /(?:(?<![\p{L}\p{N}_])-)?\b\d+(?:[.,]\d+)*\b/gu;
 
 const WHITESPACE = /\s+/gu;
 
-/** A full stop or exclamation mark at the end, which changes nothing. */
-const TRAILING_PUNCTUATION = /[\s.!]*[.!]$/u;
+/**
+ * The text without a full stop or exclamation mark at the end, which changes
+ * nothing, and whatever spaces and further stops sit in front of it: `I own
+ * it .` and `I own it` are one step. A text of nothing but punctuation is
+ * left as it is rather than made empty.
+ *
+ * A loop rather than a regular expression: `/[\s.!]*[.!]$/` is tried from
+ * every position in a long run of ` .`, which takes seconds on one step.
+ */
+function withoutTrailingPunctuation(text: string): string {
+  if (!text.endsWith('.') && !text.endsWith('!')) {
+    return text;
+  }
+  let end = text.length;
+  while (end > 0 && /[\s.!]/u.test(text[end - 1]!)) {
+    end--;
+  }
+  return end === 0 ? text : text.slice(0, end);
+}
 
 /**
  * The form of a step text used to decide whether two steps are the same one.
@@ -52,18 +70,14 @@ const TRAILING_PUNCTUATION = /[\s.!]*[.!]$/u;
  * half the sentence. Cucumber's own expressions quote with `"` anyway.
  */
 export function normaliseStepText(text: string): string {
-  return text
+  const normalised = text
     .replace(PLACEHOLDER, PLACEHOLDER_MARKER)
     .replace(QUOTED, STRING_MARKER)
     .replace(NUMBER, NUMBER_MARKER)
     .toLowerCase()
     .replace(WHITESPACE, ' ')
-    .trim()
-    // Whatever sat in front of the full stop goes with it: `I own it .` and
-    // `I own it` are one step, and a step text ending in a space is not one
-    // anybody would recognise in the report.
-    .replace(TRAILING_PUNCTUATION, '')
     .trim();
+  return withoutTrailingPunctuation(normalised);
 }
 
 /** How many words a step is made of, counted before normalisation. */
