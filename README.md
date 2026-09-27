@@ -71,7 +71,8 @@ gurkencheck [options] <feature-files>
                           or the path to a formatter of your own
                           (default: stylish)
   -c, --config <path>     configuration file (default: .gurkencheckrc)
-  -i, --ignore <globs>    comma separated globs to skip, overriding .gurkencheckignore
+  -i, --ignore <globs>    comma separated globs to skip, overriding .gurkencheckignore;
+                          may be given more than once
   -r, --rulesdir <dir>    directory of custom rules; may be given more than once
   -l, --language <code>   dialect for files with no "# language:" header
   -w, --watch             keep running, checking again whenever a file changes
@@ -156,7 +157,7 @@ gurkencheck stats [options] <feature-files>
   -f, --format <format>   output format: text, json, md (default: text)
   -c, --config <path>     configuration file to take the language from
                           (default: .gurkencheckrc)
-  -i, --ignore <globs>    comma separated globs to skip
+  -i, --ignore <globs>    comma separated globs to skip; may be given more than once
   -l, --language <code>   dialect for files with no "# language:" header
       --top <n>           how many entries each list shows (default: 10)
   -h, --help              show this message

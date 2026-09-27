@@ -44,7 +44,8 @@ function usage(): string {
     '                          or the path to a formatter of your own',
     `                          (default: ${DEFAULT_FORMAT})`,
     `  -c, --config <path>     configuration file (default: ${DEFAULT_CONFIG_FILE_NAME})`,
-    `  -i, --ignore <globs>    comma separated globs to skip, overriding ${DEFAULT_IGNORE_FILE_NAME}`,
+    `  -i, --ignore <globs>    comma separated globs to skip, overriding ${DEFAULT_IGNORE_FILE_NAME};`,
+    '                          may be given more than once',
     '  -r, --rulesdir <dir>    directory of custom rules; may be given more than once',
     '  -l, --language <code>   dialect for files with no "# language:" header',
     '  -w, --watch             keep running, checking again whenever a file changes',
@@ -85,7 +86,7 @@ export async function run(
       options: {
         format: {type: 'string', short: 'f'},
         config: {type: 'string', short: 'c'},
-        ignore: {type: 'string', short: 'i'},
+        ignore: {type: 'string', short: 'i', multiple: true},
         rulesdir: {type: 'string', short: 'r', multiple: true},
         language: {type: 'string', short: 'l'},
         watch: {type: 'boolean', short: 'w'},
@@ -156,7 +157,8 @@ export async function run(
     return EXIT_USAGE;
   }
 
-  const ignore = values.ignore?.split(',').map((pattern) => pattern.trim());
+  // Given more than once, the lists add up rather than the last one winning.
+  const ignore = values.ignore?.flatMap((list) => list.split(',').map((pattern) => pattern.trim()));
   // Files are handed over as the walk finds them, so reading and checking
   // start on the first one rather than after the last. Only the patterns are
   // checked here; the walk itself happens once per pass.

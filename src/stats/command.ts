@@ -35,7 +35,8 @@ export function statsUsage(): string {
     `                          (default: ${DEFAULT_STATS_FORMAT})`,
     `  -c, --config <path>     configuration file to take the language from`,
     `                          (default: ${DEFAULT_CONFIG_FILE_NAME})`,
-    `  -i, --ignore <globs>    comma separated globs to skip, overriding ${DEFAULT_IGNORE_FILE_NAME}`,
+    `  -i, --ignore <globs>    comma separated globs to skip, overriding ${DEFAULT_IGNORE_FILE_NAME};`,
+    '                          may be given more than once',
     '  -l, --language <code>   dialect for files with no "# language:" header',
     `      --top <n>           how many entries each list shows (default: ${DEFAULT_TOP})`,
     '  -h, --help              show this message',
@@ -57,7 +58,7 @@ export async function runStats(
       options: {
         format: {type: 'string', short: 'f'},
         config: {type: 'string', short: 'c'},
-        ignore: {type: 'string', short: 'i'},
+        ignore: {type: 'string', short: 'i', multiple: true},
         language: {type: 'string', short: 'l'},
         top: {type: 'string'},
         help: {type: 'boolean', short: 'h'},
@@ -120,7 +121,8 @@ export async function runStats(
     return EXIT_USAGE;
   }
 
-  const ignore = values.ignore?.split(',').map((pattern) => pattern.trim());
+  // Given more than once, the lists add up rather than the last one winning.
+  const ignore = values.ignore?.flatMap((list) => list.split(',').map((pattern) => pattern.trim()));
   const {files, invalidPatterns} = findFeatureFileStream(positionals, ignore);
 
   if (invalidPatterns.length > 0) {

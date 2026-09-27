@@ -137,6 +137,14 @@ test('--format json prints machine readable output', async () => {
   });
 });
 
+test('--ignore given twice skips what either one matches', async () => {
+  await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
+    fs.writeFileSync(path.join(cwd, 'Second.feature'), DIRTY_FEATURE);
+    const {code} = await cli(['-i', 'Example.feature', '-i', 'Second.feature', '.'], cwd);
+    assert.equal(code, 0);
+  });
+});
+
 test('--ignore skips the files it matches', async () => {
   await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
     const {code} = await cli(['--ignore', '**/Example.feature', '.'], cwd);
