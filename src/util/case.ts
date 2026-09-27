@@ -3,13 +3,33 @@
  * Replaces lodash's `startCase`/`camelCase`/`kebabCase`/`snakeCase`.
  */
 
+/** Capital letters, in any script. */
+const UPPER = String.raw`\p{Lu}\p{Lt}`;
+/**
+ * Small letters, and letters with no case at all - Japanese, Chinese, Arabic
+ * - which carry on a word the way small letters do.
+ */
+const LOWER = String.raw`\p{Ll}\p{Lm}\p{Lo}`;
+const DIGIT = String.raw`\p{Nd}`;
+
+const WORD = new RegExp(
+  [
+    `[${UPPER}]{2,}(?=[${UPPER}][${LOWER}]+[${DIGIT}]*|(?![${UPPER}${LOWER}${DIGIT}]))`,
+    `[${UPPER}]?[${LOWER}]+[${DIGIT}]*`,
+    `[${UPPER}]+[${DIGIT}]*`,
+    `[${DIGIT}]+`,
+  ].join('|'),
+  'gu',
+);
+
 /**
  * Splits an identifier into words, breaking on separators, on lower-to-upper
  * transitions and between a run of capitals and a following capitalised word
- * (so `XMLHttpRequest` becomes `XML`, `Http`, `Request`).
+ * (so `XMLHttpRequest` becomes `XML`, `Http`, `Request`). Letters outside
+ * ASCII are letters too: `Über` is one word, not `Ber`.
  */
 export function words(value: string): string[] {
-  return value.match(/[A-Z]{2,}(?=[A-Z][a-z]+\d*|\b)|[A-Z]?[a-z]+\d*|[A-Z]+\d*|\d+/g) ?? [];
+  return value.match(WORD) ?? [];
 }
 
 function upperFirst(word: string): string {

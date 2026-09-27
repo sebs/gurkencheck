@@ -31,3 +31,11 @@ test('handles an empty name', () => {
   assert.equal(pascalCase(''), '');
   assert.equal(kebabCase(''), '');
 });
+
+test('keeps letters outside ASCII', () => {
+  assert.deepEqual(words('Über Größe'), ['Über', 'Größe']);
+  assert.equal(pascalCase('über größe'), 'ÜberGröße');
+  assert.equal(kebabCase('ÜberGröße'), 'über-größe');
+  assert.equal(kebabCase('日本語'), '日本語');
+  assert.equal(snakeCase('ÉTÉ Été'), 'été_été');
+});
