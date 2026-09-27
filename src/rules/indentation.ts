@@ -26,7 +26,9 @@ type IndentationConfig = typeof defaultConfig & {
   'feature tag': number;
   'rule tag': number;
   'scenario tag': number;
+  'examples tag': number;
   docstring: number;
+  datatable: number;
   character: IndentationCharacter;
 };
 
@@ -46,7 +48,9 @@ const availableConfigs = {
   'feature tag': -1,
   'rule tag': -1,
   'scenario tag': -1,
+  'examples tag': -1,
   docstring: -1,
+  datatable: -1,
   /** One of "any", "space" or "tab". */
   character: 'any',
 };
@@ -61,12 +65,15 @@ function resolveConfig(configuration: Record<string, unknown>): IndentationConfi
     typeof configuration['scenario tag'] === 'number'
       ? configuration['scenario tag']
       : merged.Scenario;
-  // A doc string belongs to its step and is conventionally indented one level
-  // further in, so it follows the Step setting unless it is set on its own.
-  merged.docstring =
-    typeof configuration['docstring'] === 'number'
-      ? configuration['docstring']
-      : merged.Step + 2;
+  merged['examples tag'] =
+    typeof configuration['examples tag'] === 'number'
+      ? configuration['examples tag']
+      : merged.Examples;
+  // A doc string or a data table belongs to its step and is conventionally
+  // indented one level further in, so unless it is set on its own it follows
+  // the step it belongs to; -1 stands for that here.
+  merged.docstring = typeof configuration['docstring'] === 'number' ? configuration['docstring'] : -1;
+  merged.datatable = typeof configuration['datatable'] === 'number' ? configuration['datatable'] : -1;
   merged.character =
     configuration['character'] === 'space' || configuration['character'] === 'tab'
       ? configuration['character']
@@ -112,12 +119,15 @@ const rule: LintRule = {
       }
     };
 
-    const test = (location: Location, type: keyof IndentationConfig): void => {
+    const test = (
+      location: Location,
+      type: keyof IndentationConfig,
+      expected = config[type] as number,
+    ): void => {
       testCharacter(location, type);
 
       // Columns are 1-based, indentation is counted from 0.
       const actual = (location.column ?? 1) - 1;
-      const expected = config[type];
       if (actual !== expected) {
         errors.push({
           message: `Wrong indentation for "${type}", expected indentation level of ${expected}, but got ${actual}`,
@@ -131,20 +141,25 @@ const rule: LintRule = {
       keyword: string;
       location: Location;
       docString?: {location: Location};
+      dataTable?: {rows: readonly {location: Location}[]};
     }): void => {
       const keyword = getNeutralKeyword(step, feature.language);
       // A step only uses its own keyword's setting when the user set one.
       const type = keyword !== '' && keyword in raw ? (keyword as keyof IndentationConfig) : 'Step';
       test(step.location, type);
 
+      const underStep = (config[type] as number) + 2;
       if (step.docString !== undefined) {
-        test(step.docString.location, 'docstring');
+        test(step.docString.location, 'docstring', config.docstring === -1 ? underStep : config.docstring);
+      }
+      for (const row of step.dataTable?.rows ?? []) {
+        test(row.location, 'datatable', config.datatable === -1 ? underStep : config.datatable);
       }
     };
 
     const testTags = (
       tags: readonly Tag[],
-      type: 'feature tag' | 'rule tag' | 'scenario tag',
+      type: 'feature tag' | 'rule tag' | 'scenario tag' | 'examples tag',
     ): void => {
       for (const [, tagsOnLine] of groupBy(tags, (tag) => tag.location.line)) {
         const first = sortBy(tagsOnLine, (tag) => tag.location.column ?? 0)[0];
@@ -167,6 +182,7 @@ const rule: LintRule = {
 
         for (const examples of child.scenario.examples) {
           test(examples.location, 'Examples');
+          testTags(examples.tags, 'examples tag');
           if (examples.tableHeader !== undefined) {
             test(examples.tableHeader.location, 'example');
             for (const row of examples.tableBody) {

@@ -129,3 +129,16 @@ test('character "tab" reports lines indented with spaces', async () => {
 test('an unrecognised character setting checks nothing', async () => {
   await checkRule(rule, 'indentation/CorrectIndentationTabs.feature', {character: 'wibble'}, []);
 });
+
+test('checks the tags above an Examples table, and step data tables', async () => {
+  await checkRule(
+    rule,
+    'indentation/TablesAndExampleTags.feature',
+    {Scenario: 2, Step: 4, Examples: 4, example: 6},
+    [wrong('datatable', 6, 10, 6), wrong('examples tag', 4, 6, 9)],
+  );
+});
+
+test('a doc string follows its own step keyword setting, one level further in', async () => {
+  await checkRule(rule, 'indentation/DocStringUnderGiven.feature', {Scenario: 2, given: 4}, []);
+});
