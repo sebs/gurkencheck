@@ -94,3 +94,8 @@ test('"in-feature" still reports a name used twice within one file', async () =>
     [6, 9],
   );
 });
+
+test('scenarios with no name are not duplicates of each other', async () => {
+  // A missing name is no-unnamed-scenarios' finding, not a clash.
+  assert.deepEqual(await runAcrossFiles(rule, [`${DIR}/Unnamed.feature`]), []);
+});

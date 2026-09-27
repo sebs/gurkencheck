@@ -53,3 +53,11 @@ test('reports the same thing whatever order the files come in', async () => {
     sorted(backwards).map(({filePath, message}) => ({filePath, message})),
   );
 });
+
+test('features with no name are not duplicates of each other', async () => {
+  // A missing name is no-unnamed-features' finding, not a clash.
+  assert.deepEqual(
+    await runAcrossFiles(rule, [`${DIR}/Unnamed1.feature`, `${DIR}/Unnamed2.feature`]),
+    [],
+  );
+});

@@ -28,6 +28,10 @@ const rule: LintRule = {
     const withinOneFile = configuration === 'in-feature';
 
     for (const {scenario} of scenariosOf(feature)) {
+      // A scenario with no name is no-unnamed-scenarios' finding, not a clash.
+      if (scenario.name.trim() === '') {
+        continue;
+      }
       // Told to look within each file, a name only clashes with the same name
       // in the same file - so which file it is in is part of what makes a
       // name that name. A newline cannot appear in either half, so the two

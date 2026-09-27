@@ -19,6 +19,12 @@ const rule: LintRule = {
       return [];
     }
 
+    // A feature with no name is no-unnamed-features' finding, not a clash
+    // between every file that forgot one.
+    if (feature.name.trim() === '') {
+      return [];
+    }
+
     const seen = context.state<Seen>(() => new Map());
     const sightings = seen.get(feature.name) ?? [];
     sightings.push({filePath: file.relativePath, at: at(feature.location)});
