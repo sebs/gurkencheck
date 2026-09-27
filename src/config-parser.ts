@@ -2,13 +2,13 @@
  * Reading and validating the configuration file.
  */
 import fs from 'node:fs';
-import {createRequire} from 'node:module';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {verifyConfiguration} from './config-verifier.ts';
 import {PRESETS, RECOMMENDED} from './presets.ts';
 import type {Configuration, RuleRegistry} from './types.ts';
 import {stripJsonComments} from './util/json.ts';
+import {resolvePackage} from './util/resolve.ts';
 
 /** The configuration file looked for when none is given on the command line. */
 export const DEFAULT_CONFIG_FILE_NAME = '.gurkencheckrc';
@@ -111,7 +111,7 @@ async function loadExtended(
 
   let resolved: string;
   try {
-    resolved = createRequire(pathToFileURL(from)).resolve(specifier);
+    resolved = resolvePackage(specifier, from);
   } catch {
     throw new ConfigurationError(
       `Could not resolve the package "${specifier}", extended from "${fromFile}". Is it installed?`,

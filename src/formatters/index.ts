@@ -1,7 +1,6 @@
 /**
  * Output formats.
  */
-import {createRequire} from 'node:module';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import type {FileResult} from '../types.ts';
@@ -10,6 +9,7 @@ import {printResults as junit} from './junit.ts';
 import {printResults as sarif} from './sarif.ts';
 import {printResults as stylish, startRun as streamStylish} from './stylish.ts';
 import {printResults as tap, startRun as streamTap} from './tap.ts';
+import {resolvePackage} from '../util/resolve.ts';
 
 /**
  * Turns results into output.
@@ -125,7 +125,7 @@ async function loadFormatterModule(
     resolved = path.resolve(cwd, specifier);
   } else {
     try {
-      resolved = createRequire(pathToFileURL(from)).resolve(specifier);
+      resolved = resolvePackage(specifier, from);
     } catch {
       throw new Error(
         `Unsupported format "${specifier}". Use one of ${Object.keys(FORMATTERS).join(', ')}, ` +

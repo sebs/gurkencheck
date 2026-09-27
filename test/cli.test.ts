@@ -292,6 +292,30 @@ test('a formatter that throws exits 2 rather than crashing', async () => {
   });
 });
 
+test('a config and a formatter may come from packages that only export for import', async () => {
+  await withProject(DIRTY_FEATURE, '{"extends": "esm-config"}', async (cwd) => {
+    const write = (name: string, source: string): void => {
+      const directory = path.join(cwd, 'node_modules', name);
+      fs.mkdirSync(directory, {recursive: true});
+      fs.writeFileSync(
+        path.join(directory, 'package.json'),
+        JSON.stringify({name, type: 'module', exports: {import: './index.js'}}),
+      );
+      fs.writeFileSync(path.join(directory, 'index.js'), source);
+    };
+    write('esm-config', 'export default {"no-unnamed-scenarios": "on"};\n');
+    write(
+      'esm-formatter',
+      'export default (results) => `${results[0].errors.length} finding`;\n',
+    );
+
+    const {code, stdout, stderr} = await cli(['--format', 'esm-formatter', '.'], cwd);
+    assert.equal(stderr, '');
+    assert.equal(stdout.trim(), '1 finding');
+    assert.equal(code, 1);
+  });
+});
+
 test('a config extending a package that throws on import exits 2 with the reason', async () => {
   await withProject(CLEAN_FEATURE, '{"extends": "broken-config"}', async (cwd) => {
     const packageDirectory = path.join(cwd, 'node_modules', 'broken-config');
