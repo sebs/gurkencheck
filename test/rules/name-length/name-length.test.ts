@@ -51,3 +51,11 @@ test('other limits keep working when one is turned off', async () => {
     },
   ]);
 });
+
+test('counts characters, not UTF-16 units', async () => {
+  // Six emoji are six characters, although .length says twelve.
+  await checkRule(rule, 'name-length/Unicode.feature', {Feature: 10, Scenario: 21, Step: 8}, []);
+  await checkRule(rule, 'name-length/Unicode.feature', {Feature: 5}, [
+    {message: 'Feature name is too long. Length of 6 is longer than the maximum allowed: 5', line: 1},
+  ]);
+});

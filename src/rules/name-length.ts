@@ -29,11 +29,14 @@ const rule: LintRule = {
 
     const test = (text: string, location: Location, type: keyof NameLengthConfig): void => {
       const maximum = config[type];
+      // Characters, not the UTF-16 units .length counts: an emoji is one
+      // character to the person reading the name, not two.
+      const length = [...text].length;
       // A limit of 0 turns the check off for that kind of name, for teams that
       // want a limit on scenario names but not on step text, or the reverse.
-      if (maximum > 0 && text !== '' && text.length > maximum) {
+      if (maximum > 0 && text !== '' && length > maximum) {
         errors.push({
-          message: `${type} name is too long. Length of ${text.length} is longer than the maximum allowed: ${maximum}`,
+          message: `${type} name is too long. Length of ${length} is longer than the maximum allowed: ${maximum}`,
           rule: name,
           ...at(location),
         });
