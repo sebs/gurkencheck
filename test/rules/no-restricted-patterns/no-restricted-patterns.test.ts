@@ -24,6 +24,8 @@ test('accepts text that matches nothing restricted', async () => {
   );
 });
 
+// A description is reported on the line the matching text is on, not on the
+// keyword line above it.
 test('reports feature names and descriptions', async () => {
   await checkRule(
     rule,
@@ -31,8 +33,8 @@ test('reports feature names and descriptions', async () => {
     {Feature: ['^.*disallowed.*$'], Global: GLOBAL},
     [
       matched('Feature', 'name', 'Feature with disallowed patterns', '^.*disallowed.*$', 1),
-      matched('Feature', 'description', 'A restricted global pattern', '^a restricted global pattern$', 1),
-      matched('Feature', 'description', 'A bad description', 'a bad description', 1),
+      matched('Feature', 'description', 'A restricted global pattern', '^a restricted global pattern$', 3),
+      matched('Feature', 'description', 'A bad description', 'a bad description', 2),
     ],
   );
 });
@@ -43,7 +45,7 @@ test('reports background descriptions and steps', async () => {
     'no-restricted-patterns/BackgroundViolations.feature',
     {Background: ['^.*disallowed.*$'], Global: GLOBAL},
     [
-      matched('Background', 'description', 'A bad description', 'a bad description', 4),
+      matched('Background', 'description', 'A bad description', 'a bad description', 5),
       matched('Step', 'text', 'disallowed background step', '^.*disallowed.*$', 6),
       matched('Step', 'text', 'a restricted global pattern', '^a restricted global pattern$', 7),
     ],
@@ -56,7 +58,7 @@ test('reports scenario names, descriptions and steps', async () => {
     'no-restricted-patterns/ScenarioViolations.feature',
     {Scenario: ['^.*disallowed.*$'], Global: GLOBAL},
     [
-      matched('Scenario', 'description', 'A bad description', 'a bad description', 4),
+      matched('Scenario', 'description', 'A bad description', 'a bad description', 5),
       matched('Scenario', 'name', 'Disallowed exact and partial matching', '^.*disallowed.*$', 4),
       matched('Step', 'text', 'disallowed scenario step', '^.*disallowed.*$', 6),
       matched('Step', 'text', 'a restricted global pattern', '^a restricted global pattern$', 7),
@@ -70,7 +72,7 @@ test('reports scenario outline names, descriptions and steps', async () => {
     'no-restricted-patterns/ScenarioOutlineViolations.feature',
     {ScenarioOutline: ['^.*disallowed.*$'], Global: GLOBAL},
     [
-      matched('Scenario Outline', 'description', 'A bad description', 'a bad description', 4),
+      matched('Scenario Outline', 'description', 'A bad description', 'a bad description', 5),
       matched('Scenario Outline', 'name', 'Disallowed exact and partial matching', '^.*disallowed.*$', 4),
       matched('Step', 'text', 'disallowed scenario outline step', '^.*disallowed.*$', 6),
       matched('Step', 'text', 'a restricted global pattern', '^a restricted global pattern$', 7),
@@ -85,7 +87,7 @@ test('reports rule names and descriptions', async () => {
     {Rule: ['^.*disallowed.*$'], Global: GLOBAL},
     [
       matched('Rule', 'name', 'Disallowed rule name', '^.*disallowed.*$', 3),
-      matched('Rule', 'description', 'A bad description', 'a bad description', 3),
+      matched('Rule', 'description', 'A bad description', 'a bad description', 4),
     ],
   );
 });
@@ -97,4 +99,13 @@ test('steps inside a rule still use the Scenario patterns', async () => {
     {Scenario: ['^.*disallowed.*$']},
     [matched('Step', 'text', 'disallowed scenario step', '^.*disallowed.*$', 8)],
   );
+});
+
+test('Global reaches Examples, data tables and doc strings too', async () => {
+  await checkRule(rule, 'no-restricted-patterns/EverywhereViolations.feature', {Global: ['forbidden']}, [
+    matched('Step', 'data table', 'forbidden cell', 'forbidden', 6),
+    matched('Step', 'doc string', 'a forbidden line', 'forbidden', 9),
+    matched('Examples', 'name', 'Forbidden examples', 'forbidden', 12),
+    matched('Examples', 'description', 'A forbidden description', 'forbidden', 13),
+  ]);
 });

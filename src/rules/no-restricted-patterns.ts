@@ -66,7 +66,7 @@ const rule: LintRule = {
   availableConfigs,
   verifySettings: (settings) =>
     Object.entries(settings).flatMap(([key, patterns]) => invalidPatterns(key, patterns, 'i')),
-  run(feature, _file, configuration) {
+  run(feature, file, configuration) {
     if (feature === undefined) {
       return [];
     }
@@ -75,28 +75,63 @@ const rule: LintRule = {
     const language = feature.language;
     const errors: RuleError[] = [];
 
+    /** Reports every pattern the text matches, at the given position. */
+    const report = (
+      type: string,
+      property: string,
+      text: string,
+      applicable: readonly RegExp[],
+      position: {line: number; column?: number},
+    ): void => {
+      for (const pattern of applicable) {
+        if (pattern.test(text)) {
+          errors.push({
+            message: `${type} ${property}: "${text}" matches restricted pattern "${pattern}"`,
+            rule: name,
+            ...position,
+          });
+        }
+      }
+    };
+
     const check = (
       node: {keyword: string; location: Location},
-      property: 'name' | 'description' | 'text',
+      property: 'name' | 'text',
       value: string | undefined,
       applicable: readonly RegExp[],
+      location: Location = node.location,
     ): void => {
       if (value === undefined || value === '') {
         return;
       }
+      // Names may be padded with whitespace; steps are not.
+      report(getNodeType(node, language), property, value.trim(), applicable, at(location));
+    };
+
+    /**
+     * A description, line by line, each reported on the line it is written
+     * on. The description starts below the keyword line, and a comment
+     * between its lines is left out of it, so each line is looked for in the
+     * file rather than counted.
+     */
+    const checkDescription = (
+      node: {keyword: string; location: Location; description?: string},
+      applicable: readonly RegExp[],
+    ): void => {
+      if (node.description === undefined || node.description === '') {
+        return;
+      }
       const type = getNodeType(node, language);
-      for (const pattern of applicable) {
-        for (const candidate of toCheckableStrings(property, value)) {
-          // Names and descriptions may be padded with whitespace; steps are not.
-          const text = candidate.trim();
-          if (pattern.test(text)) {
-            errors.push({
-              message: `${type} ${property}: "${text}" matches restricted pattern "${pattern}"`,
-              rule: name,
-              ...at(node.location),
-            });
-          }
-        }
+      let searchFrom = node.location.line;
+      for (const candidate of toCheckableStrings('description', node.description)) {
+        const text = candidate.trim();
+        if (text === '') continue;
+        const index = file.lines.findIndex(
+          (line, lineIndex) => lineIndex >= searchFrom && line.trim() === text,
+        );
+        const line = index === -1 ? node.location.line : index + 1;
+        if (index !== -1) searchFrom = index + 1;
+        report(type, 'description', text, applicable, {line});
       }
     };
 
@@ -104,22 +139,44 @@ const rule: LintRule = {
       patterns.get(getNeutralKeyword(node, language)) ?? [];
 
     check(feature, 'name', feature.name, patternsFor(feature));
-    check(feature, 'description', feature.description, patternsFor(feature));
+    checkDescription(feature, patternsFor(feature));
 
     for (const featureRule of rulesOf(feature)) {
       const applicable = patternsFor(featureRule);
       check(featureRule, 'name', featureRule.name, applicable);
-      check(featureRule, 'description', featureRule.description, applicable);
+      checkDescription(featureRule, applicable);
     }
 
     for (const {node} of stepContainersOf(feature)) {
       const applicable = patternsFor(node);
       check(node, 'name', node.name, applicable);
-      check(node, 'description', node.description, applicable);
+      checkDescription(node, applicable);
 
-      // Steps are checked against the patterns of the block they sit in.
+      // Steps, and what they carry, are checked against the patterns of the
+      // block they sit in.
       for (const step of node.steps) {
         check(step, 'text', step.text, applicable);
+        for (const row of step.dataTable?.rows ?? []) {
+          for (const cell of row.cells) {
+            if (cell.value.trim() !== '') {
+              report('Step', 'data table', cell.value.trim(), applicable, at(cell.location));
+            }
+          }
+        }
+        if (step.docString !== undefined) {
+          const {content, location} = step.docString;
+          content.split('\n').forEach((line, index) => {
+            if (line.trim() !== '') {
+              report('Step', 'doc string', line.trim(), applicable, {line: location.line + 1 + index});
+            }
+          });
+        }
+      }
+
+      // An outline's Examples belong to it, and take its patterns.
+      for (const examples of 'examples' in node ? node.examples : []) {
+        check(examples, 'name', examples.name, applicable);
+        checkDescription(examples, applicable);
       }
     }
 
