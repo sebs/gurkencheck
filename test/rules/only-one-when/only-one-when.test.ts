@@ -50,3 +50,7 @@ test('countAnd off behaves the same inside rules', async () => {
 test('countAnd on is the default', async () => {
   await checkRule(rule, 'only-one-when/Violations.feature', {countAnd: true}, violations);
 });
+
+test('a * step after a When counts as another When, as And does', async () => {
+  await checkRule(rule, 'only-one-when/StarSteps.feature', {}, [tooMany('A star after When', 2, 6)]);
+});

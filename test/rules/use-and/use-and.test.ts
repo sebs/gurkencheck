@@ -24,3 +24,7 @@ test('reports a keyword repeated instead of And', async () => {
     shouldUseAnd('Then ', 'step33', 33),
   ]);
 });
+
+test('takes a * step as carrying on, like And', async () => {
+  await checkRule(rule, 'use-and/StarSteps.feature', {}, []);
+});

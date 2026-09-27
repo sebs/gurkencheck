@@ -38,3 +38,7 @@ test('reports keywords that go backwards', async () => {
 test('reports keywords that go backwards inside rules', async () => {
   await checkRule(rule, 'keywords-in-logical-order/ViolationsUsingRules.feature', {}, violations);
 });
+
+test('takes a * step as carrying on from the step before it', async () => {
+  await checkRule(rule, 'keywords-in-logical-order/StarSteps.feature', {}, []);
+});

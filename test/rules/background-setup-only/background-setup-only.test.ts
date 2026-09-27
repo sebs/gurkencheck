@@ -29,3 +29,10 @@ test('reports the steps in a Background that do more than set up', async () => {
 test('reports them inside a rule too', async () => {
   await checkRule(rule, 'background-setup-only/ViolationsUsingRules.feature', {}, violations);
 });
+
+test('a * step carries on from the step before it, as And does', async () => {
+  await checkRule(rule, 'background-setup-only/StarSteps.feature', {}, [
+    notSetup('When I act', 6),
+    notSetup('* I act again', 7),
+  ]);
+});

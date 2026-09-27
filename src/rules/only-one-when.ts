@@ -35,9 +35,10 @@ const rule: LintRule = {
 
       for (const step of scenario.steps) {
         const keyword = getNeutralKeyword(step, feature.language);
-        // An `And` carries on from whichever keyword came before it, however
-        // many of them are chained together.
-        const continuesWhen = keyword === 'and' && lastRealKeyword === 'when';
+        // An `And` or `*` carries on from whichever keyword came before it,
+        // however many of them are chained together.
+        const continues = keyword === 'and' || keyword === 'star';
+        const continuesWhen = continues && lastRealKeyword === 'when';
 
         if (keyword !== 'when' && !continuesWhen) {
           lastRealKeyword = keyword;
@@ -45,7 +46,7 @@ const rule: LintRule = {
         }
 
         lastRealKeyword = 'when';
-        if (keyword === 'and' && !countAnd) {
+        if (continues && !countAnd) {
           continue;
         }
 

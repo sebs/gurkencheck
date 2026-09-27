@@ -23,6 +23,7 @@ export type NeutralKeyword =
   | 'then'
   | 'and'
   | 'but'
+  | 'star'
   | '';
 
 const KEYWORD_FIELDS = [
@@ -39,16 +40,23 @@ const KEYWORD_FIELDS = [
   'but',
 ] as const;
 
-const STEP_KEYWORDS = new Set<NeutralKeyword>(['given', 'when', 'then', 'and', 'but']);
+const STEP_KEYWORDS = new Set<NeutralKeyword>(['given', 'when', 'then', 'and', 'but', 'star']);
 
 /**
  * Maps a node's localised keyword (`Szenario`) onto the language-neutral name
  * (`scenario`). Returns an empty string for keywords the dialect does not know.
+ *
+ * `*` is `star` of its own. Every dialect lists it under all five step
+ * keywords, so looking it up would say `given` - but like `And` it carries on
+ * from the step before it, which is how Cucumber reads it too.
  */
 export function getNeutralKeyword(
   node: Pick<KeywordNode, 'keyword'>,
   language: string | undefined,
 ): NeutralKeyword {
+  if (node.keyword.trim() === '*') {
+    return 'star';
+  }
   const dialect = getDialect(language);
   for (const field of KEYWORD_FIELDS) {
     if (dialect[field].includes(node.keyword)) {
@@ -75,7 +83,7 @@ export function resolvedStepKeywords(
 
   return steps.map((step) => {
     const keyword = getNeutralKeyword(step, language);
-    if (keyword === 'and' || keyword === 'but') {
+    if (keyword === 'and' || keyword === 'but' || keyword === 'star') {
       return carried;
     }
     carried = keyword;
@@ -83,7 +91,7 @@ export function resolvedStepKeywords(
   });
 }
 
-/** True when the keyword is a Given/When/Then/And/But step keyword. */
+/** True when the keyword is a Given/When/Then/And/But/`*` step keyword. */
 export function isStepKeyword(keyword: NeutralKeyword): boolean {
   return STEP_KEYWORDS.has(keyword);
 }

@@ -19,7 +19,8 @@ const rule: LintRule = {
 
       for (const step of node.steps) {
         const keyword = getNeutralKeyword(step, feature.language);
-        if (keyword === 'and') {
+        // And and * already carry on from the step before them.
+        if (keyword === 'and' || keyword === 'star') {
           continue;
         }
         if (keyword === previousKeyword) {
