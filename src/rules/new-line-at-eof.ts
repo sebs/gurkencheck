@@ -1,4 +1,5 @@
 import type {LintRule} from '../types.ts';
+import {contentLines} from '../util/lines.ts';
 
 const name = 'new-line-at-eof';
 
@@ -18,6 +19,12 @@ const rule: LintRule = {
   availableConfigs,
   run(_feature, file, configuration) {
     const setting = toSetting(configuration);
+    // An empty file has no line for a new line to end, so there is nothing to
+    // require or forbid. Splitting it gives a single empty entry, which would
+    // otherwise read as a new line at the end.
+    if (file.lines.length === 1 && file.lines[0] === '') {
+      return [];
+    }
     // Splitting on line breaks leaves a trailing empty entry when the file
     // ends with one.
     const hasNewLineAtEof = file.lines.at(-1) === '';
@@ -32,7 +39,9 @@ const rule: LintRule = {
     if (message === '') {
       return [];
     }
-    return [{message, rule: name, line: file.lines.length}];
+    // The last line of the file: the one the new line ends, or the one
+    // missing it. contentLines leaves out the empty entry after a new line.
+    return [{message, rule: name, line: contentLines(file).length}];
   },
 };
 

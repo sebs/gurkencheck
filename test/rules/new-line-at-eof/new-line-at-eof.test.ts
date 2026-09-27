@@ -18,7 +18,14 @@ test('reports a missing new line when configured to "yes"', async () => {
 });
 
 test('reports a trailing new line when configured to "no"', async () => {
-  await checkRule(rule, 'new-line-at-eof/NewLineAtEOF.feature', 'no', [{message: notAllowed, line: 6}]);
+  // On the last line of the file, the one the new line ends, not on a line
+  // after it that does not exist.
+  await checkRule(rule, 'new-line-at-eof/NewLineAtEOF.feature', 'no', [{message: notAllowed, line: 5}]);
+});
+
+test('an empty file has no line to end, either way', async () => {
+  await checkRule(rule, 'new-line-at-eof/Empty.feature', 'no', []);
+  await checkRule(rule, 'new-line-at-eof/Empty.feature', 'yes', []);
 });
 
 test('falls back to requiring a new line when no setting is given', async () => {
