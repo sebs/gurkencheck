@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const REGEXP_SPECIAL_CHARACTERS = new Set('.+^$()|\\'.split(''));
+const REGEXP_SPECIAL_CHARACTERS = new Set('.+^$()|\\[]{}*?'.split(''));
 
 /**
  * Translates a glob pattern into an anchored regular expression matching
@@ -90,6 +90,11 @@ function findClosingBracket(pattern: string, from: number): number {
     if (pattern[index] === ']') return index;
   }
   return -1;
+}
+
+/** Escapes every character glob syntax would read, so the text matches only itself. */
+export function escapeGlob(literal: string): string {
+  return literal.replace(/[*?[\]{}\\]/g, '\\$&');
 }
 
 /** True when the segment contains glob syntax rather than a literal name. */
@@ -248,22 +253,27 @@ interface Search {
 function newSearch(pattern: string, options: GlobOptions): Search {
   const cwd = options.cwd ?? process.cwd();
   const normalisedPattern = pattern.split(path.sep).join('/');
-  const matches = globToRegExp(normalisedPattern);
   const ignores = (options.ignore ?? []).map((ignorePattern) =>
     globToRegExp(ignorePattern.split(path.sep).join('/')),
   );
 
-  // An absolute pattern is matched against absolute paths: comparing it with
-  // a path relative to cwd can never match, and the search would come back
+  // Matched against absolute paths, with the literal start of the pattern
+  // resolved first. Comparing the pattern as written with a path relative to
+  // cwd goes wrong whenever the two spell the same place differently -
+  // `./features/a.feature` against `features/a.feature`, or `../**` against
+  // a file below cwd, which has no `../` at all - and the search comes back
   // empty rather than wrong, which reads as "nothing to report".
-  const absolutePattern = path.isAbsolute(normalisedPattern);
+  const prefix = staticPrefix(normalisedPattern);
+  const searchRoot = path.resolve(cwd, prefix);
+  const rest = normalisedPattern.slice(prefix === '' ? 0 : prefix.length + 1);
+  const root = searchRoot.split(path.sep).join('/').replace(/\/$/, '');
+  const matches = globToRegExp(`${escapeGlob(root)}/${rest}`);
 
   return {
-    searchRoot: path.resolve(cwd, staticPrefix(normalisedPattern)),
+    searchRoot,
     match(absolutePath: string): string | undefined {
       const relativePath = path.relative(cwd, absolutePath).split(path.sep).join('/');
-      const candidate = absolutePattern ? absolutePath.split(path.sep).join('/') : relativePath;
-      if (!matches.test(candidate)) return undefined;
+      if (!matches.test(absolutePath.split(path.sep).join('/'))) return undefined;
       if (isIgnored(relativePath, ignores)) return undefined;
       return relativePath;
     },

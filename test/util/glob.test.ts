@@ -111,3 +111,33 @@ test('an ignore pattern that matches nothing leaves the result alone', () => {
     'features/nested/b.feature',
   ]);
 });
+
+test('a leading ./ names the same files as the path without it', () => {
+  assert.deepEqual(globSync('./features/a.feature'), ['features/a.feature']);
+  assert.deepEqual(globSync('./features/**'), globSync('features/**'));
+});
+
+test('a pattern reaching into the parent directory still finds files below the cwd', () => {
+  // Paths below the working directory carry no ../ prefix, so comparing them
+  // with ../**/*.feature used to drop every one of them.
+  const inside = path.join(root, 'features');
+  process.chdir(inside);
+  try {
+    assert.deepEqual(globSync('../**/*.feature'), ['a.feature', 'nested/b.feature']);
+  } finally {
+    process.chdir(root);
+  }
+});
+
+test('the directory a pattern starts from may hold glob characters of its own', () => {
+  const odd = path.join(root, 'odd [dir] {x}');
+  fs.mkdirSync(odd, {recursive: true});
+  fs.writeFileSync(path.join(odd, 'd.feature'), '');
+  process.chdir(odd);
+  try {
+    assert.deepEqual(globSync('**/*.feature'), ['d.feature']);
+  } finally {
+    process.chdir(root);
+    fs.rmSync(odd, {recursive: true, force: true});
+  }
+});
