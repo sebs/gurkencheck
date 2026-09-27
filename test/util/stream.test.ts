@@ -98,6 +98,14 @@ test('a window smaller than one still makes progress', async () => {
   assert.deepEqual(seen, [0, 1, 2]);
 });
 
+test('a window that is not a number still makes progress', async () => {
+  const results: number[] = [];
+  for await (const value of mapWithWindow([1, 2, 3], Number.NaN, async (x) => x * 2)) {
+    results.push(value);
+  }
+  assert.deepEqual(results, [2, 4, 6]);
+});
+
 test('an empty list yields nothing', async () => {
   const seen: number[] = [];
   for await (const value of mapWithWindow<number, number>([], 4, async (value) => value)) {

@@ -43,7 +43,9 @@ export async function* mapWithWindow<T, R>(
   window: number,
   map: (value: T) => Promise<R>,
 ): AsyncGenerator<R> {
-  const width = Math.max(1, Math.trunc(window));
+  // NaN, from a setting that was not a number, would compare false with every
+  // count, start nothing, and quietly hand back nothing at all.
+  const width = Number.isNaN(window) ? 1 : Math.max(1, Math.trunc(window));
   const source = asAsync(values);
   const inFlight: Promise<R>[] = [];
   let drained = false;
