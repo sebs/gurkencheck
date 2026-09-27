@@ -126,13 +126,33 @@ export async function run(
     return EXIT_USAGE;
   }
 
-  const configuration = await readConfiguration(values.config, rules);
-  if (!configuration.ok) {
-    diagnostics.report({
-      level: 'error',
-      message: configuration.message,
-      details: configuration.details,
-    });
+  /**
+   * The configuration and the dialect it asks for, or `undefined` once what
+   * is wrong with them has been reported. Read again on every pass of a
+   * watch, since a change to the configuration is one of the things it
+   * checks again for.
+   */
+  const readSettings = async (): Promise<
+    {configuration: Configuration; language: string | undefined} | undefined
+  > => {
+    const read = await readConfiguration(values.config, rules);
+    if (!read.ok) {
+      diagnostics.report({level: 'error', message: read.message, details: read.details});
+      return undefined;
+    }
+    const language = values.language ?? read.language;
+    if (language !== undefined && !isKnownLanguage(language)) {
+      diagnostics.report({
+        level: 'error',
+        message: `Unknown language "${language}". Use a Gherkin language code, such as "fr".`,
+      });
+      return undefined;
+    }
+    return {configuration: read.configuration, language};
+  };
+
+  let settings = await readSettings();
+  if (settings === undefined) {
     return EXIT_USAGE;
   }
 
@@ -174,26 +194,26 @@ export async function run(
     return EXIT_USAGE;
   }
 
-  const language = values.language ?? configuration.language;
-  if (language !== undefined && !isKnownLanguage(language)) {
-    diagnostics.report({
-      level: 'error',
-      message: `Unknown language "${language}". Use a Gherkin language code, such as "fr".`,
-    });
-    return EXIT_USAGE;
-  }
-
   // Discovery is a stream, and a stream can only be read once - so a run that
   // may happen more than once is given a fresh one each time.
   const discover = (): Sequence<string> =>
     findFeatureFileStream(positionals, ignore).files;
 
+  let passes = 0;
   const checkOnce = async (): Promise<number> => {
+    if (passes++ > 0) {
+      settings = await readSettings();
+      if (settings === undefined) {
+        return EXIT_USAGE;
+      }
+    }
+    const {configuration, language} = settings!;
+
     if (streaming !== undefined) {
       return await runStreaming(
         streaming,
         discover(),
-        configuration.configuration,
+        configuration,
         rules,
         language,
         diagnostics,
@@ -202,7 +222,7 @@ export async function run(
 
     let results;
     try {
-      results = await lint(discover(), configuration.configuration, rules, {language});
+      results = await lint(discover(), configuration, rules, {language});
     } catch (thrown) {
       diagnostics.report({
         level: 'error',

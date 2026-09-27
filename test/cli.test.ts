@@ -381,6 +381,36 @@ test('--watch checks, waits, then checks again when a file changes', async () =>
   });
 });
 
+test('--watch reads the configuration again when it changes', async () => {
+  await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
+    const child = spawn(process.execPath, [CLI, '--watch', '.'], {cwd});
+    let output = '';
+    child.stdout.on('data', (chunk) => (output += String(chunk)));
+    child.stderr.on('data', (chunk) => (output += String(chunk)));
+
+    const waitFor = async (pattern: RegExp): Promise<void> => {
+      const deadline = Date.now() + 10000;
+      while (!pattern.test(output)) {
+        if (Date.now() > deadline) {
+          assert.fail(`timed out waiting for ${String(pattern)} in:\n${output}`);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+    };
+
+    try {
+      await waitFor(/error +Missing Scenario name/u);
+      await waitFor(/Watching for changes/u);
+
+      output = '';
+      fs.writeFileSync(path.join(cwd, '.gurkencheckrc'), '{"no-unnamed-scenarios": "warn"}');
+      await waitFor(/warning +Missing Scenario name/u);
+    } finally {
+      await stop(child);
+    }
+  });
+});
+
 test('--watch exits 0 when it is stopped', async () => {
   await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
     const child = spawn(process.execPath, [CLI, '--watch', '.'], {cwd});
