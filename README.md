@@ -27,8 +27,9 @@ npx gurkencheck
 
 With no configuration file, gurkencheck uses its **recommended** rules: the ones that catch
 a mistake rather than express a preference — an empty file, a scenario with no name, a
-variable that will never be substituted. Nothing in that set depends on how you lay a file
-out, so it should be quiet on a codebase that has never been linted.
+variable that will never be substituted. It also asks for basic whitespace hygiene: no
+trailing spaces, no runs of empty lines, one space between tags and a new line at the end of
+each file. Beyond that, nothing in it depends on how you lay a file out.
 
 When you want something different, create a `.gurkencheckrc` and list the rules you want. A
 configuration file replaces the recommended set rather than adding to it, so every rule is

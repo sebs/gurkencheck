@@ -4,8 +4,10 @@
  * `recommended` is what you get when there is no configuration file. It holds
  * the rules that catch a mistake rather than express a preference: an empty
  * file, a scenario with no name, a variable that will never be substituted.
- * Nothing in it depends on how a team likes to lay a file out, so it should be
- * quiet on a codebase that has never been linted.
+ * It also asks for basic whitespace hygiene - no trailing spaces, no runs of
+ * empty lines, one space between tags, a new line at the end - which a
+ * codebase that has never been linted may well trip over. Beyond that,
+ * nothing in it depends on how a team likes to lay a file out.
  *
  * Rules about style - indentation, name length, which tags go where, whether
  * repeated keywords become And - are deliberately left out. They are worth
