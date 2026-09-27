@@ -29,12 +29,11 @@ const DIRECTIVE = /^\s*#\s*gurkencheck-(disable-next-line|disable-file|disable|e
 /** Stands in for "every rule" when a directive names none. */
 const ALL_RULES = '*';
 
-/** A rule switched off across a run of lines. */
-interface Range {
+/** A `disable` or `enable`, in the order they appear. */
+interface Switch {
+  line: number;
+  off: boolean;
   rule: string;
-  from: number;
-  /** Inclusive; Infinity when nothing switched it back on. */
-  to: number;
 }
 
 export interface Suppressions {
@@ -59,9 +58,7 @@ export function readSuppressions(lines: readonly string[]): Suppressions {
   const wholeFile = new Set<string>();
   /** Line number -> the rules switched off on that line only. */
   const nextLine = new Map<number, Set<string>>();
-  const ranges: Range[] = [];
-  /** Rule -> the line its still-open `disable` started on. */
-  const open = new Map<string, number>();
+  const switches: Switch[] = [];
   let found = false;
 
   lines.forEach((text, index) => {
@@ -85,31 +82,11 @@ export function readSuppressions(lines: readonly string[]): Suppressions {
         const onLine = nextLine.get(line + 1) ?? new Set<string>();
         onLine.add(name);
         nextLine.set(line + 1, onLine);
-      } else if (kind === 'disable') {
-        if (!open.has(name)) {
-          open.set(name, line);
-        }
       } else {
-        // enable
-        const from = open.get(name);
-        if (from !== undefined) {
-          ranges.push({rule: name, from, to: line});
-          open.delete(name);
-        }
-        if (name === ALL_RULES) {
-          // `enable` with no names closes everything that is open.
-          for (const [openRule, openFrom] of open) {
-            ranges.push({rule: openRule, from: openFrom, to: line});
-          }
-          open.clear();
-        }
+        switches.push({line, off: kind === 'disable', rule: name});
       }
     }
   });
-
-  for (const [rule, from] of open) {
-    ranges.push({rule, from, to: Infinity});
-  }
 
   const covers = (rule: string, candidate: string): boolean =>
     candidate === ALL_RULES || candidate === rule;
@@ -123,10 +100,18 @@ export function readSuppressions(lines: readonly string[]): Suppressions {
       for (const candidate of nextLine.get(error.line) ?? []) {
         if (covers(error.rule, candidate)) return true;
       }
-      return ranges.some(
-        (range) =>
-          covers(error.rule, range.rule) && error.line >= range.from && error.line <= range.to,
-      );
+      // Whatever switched this rule on or off last, above the line, decides.
+      // So `enable use-and` after a bare `disable` switches use-and back on
+      // and leaves every other rule off, and `enable` with no names switches
+      // everything back on.
+      let off = false;
+      for (const change of switches) {
+        if (change.line > error.line) break;
+        if (covers(error.rule, change.rule)) {
+          off = change.off;
+        }
+      }
+      return off;
     },
   };
 }

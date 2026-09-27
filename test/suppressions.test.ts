@@ -97,3 +97,26 @@ test('an unknown rule name simply matches nothing', () => {
   const found = suppressions(['a', '# gurkencheck-disable-next-line no-such-rule', 'b'].join('\n'));
   assert.ok(!found.isSuppressed(error('use-and', 3)));
 });
+
+test('enable naming a rule switches it back on after a disable of every rule', () => {
+  const found = suppressions(
+    ['Feature: A', '# gurkencheck-disable', 'x', '# gurkencheck-enable no-trailing-spaces', 'y'].join('\n'),
+  );
+  assert.ok(found.isSuppressed(error('no-trailing-spaces', 3)));
+  assert.ok(!found.isSuppressed(error('no-trailing-spaces', 5)));
+  assert.ok(found.isSuppressed(error('use-and', 5)), 'every other rule stays off');
+});
+
+test('a rule switched off again after being switched back on is off again', () => {
+  const found = suppressions(
+    [
+      '# gurkencheck-disable',
+      '# gurkencheck-enable use-and',
+      'x',
+      '# gurkencheck-disable use-and',
+      'y',
+    ].join('\n'),
+  );
+  assert.ok(!found.isSuppressed(error('use-and', 3)));
+  assert.ok(found.isSuppressed(error('use-and', 5)));
+});
