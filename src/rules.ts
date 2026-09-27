@@ -1,6 +1,7 @@
 /**
  * Assembling the set of rules available to a run, and running them.
  */
+import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {BUILT_IN_RULES} from './rules/index.ts';
@@ -47,6 +48,17 @@ function extractRule(loaded: Record<string, unknown>, source: string): LintRule 
 
 async function loadRulesFrom(directory: string): Promise<LintRule[]> {
   const resolved = path.resolve(directory);
+  // A directory that is not there would otherwise contribute no rules and no
+  // complaint, and a run meant to include them would pass without them.
+  let stats: fs.Stats;
+  try {
+    stats = fs.statSync(resolved);
+  } catch {
+    throw new Error(`Could not find the rules directory "${directory}".`);
+  }
+  if (!stats.isDirectory()) {
+    throw new Error(`The rules directory "${directory}" is not a directory.`);
+  }
   const files = globSync(`*.${RULE_EXTENSIONS}`, {cwd: resolved});
   const loaded: LintRule[] = [];
 

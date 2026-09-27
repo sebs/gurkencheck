@@ -145,3 +145,11 @@ test('a rule handing back something other than a list is reported by name', asyn
     ],
   );
 });
+
+test('a rules directory that does not exist is an error, not an empty set', async () => {
+  await assert.rejects(loadRules(['test/rulesdir/no-such-directory']), /Could not find the rules directory/u);
+});
+
+test('a rules directory that is a file is an error', async () => {
+  await assert.rejects(loadRules(['test/rulesdir.test.ts']), /is not a directory/u);
+});
