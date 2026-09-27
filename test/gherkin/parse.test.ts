@@ -131,6 +131,38 @@ test('tells a misplaced Background apart from a second one', () => {
   assert.equal(duplicate.errors[0]?.rule, 'up-to-one-background-per-file');
 });
 
+test('a Feature Background does not make a misplaced Rule Background a second one', () => {
+  const source = [
+    'Feature: F',
+    '  Background:',
+    '    Given a',
+    '',
+    '  Rule: R',
+    '    Scenario: S',
+    '      Then step',
+    '',
+    '    Background:',
+    '      Given b',
+    '',
+  ].join('\n');
+  assert.equal(parseFeature('x.feature', source).errors[0]?.rule, 'background-before-scenarios');
+});
+
+test('a second Background inside one Rule is still a second one', () => {
+  const source = [
+    'Feature: F',
+    '  Rule: R',
+    '    Background:',
+    '      Given a',
+    '    Background:',
+    '      Given b',
+    '    Scenario: S',
+    '      Then step',
+    '',
+  ].join('\n');
+  assert.equal(parseFeature('x.feature', source).errors[0]?.rule, 'up-to-one-background-per-file');
+});
+
 test('recognises a misplaced Background in another language', () => {
   const source = [
     '# language: de',

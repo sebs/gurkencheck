@@ -123,20 +123,30 @@ function startsWithKeyword(text: string, keywords: readonly string[]): boolean {
 }
 
 /**
- * True when a Background is already open above `line`.
+ * True when a Background is already open above `line`, in the same Feature
+ * or Rule.
  *
  * The parser rejects a second Background and a Background written below a
  * Scenario in exactly the same way, but they are different mistakes with
- * different fixes, so the lines above are checked to tell them apart.
+ * different fixes, so the lines above are checked to tell them apart. A Rule
+ * may have a Background of its own beside the Feature's, so the search stops
+ * at the Rule the line belongs to.
  */
 function hasEarlierBackground(
   lines: readonly string[],
   line: number,
   dialect: Dialect,
 ): boolean {
-  return lines
-    .slice(0, Math.max(0, line - 1))
-    .some((text) => startsWithKeyword(text.trim(), dialect.background));
+  for (let index = line - 2; index >= 0; index--) {
+    const text = lines[index]!.trim();
+    if (startsWithKeyword(text, dialect.background)) {
+      return true;
+    }
+    if (startsWithKeyword(text, dialect.rule)) {
+      return false;
+    }
+  }
+  return false;
 }
 
 /** The step keywords of a dialect, without the `*` wildcard, for messages. */
