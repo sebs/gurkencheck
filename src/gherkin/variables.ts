@@ -9,8 +9,15 @@
 import type {Scenario} from '@cucumber/messages';
 import {at} from '../util/location.ts';
 
-/** `<name>` placeholders, as used in Scenario Outlines. */
-const VARIABLE = /<([^>]*)>/gu;
+/**
+ * `<name>` placeholders, as used in Scenario Outlines.
+ *
+ * Cucumber substitutes any column name written in angle brackets, so what
+ * counts as one here is only what could be a column name: not starting or
+ * ending with a space or `/`, and holding no quotes or `=`. Without that,
+ * `x < 5 and y > 3`, `<div class="x">` and `<br/>` would read as variables.
+ */
+const VARIABLE = /<([^<>\s"'=/](?:[^<>\n"'=]*[^<>\s"'=/])?)>/gu;
 
 /** Where a variable was seen: the node holding it. */
 export interface Position {
@@ -96,8 +103,13 @@ export function variablesOf(scenario: Scenario): ScenarioVariables {
         collect(cell.value, at(cell.location), used);
       }
     }
+    // A doc string's content starts on the line below its opening delimiter,
+    // and each line of it is reported where it is.
     if (step.docString !== undefined) {
-      collect(step.docString.content, at(step.location), used);
+      const {content, location} = step.docString;
+      content.split('\n').forEach((line, index) => {
+        collect(line, {line: location.line + 1 + index, column: location.column}, used);
+      });
     }
   }
 

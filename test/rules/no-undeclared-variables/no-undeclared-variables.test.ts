@@ -17,7 +17,8 @@ test('reports step variables missing from the examples table', async () => {
     rule,
     'no-undeclared-variables/UnusedStepVariables.feature',
     {},
-    [5, 12, 18, 30, 41].map((line) => undeclared('b', line)),
+    // The last is in a doc string, reported on its own line rather than the step's.
+    [5, 12, 18, 30, 43].map((line) => undeclared('b', line)),
   );
 });
 
@@ -42,5 +43,11 @@ test('says nothing about an unused examples column', async () => {
 test('reports a variable that one of several Examples tables leaves out', async () => {
   await checkRule(rule, 'no-undeclared-variables/SomeTables.feature', {}, [
     {message: 'Step variable "b" does not exist in the examples table on line 10', line: 4},
+  ]);
+});
+
+test('takes only placeholder-shaped text as a variable, and places doc string ones on their line', async () => {
+  await checkRule(rule, 'no-undeclared-variables/AngleBrackets.feature', {}, [
+    {message: 'Step variable "b" does not exist in the examples table', line: 8},
   ]);
 });
