@@ -153,3 +153,8 @@ test('a rules directory that does not exist is an error, not an empty set', asyn
 test('a rules directory that is a file is an error', async () => {
   await assert.rejects(loadRules(['test/rulesdir.test.ts']), /is not a directory/u);
 });
+
+test('declaration files beside TypeScript rules are skipped', async () => {
+  const rules = await loadRules(['test/rulesdir/typed_rules']);
+  assert.ok(rules.has('typed'));
+});

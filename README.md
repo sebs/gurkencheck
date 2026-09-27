@@ -370,6 +370,9 @@ npx gurkencheck --rulesdir ./rules
 
 A custom rule may reuse a built-in rule's name to replace it.
 
+Every module directly inside the directory has to be a rule; TypeScript declaration files
+(`.d.ts`) are skipped. Code the rules share belongs in a subdirectory, which is not read.
+
 `run` may also be `async` and return a promise, for a rule that has to wait for
 something — reading a file, or asking an issue tracker whether a tag refers to a real
 ticket. Files are checked one after another, so rules see a predictable order.

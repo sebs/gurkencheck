@@ -59,7 +59,11 @@ async function loadRulesFrom(directory: string): Promise<LintRule[]> {
   if (!stats.isDirectory()) {
     throw new Error(`The rules directory "${directory}" is not a directory.`);
   }
-  const files = globSync(`*.${RULE_EXTENSIONS}`, {cwd: resolved});
+  // Declaration files sit beside TypeScript rules as a matter of course, and
+  // hold types, not code.
+  const files = globSync(`*.${RULE_EXTENSIONS}`, {cwd: resolved}).filter(
+    (file) => !/\.d\.[mc]?ts$/u.test(file),
+  );
   const loaded: LintRule[] = [];
 
   for (const file of files) {
