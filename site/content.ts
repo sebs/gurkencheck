@@ -263,8 +263,12 @@ export const RULE_DOCS: RuleDoc[] = [
     name: 'no-examples-in-scenarios',
     summary: 'Reminds you that Examples belong to a Scenario Outline.',
     explanation:
-      'An Examples table only runs when it hangs off a Scenario Outline. Attached to a ' +
-      'plain Scenario it is silently ignored, so your test never runs the rows you wrote.',
+      'Current versions of Gherkin treat Scenario and Scenario Outline alike, so the rows ' +
+      'of an Examples table under a plain Scenario do run, one scenario each. The keyword ' +
+      'still tells a reader what they are looking at: a Scenario reads as one example, and ' +
+      'the placeholders in it look like literal text. Older tools, and some other ' +
+      'implementations, ignore the table altogether. Writing Scenario Outline says it is ' +
+      'a template, and runs the same everywhere.',
     config: '{\n  "no-examples-in-scenarios": "on"\n}',
     good: 'Feature: Logging in\n\n  Scenario Outline: Logging in as <role>\n    Given I am a <role>\n    When I log in\n\n    Examples:\n      | role  |\n      | admin |\n      | guest |',
     bad: 'Feature: Logging in\n\n  Scenario: Logging in as <role>\n    Given I am a <role>\n    When I log in\n\n    Examples:\n      | role  |\n      | admin |\n      | guest |',
