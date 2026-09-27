@@ -3,7 +3,8 @@
  * a rule name is reported once and clearly rather than silently ignored.
  */
 import {ALWAYS_ON_RULES} from './gherkin/parse.ts';
-import type {Configuration, RuleRegistry} from './types.ts';
+import {BUILT_IN_RULES} from './rules/index.ts';
+import type {Configuration, LintRule, RuleRegistry} from './types.ts';
 
 const STATES = ['on', 'warn', 'off'];
 
@@ -19,15 +20,77 @@ function describeAllowed(availableConfigs: unknown): string {
   return '';
 }
 
+/** What a value should be, going by the default it would replace. */
+function describeType(fallback: unknown): string {
+  if (Array.isArray(fallback)) return 'a list of strings';
+  if (typeof fallback === 'number') return 'a number';
+  if (typeof fallback === 'boolean') return 'true or false';
+  if (typeof fallback === 'string') return 'a string';
+  return 'an object';
+}
+
+/**
+ * Checks each setting against the type of the default it replaces, going
+ * into nested settings. A value of the wrong type is not a matter of taste:
+ * the rule would crash on it, or quietly do something else - a string where
+ * a list belongs is read one character at a time.
+ */
+function verifyTypes(
+  prefix: string,
+  defaults: Record<string, unknown>,
+  settings: Record<string, unknown>,
+  path: string,
+  errors: string[],
+): void {
+  for (const [key, value] of Object.entries(settings)) {
+    if (!Object.hasOwn(defaults, key)) {
+      continue;
+    }
+    const fallback = defaults[key];
+    const name = `${path}${key}`;
+    let fits: boolean;
+    if (Array.isArray(fallback)) {
+      fits = Array.isArray(value) && value.every((entry) => typeof entry === 'string');
+    } else if (typeof fallback === 'number') {
+      fits = typeof value === 'number' && Number.isFinite(value);
+    } else if (typeof fallback === 'object' && fallback !== null) {
+      fits = typeof value === 'object' && value !== null && !Array.isArray(value);
+      if (fits) {
+        for (const nested of Object.keys(value as object)) {
+          if (!Object.hasOwn(fallback, nested)) {
+            errors.push(
+              `${prefix}"${name}" has no setting called "${nested}". Available settings: ${describeAllowed(fallback)}`,
+            );
+          }
+        }
+        verifyTypes(prefix, fallback as Record<string, unknown>, value as Record<string, unknown>, `${name}.`, errors);
+        continue;
+      }
+    } else {
+      fits = typeof value === typeof fallback;
+    }
+    if (!fits) {
+      errors.push(`${prefix}"${name}" should be ${describeType(fallback)}, not ${JSON.stringify(value)}`);
+    }
+  }
+}
+
 function verifySettings(
-  ruleName: string,
-  availableConfigs: unknown,
+  rule: LintRule,
   settings: unknown,
   errors: string[],
 ): void {
+  const ruleName = rule.name;
+  const availableConfigs = rule.availableConfigs;
   const prefix = `Invalid rule configuration for "${ruleName}" - `;
 
   if (availableConfigs === undefined) {
+    // A custom rule may read settings it never declared; a built-in one
+    // declares every setting it has, so settings for one with none are a
+    // mistake.
+    if (BUILT_IN_RULES.includes(rule)) {
+      errors.push(`${prefix}the rule has no settings, so the config should be "on", "warn" or "off"`);
+    }
     return;
   }
 
@@ -50,6 +113,15 @@ function verifySettings(
   for (const key of Object.keys(settings)) {
     if (!allowedKeys.has(key)) {
       errors.push(`${prefix}the rule has no setting called "${key}". Available settings: ${describeAllowed(availableConfigs)}`);
+    }
+  }
+
+  const before = errors.length;
+  verifyTypes(prefix, availableConfigs as Record<string, unknown>, settings as Record<string, unknown>, '', errors);
+  // The rule's own checks assume the types are right, so they run only then.
+  if (errors.length === before && rule.verifySettings !== undefined) {
+    for (const problem of rule.verifySettings(settings as Record<string, unknown>)) {
+      errors.push(`${prefix}${problem}`);
     }
   }
 }
@@ -96,7 +168,7 @@ export function verifyConfiguration(configuration: Configuration, rules: RuleReg
       continue;
     }
 
-    verifySettings(ruleName, rule.availableConfigs, ruleConfig[1], errors);
+    verifySettings(rule, ruleConfig[1], errors);
   }
 
   return errors;

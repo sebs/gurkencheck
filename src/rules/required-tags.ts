@@ -3,6 +3,7 @@ import {scenariosOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
 import {mergeDefaults} from '../util/collections.ts';
 import {at} from '../util/location.ts';
+import {invalidPatterns} from '../util/patterns.ts';
 
 const name = 'required-tags';
 
@@ -18,6 +19,7 @@ const availableConfigs: RequiredTagsConfig = {tags: [], ignoreUntagged: true};
 const rule: LintRule = {
   name,
   availableConfigs,
+  verifySettings: (settings) => invalidPatterns('tags', settings['tags']),
   run(feature, _file, configuration) {
     if (feature === undefined) {
       return [];

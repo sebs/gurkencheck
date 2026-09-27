@@ -95,3 +95,46 @@ test('still rejects a nonsense state for an always-on rule', () => {
     'Invalid rule configuration for "no-multiline-steps" - the config should be "on", "warn" or "off"',
   ]);
 });
+
+test('reports a setting of the wrong type', () => {
+  assert.deepEqual(verify({'allowed-tags': ['on', {patterns: '^@w'}]}), [
+    'Invalid rule configuration for "allowed-tags" - "patterns" should be a list of strings, not "^@w"',
+  ]);
+  assert.deepEqual(verify({'required-tags': ['on', {tags: '@ab'}]}), [
+    'Invalid rule configuration for "required-tags" - "tags" should be a list of strings, not "@ab"',
+  ]);
+  assert.deepEqual(verify({'max-scenarios-per-file': ['on', {maxScenarios: '0'}]}), [
+    'Invalid rule configuration for "max-scenarios-per-file" - "maxScenarios" should be a number, not "0"',
+  ]);
+  assert.deepEqual(verify({indentation: ['on', {Step: 'two'}]}), [
+    'Invalid rule configuration for "indentation" - "Step" should be a number, not "two"',
+  ]);
+});
+
+test('checks nested settings too', () => {
+  assert.deepEqual(verify({'scenario-size': ['on', {'steps-length': {Scenario: 'ten', Outline: 3}}]}), [
+    'Invalid rule configuration for "scenario-size" - "steps-length" has no setting called "Outline". Available settings: "Background", "Scenario"',
+    'Invalid rule configuration for "scenario-size" - "steps-length.Scenario" should be a number, not "ten"',
+  ]);
+});
+
+test('reports a pattern that is not a regular expression once, before linting', () => {
+  const [problem, ...rest] = verify({'no-restricted-tags': ['on', {patterns: ['[unclosed']}]});
+  assert.deepEqual(rest, []);
+  assert.match(problem!, /"patterns" holds "\[unclosed", which is not a regular expression/u);
+  assert.equal(verify({'no-restricted-patterns': ['on', {Global: ['(']}]}).length, 1);
+  assert.equal(verify({'required-tags': ['on', {tags: ['*']}]}).length, 1);
+});
+
+test('reports a value outside a fixed set of choices', () => {
+  assert.deepEqual(verify({indentation: ['on', {character: 'tabs'}]}), [
+    'Invalid rule configuration for "indentation" - "character" should be "any", "space" or "tab", not "tabs"',
+  ]);
+  assert.equal(verify({'file-name': ['on', {style: 'Kebab'}]}).length, 1);
+});
+
+test('reports settings given to a built-in rule that has none', () => {
+  assert.deepEqual(verify({'no-trailing-spaces': ['on', 'garbage']}), [
+    'Invalid rule configuration for "no-trailing-spaces" - the rule has no settings, so the config should be "on", "warn" or "off"',
+  ]);
+});

@@ -4,6 +4,7 @@ import {rulesOf, stepContainersOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
 import {mergeDefaults} from '../util/collections.ts';
 import {at} from '../util/location.ts';
+import {invalidPatterns} from '../util/patterns.ts';
 
 const name = 'no-restricted-patterns';
 
@@ -63,6 +64,8 @@ function toCheckableStrings(property: string, value: string): string[] {
 const rule: LintRule = {
   name,
   availableConfigs,
+  verifySettings: (settings) =>
+    Object.entries(settings).flatMap(([key, patterns]) => invalidPatterns(key, patterns, 'i')),
   run(feature, _file, configuration) {
     if (feature === undefined) {
       return [];

@@ -23,6 +23,16 @@ const availableConfigs = {
 const rule: LintRule = {
   name,
   availableConfigs,
+  verifySettings(settings) {
+    const style = settings['style'];
+    return style === undefined || Object.hasOwn(STYLES, style as string)
+      ? []
+      : [
+          `"style" should be one of ${Object.keys(STYLES)
+            .map((known) => `"${known}"`)
+            .join(', ')}, not ${JSON.stringify(style)}`,
+        ];
+  },
   run(_feature, file, configuration) {
     const {style} = mergeDefaults(availableConfigs, configuration);
     const convert = STYLES[style];

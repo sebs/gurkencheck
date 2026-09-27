@@ -77,6 +77,12 @@ function resolveConfig(configuration: Record<string, unknown>): IndentationConfi
 const rule: LintRule = {
   name,
   availableConfigs,
+  verifySettings(settings) {
+    const character = settings['character'];
+    return character === undefined || ['any', 'space', 'tab'].includes(character as string)
+      ? []
+      : [`"character" should be "any", "space" or "tab", not ${JSON.stringify(character)}`];
+  },
   run(feature, file, configuration) {
     if (feature === undefined) {
       return [];

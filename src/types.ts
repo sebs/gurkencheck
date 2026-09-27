@@ -100,6 +100,13 @@ export interface LintRule {
    */
   readonly availableConfigs?: unknown;
   /**
+   * Checks what the configuration gives the rule beyond the types of its
+   * settings, which are checked against `availableConfigs` already: that a
+   * pattern is a regular expression, or a value one of a fixed set. Returns
+   * what is wrong, an empty list when nothing is.
+   */
+  verifySettings?(settings: Record<string, unknown>): string[];
+  /**
    * Returns the violations found in this file. A rule that needs to wait for
    * something - reading a file, asking a service - may return a promise.
    *
