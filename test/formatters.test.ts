@@ -229,6 +229,13 @@ test('tap quotes a message containing an apostrophe', () => {
   assert.match(output, /message: 'it''s wrong'/u);
 });
 
+test('tap escapes a message holding characters YAML cannot quote plainly', () => {
+  const output = capture(getFormatter('tap')!, [
+    {filePath: '/a.feature', errors: [{line: 1, message: 'a\u0001 "b"\nc\\', rule: 'r'}]},
+  ]);
+  assert.match(output, /message: "a\\x01 \\"b\\"\\x0ac\\\\"$/mu);
+});
+
 test('tap emits an empty plan when there is nothing to report', () => {
   assert.equal(capture(getFormatter('tap')!, []), 'TAP version 13\n1..0');
 });

@@ -16,11 +16,35 @@ import type {FormatterRun} from './index.ts';
 import type {FileResult, RuleError} from '../types.ts';
 
 /**
- * Quotes a scalar for YAML using single quotes, in which the only character
- * needing attention is the quote itself.
+ * Characters a single-quoted YAML scalar cannot hold as they are: anything
+ * YAML does not count as printable, and line breaks, which it would fold.
+ */
+const NEEDS_ESCAPING = /[^\t\u0020-\u007E\u0085\u00A0-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/u;
+
+/**
+ * Quotes a scalar for YAML. Single quotes, in which the only character needing
+ * attention is the quote itself, unless the value holds something they cannot
+ * carry; then double quotes, which can escape anything.
  */
 function quote(value: string): string {
-  return `'${value.split("'").join("''")}'`;
+  if (!NEEDS_ESCAPING.test(value)) {
+    return `'${value.split("'").join("''")}'`;
+  }
+  let escaped = '';
+  for (const character of value) {
+    if (character === '"' || character === '\\') {
+      escaped += `\\${character}`;
+    } else if (NEEDS_ESCAPING.test(character)) {
+      const code = character.codePointAt(0)!;
+      escaped +=
+        code <= 0xff
+          ? `\\x${code.toString(16).padStart(2, '0')}`
+          : `\\u${code.toString(16).padStart(4, '0')}`;
+    } else {
+      escaped += character;
+    }
+  }
+  return `"${escaped}"`;
 }
 
 function severityOf(error: RuleError): string {

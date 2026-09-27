@@ -21,3 +21,13 @@ test('wraps text in CDATA', () => {
 test('splits CDATA around a nested terminator', () => {
   assert.equal(cdata('a]]>b'), '<![CDATA[a]]]]><![CDATA[>b]]>');
 });
+
+test('replaces characters XML cannot carry', () => {
+  assert.equal(escapeXml('a\u0001b￾c\uD800d'), 'a�b�c�d');
+  assert.equal(attributes({message: 'x\u001Fy'}), ' message="x�y"');
+  assert.equal(cdata('\u0000'), '<![CDATA[�]]>');
+});
+
+test('keeps tabs, line breaks and characters beyond the BMP', () => {
+  assert.equal(escapeXml('a\tb\nc\r😀'), 'a\tb\nc\r😀');
+});
