@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {after, before, test} from 'node:test';
-import {globSync, globToRegExp} from '../../src/util/glob.ts';
+import {globRoot, globSync, globToRegExp} from '../../src/util/glob.ts';
 
 const matches = (pattern: string, candidate: string): boolean =>
   globToRegExp(pattern).test(candidate);
@@ -140,4 +140,8 @@ test('the directory a pattern starts from may hold glob characters of its own', 
     process.chdir(root);
     fs.rmSync(odd, {recursive: true, force: true});
   }
+});
+
+test('an escaped directory name is where the search starts', () => {
+  assert.equal(globRoot('specs \\[wip\\]/**/*.feature', '/base'), path.resolve('/base/specs [wip]'));
 });

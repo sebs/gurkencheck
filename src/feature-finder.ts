@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {uniq} from './util/collections.ts';
-import {globRoot, globStream, globSync} from './util/glob.ts';
+import {escapeGlob, globRoot, globStream, globSync, literalPath} from './util/glob.ts';
 
 /** The ignore file looked for when `--ignore` is not given. */
 export const DEFAULT_IGNORE_FILE_NAME = '.gurkencheckignore';
@@ -35,26 +35,47 @@ export interface FeatureFileStream {
   invalidPatterns: string[];
 }
 
+/** The argument with forward slashes, whatever the platform writes. */
+function toSlashes(pattern: string): string {
+  return pattern.split(path.sep).join('/');
+}
+
 /**
  * Expands one command line argument into a glob that only matches feature
  * files, or `undefined` when it does not name anything usable.
+ *
+ * Something that exists is taken as a name rather than as a glob, and
+ * escaped, so a file or directory whose name holds glob characters - `[wip]`,
+ * `{x}` - is still found, and a directory called `x.feature` is searched. A
+ * name without glob syntax that does not exist is reported rather than
+ * searched for: matching nothing, it would end in a clean run.
  */
 function toFeatureGlob(pattern: string): string | undefined {
   if (pattern === '.') {
     return '**/*.feature';
+  }
+
+  let stats: fs.Stats | undefined;
+  try {
+    stats = fs.statSync(pattern);
+  } catch {
+    stats = undefined;
+  }
+  if (stats?.isDirectory() === true) {
+    return `${escapeGlob(toSlashes(pattern)).replace(/\/+$/, '')}/**/*.feature`;
+  }
+  if (stats?.isFile() === true) {
+    return pattern.endsWith('.feature') ? escapeGlob(toSlashes(pattern)) : undefined;
+  }
+
+  if (literalPath(toSlashes(pattern)) !== undefined) {
+    return undefined;
   }
   if (/\/\*\*$/.test(pattern)) {
     return `${pattern}/*.feature`;
   }
   if (pattern.endsWith('.feature')) {
     return pattern;
-  }
-  try {
-    if (fs.statSync(pattern).isDirectory()) {
-      return path.join(pattern, '**/*.feature').split(path.sep).join('/');
-    }
-  } catch {
-    // Reported by the caller as an invalid pattern.
   }
   return undefined;
 }

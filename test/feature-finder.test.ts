@@ -188,3 +188,37 @@ test('the streaming search hands the same file over only once', async () => {
   assert.deepEqual(found, [...new Set(found)]);
   assert.deepEqual(found.sort(), findFeatureFiles(['.']).files.sort());
 });
+
+test('reports a feature file that does not exist', () => {
+  // Treated as a glob matching nothing, it used to end in a clean run.
+  const {files, invalidPatterns} = findFeatureFiles(['missing.feature']);
+  assert.deepEqual(files, []);
+  assert.deepEqual(invalidPatterns, ['missing.feature']);
+});
+
+test('finds a file named explicitly even when a search would skip it', () => {
+  fs.writeFileSync('.hidden.feature', '');
+  fs.symlinkSync(`${FOUND}/a.feature`, 'link.feature');
+  assert.deepEqual(findFeatureFiles(['.hidden.feature']).files, ['.hidden.feature']);
+  assert.deepEqual(findFeatureFiles(['link.feature']).files, ['link.feature']);
+});
+
+test('finds files and directories whose names hold glob characters', () => {
+  fs.mkdirSync('specs [wip]/{x}', {recursive: true});
+  fs.writeFileSync('specs [wip]/{x}/w.feature', '');
+  fs.writeFileSync('[x].feature', '');
+  assert.deepEqual(findFeatureFiles(['[x].feature']).files, ['[x].feature']);
+  assert.deepEqual(findFeatureFiles(['specs [wip]']).files, ['specs [wip]/{x}/w.feature']);
+});
+
+test('searches a directory whose name ends in .feature', () => {
+  fs.writeFileSync('directory.feature/inside.feature', '');
+  assert.deepEqual(findFeatureFiles(['directory.feature']).files, [
+    'directory.feature/inside.feature',
+  ]);
+});
+
+test('the streaming search finds a file named explicitly', async () => {
+  fs.writeFileSync('.hidden.feature', '');
+  assert.deepEqual(await streamed(['.hidden.feature']), ['.hidden.feature']);
+});

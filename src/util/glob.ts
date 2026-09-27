@@ -97,23 +97,39 @@ export function escapeGlob(literal: string): string {
   return literal.replace(/[*?[\]{}\\]/g, '\\$&');
 }
 
-/** True when the segment contains glob syntax rather than a literal name. */
-function isDynamic(segment: string): boolean {
-  return /[*?[\]{}]/.test(segment);
+/**
+ * The path a pattern names when it holds no glob syntax, with its escapes
+ * removed, or `undefined` when it is a real pattern.
+ */
+export function literalPath(pattern: string): string | undefined {
+  let literal = '';
+  for (let index = 0; index < pattern.length; index++) {
+    const character = pattern[index]!;
+    if (character === '\\' && index + 1 < pattern.length) {
+      literal += pattern[++index]!;
+    } else if ('*?[]{}'.includes(character)) {
+      return undefined;
+    } else {
+      literal += character;
+    }
+  }
+  return literal;
 }
 
 /**
  * The leading run of literal segments, used as the directory to start walking
- * from so that `a/b/**` does not scan the whole tree.
+ * from so that `a/b/**` does not scan the whole tree, with its escapes
+ * removed - and what is left of the pattern after it.
  */
-function staticPrefix(pattern: string): string {
+function splitPattern(pattern: string): {prefix: string; rest: string} {
   const segments = pattern.split('/');
   const literal: string[] = [];
   for (const segment of segments.slice(0, -1)) {
-    if (isDynamic(segment)) break;
-    literal.push(segment);
+    const name = literalPath(segment);
+    if (name === undefined) break;
+    literal.push(name);
   }
-  return literal.join('/');
+  return {prefix: literal.join('/'), rest: segments.slice(literal.length).join('/')};
 }
 
 /**
@@ -122,7 +138,7 @@ function staticPrefix(pattern: string): string {
  * anything the pattern could match.
  */
 export function globRoot(pattern: string, cwd: string = process.cwd()): string {
-  return path.resolve(cwd, staticPrefix(pattern.split(path.sep).join('/')));
+  return path.resolve(cwd, splitPattern(pattern.split(path.sep).join('/')).prefix);
 }
 
 function isHidden(name: string): boolean {
@@ -263,11 +279,22 @@ function newSearch(pattern: string, options: GlobOptions): Search {
   // `./features/a.feature` against `features/a.feature`, or `../**` against
   // a file below cwd, which has no `../` at all - and the search comes back
   // empty rather than wrong, which reads as "nothing to report".
-  const prefix = staticPrefix(normalisedPattern);
-  const searchRoot = path.resolve(cwd, prefix);
-  const rest = normalisedPattern.slice(prefix === '' ? 0 : prefix.length + 1);
-  const root = searchRoot.split(path.sep).join('/').replace(/\/$/, '');
-  const matches = globToRegExp(`${escapeGlob(root)}/${rest}`);
+  //
+  // A pattern holding no glob syntax names one path, which is looked at
+  // directly rather than searched for, so a file named on purpose is found
+  // even where a search would pass it by: a dotfile, or a symlink.
+  const literal = literalPath(normalisedPattern);
+  let searchRoot: string;
+  let matches: RegExp;
+  if (literal !== undefined) {
+    searchRoot = path.resolve(cwd, literal);
+    matches = globToRegExp(escapeGlob(searchRoot.split(path.sep).join('/')));
+  } else {
+    const {prefix, rest} = splitPattern(normalisedPattern);
+    searchRoot = path.resolve(cwd, prefix);
+    const root = searchRoot.split(path.sep).join('/').replace(/\/$/, '');
+    matches = globToRegExp(`${escapeGlob(root)}/${rest}`);
+  }
 
   return {
     searchRoot,
