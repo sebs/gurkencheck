@@ -476,7 +476,10 @@ export const RULE_DOCS: RuleDoc[] = [
     explanation:
       'A placeholder with no matching column is never substituted. The step runs with the ' +
       'angle brackets still in the text, which almost never matches a step definition and ' +
-      'is confusing when it does. Usually it is a typo or a column that was renamed.',
+      'is confusing when it does. Usually it is a typo or a column that was renamed. ' +
+      'With several Examples tables, each one needs the column: Cucumber runs the rows of ' +
+      'each table on their own, so a column only some tables have leaves the placeholder ' +
+      'unfilled in the others.',
     config: '{\n  "no-undeclared-variables": "on"\n}',
     good: 'Feature: Logging in\n\n  Scenario Outline: Logging in as <role>\n    Given I am a <role>\n\n    Examples:\n      | role  |\n      | admin |',
     bad: 'Feature: Logging in\n\n  Scenario Outline: Logging in as <role>\n    Given I am a <rol>\n\n    Examples:\n      | role  |\n      | admin |',

@@ -38,3 +38,9 @@ test('says nothing about an unused examples column', async () => {
     undeclared('b', 7),
   ]);
 });
+
+test('reports a variable that one of several Examples tables leaves out', async () => {
+  await checkRule(rule, 'no-undeclared-variables/SomeTables.feature', {}, [
+    {message: 'Step variable "b" does not exist in the examples table on line 10', line: 4},
+  ]);
+});

@@ -21,10 +21,23 @@ export interface Position {
 /** Variable name -> every place it appears. */
 export type Sightings = Map<string, Position[]>;
 
+/** The columns one Examples table declares. */
+export interface ExamplesTable {
+  /** The line of the `Examples:` keyword. */
+  line: number;
+  columns: Set<string>;
+}
+
 /** What a Scenario Outline declares, and what it actually uses. */
 export interface ScenarioVariables {
   /** Column names, against the Examples header cells declaring them. */
   declared: Sightings;
+  /**
+   * Each Examples table with a header, on its own. Cucumber runs the rows of
+   * each table separately, so a variable has to be declared in every one of
+   * them, not merely in one.
+   */
+  tables: ExamplesTable[];
   /** Variable names, against every node using them. */
   used: Sightings;
 }
@@ -55,13 +68,20 @@ function collect(text: string | undefined, position: Position, into: Sightings):
 export function variablesOf(scenario: Scenario): ScenarioVariables {
   const declared: Sightings = new Map();
   const used: Sightings = new Map();
+  const tables: ExamplesTable[] = [];
 
   for (const examples of scenario.examples) {
-    for (const cell of examples.tableHeader?.cells ?? []) {
+    if (examples.tableHeader === undefined) {
+      continue;
+    }
+    const columns = new Set<string>();
+    for (const cell of examples.tableHeader.cells) {
       if (cell.value !== '') {
         note(cell.value, at(cell.location), declared);
+        columns.add(cell.value);
       }
     }
+    tables.push({line: examples.location.line, columns});
   }
 
   collect(scenario.name, at(scenario.location), used);
@@ -81,5 +101,5 @@ export function variablesOf(scenario: Scenario): ScenarioVariables {
     }
   }
 
-  return {declared, used};
+  return {declared, tables, used};
 }

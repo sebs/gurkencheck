@@ -20,18 +20,24 @@ const rule: LintRule = {
         continue;
       }
 
-      const {declared, used} = variablesOf(scenario);
+      const {declared, tables, used} = variablesOf(scenario);
 
       for (const [variable, positions] of used) {
-        if (declared.has(variable)) {
-          continue;
-        }
-        for (const position of positions) {
-          errors.push({
-            message: `Step variable "${variable}" does not exist in the examples table`,
-            rule: name,
-            ...position,
-          });
+        // Declared nowhere is one mistake; declared in some tables but not
+        // all is another, and the table leaving it out is worth naming.
+        const messages = !declared.has(variable)
+          ? [`Step variable "${variable}" does not exist in the examples table`]
+          : tables
+              .filter((table) => !table.columns.has(variable))
+              .map(
+                (table) =>
+                  `Step variable "${variable}" does not exist in the examples table on line ${table.line}`,
+              );
+
+        for (const message of messages) {
+          for (const position of positions) {
+            errors.push({message, rule: name, ...position});
+          }
         }
       }
     }
