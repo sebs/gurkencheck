@@ -251,29 +251,65 @@ export interface GlobOptions {
   /** Directory that relative patterns and returned paths are relative to. */
   cwd?: string;
   /**
-   * Patterns whose matches are dropped from the result. A pattern matching a
-   * directory drops everything below it, as in .gitignore and .eslintignore.
+   * Patterns whose matches are dropped from the result, read as .gitignore
+   * reads them. A pattern matching a directory drops everything below it.
    */
   ignore?: readonly string[];
 }
 
+/** One line of an ignore list, read the way .gitignore reads it. */
+interface IgnoreRule {
+  matches: RegExp;
+  /** A `!` pattern, bringing back what an earlier one left out. */
+  negated: boolean;
+  /** A pattern ending in `/`, which only ever matches a directory. */
+  directoryOnly: boolean;
+}
+
 /**
- * True when the path, or any directory leading to it, matches one of the
- * patterns.
+ * Reads an ignore pattern as .gitignore does. A pattern with no slash, other
+ * than a trailing one, matches a name at any depth; one with a slash is
+ * anchored to the working directory, whether or not it starts with `./` or
+ * `/`; a trailing slash means directories only; and a leading `!` brings back
+ * what an earlier pattern left out.
+ */
+function toIgnoreRule(pattern: string): IgnoreRule {
+  let text = pattern.split(path.sep).join('/');
+  const negated = text.startsWith('!');
+  if (negated) {
+    text = text.slice(1);
+  }
+  const directoryOnly = text.endsWith('/');
+  text = text.replace(/\/+$/u, '').replace(/^(?:\.\/)+/u, '');
+  const anchored = text.includes('/');
+  text = text.replace(/^\/+/u, '');
+  return {matches: globToRegExp(anchored ? text : `**/${text}`), negated, directoryOnly};
+}
+
+/**
+ * True when the path, or any directory leading to it, is ignored.
  *
  * Testing the parent directories is what makes an entry like `build` or `o*e`
  * skip the whole directory rather than only a file of that exact name. Without
  * it an ignore file has to spell out `build/**` everywhere, which is not how
- * .gitignore or .eslintignore behave.
+ * .gitignore or .eslintignore behave. As there, the last pattern to match a
+ * path decides, and nothing inside an ignored directory can be brought back.
  */
-function isIgnored(relativePath: string, ignores: readonly RegExp[]): boolean {
-  if (ignores.length === 0) {
+function isIgnored(relativePath: string, rules: readonly IgnoreRule[]): boolean {
+  if (rules.length === 0) {
     return false;
   }
   const segments = relativePath.split('/');
   for (let depth = 1; depth <= segments.length; depth++) {
     const prefix = segments.slice(0, depth).join('/');
-    if (ignores.some((ignore) => ignore.test(prefix))) {
+    const isDirectory = depth < segments.length;
+    let ignored = false;
+    for (const rule of rules) {
+      if ((isDirectory || !rule.directoryOnly) && rule.matches.test(prefix)) {
+        ignored = !rule.negated;
+      }
+    }
+    if (ignored) {
       return true;
     }
   }
@@ -291,9 +327,7 @@ interface Search {
 function newSearch(pattern: string, options: GlobOptions): Search {
   const cwd = options.cwd ?? process.cwd();
   const normalisedPattern = pattern.split(path.sep).join('/');
-  const ignores = (options.ignore ?? []).map((ignorePattern) =>
-    globToRegExp(ignorePattern.split(path.sep).join('/')),
-  );
+  const ignores = (options.ignore ?? []).map(toIgnoreRule);
 
   // Matched against absolute paths, with the literal start of the pattern
   // resolved first. Comparing the pattern as written with a path relative to

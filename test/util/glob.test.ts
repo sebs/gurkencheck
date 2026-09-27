@@ -151,3 +151,50 @@ test('the directory a pattern starts from may hold glob characters of its own', 
 test('an escaped directory name is where the search starts', () => {
   assert.equal(globRoot('specs \\[wip\\]/**/*.feature', '/base'), path.resolve('/base/specs [wip]'));
 });
+
+test('an ignore pattern without a slash matches at any depth, as in .gitignore', () => {
+  assert.deepEqual(globSync('**/*.feature', {ignore: ['nested']}), ['features/a.feature']);
+  assert.deepEqual(globSync('**/*.feature', {ignore: ['b.feature']}), ['features/a.feature']);
+});
+
+test('an ignore pattern with a slash is anchored to the working directory', () => {
+  assert.deepEqual(globSync('**/*.feature', {ignore: ['nested/b.feature']}), [
+    'features/a.feature',
+    'features/nested/b.feature',
+  ]);
+  assert.deepEqual(globSync('**/*.feature', {ignore: ['/features/nested']}), ['features/a.feature']);
+});
+
+test('a trailing slash or a leading ./ still names the directory', () => {
+  assert.deepEqual(globSync('**/*.feature', {ignore: ['features/nested/']}), ['features/a.feature']);
+  assert.deepEqual(globSync('**/*.feature', {ignore: ['./features/nested']}), ['features/a.feature']);
+});
+
+test('a trailing slash only matches a directory', () => {
+  assert.deepEqual(globSync('**/*.feature', {ignore: ['a.feature/']}), [
+    'features/a.feature',
+    'features/nested/b.feature',
+  ]);
+});
+
+test('a negated ignore pattern brings a file back, the last match winning', () => {
+  assert.deepEqual(globSync('**/*.feature', {ignore: ['*.feature', '!b.feature']}), [
+    'features/nested/b.feature',
+  ]);
+  assert.deepEqual(globSync('**/*.feature', {ignore: ['!b.feature', '*.feature']}), []);
+});
+
+test('a file inside an ignored directory cannot be brought back, as in .gitignore', () => {
+  assert.deepEqual(globSync('**/*.feature', {ignore: ['nested', '!b.feature']}), [
+    'features/a.feature',
+  ]);
+});
+
+test('ignore patterns apply to paths outside the working directory too', () => {
+  process.chdir(path.join(root, 'features'));
+  try {
+    assert.deepEqual(globSync('../**/*.feature', {ignore: ['nested']}), ['a.feature']);
+  } finally {
+    process.chdir(root);
+  }
+});

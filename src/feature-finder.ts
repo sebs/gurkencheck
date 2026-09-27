@@ -11,7 +11,7 @@ import {escapeGlob, globRoot, globStream, globSync, literalPath} from './util/gl
 export const DEFAULT_IGNORE_FILE_NAME = '.gurkencheckignore';
 
 /** Never worth linting, and expensive to walk into. */
-export const DEFAULT_IGNORED_PATTERNS = ['node_modules/**'];
+export const DEFAULT_IGNORED_PATTERNS = ['node_modules'];
 
 export interface FeatureSearch {
   /** Matching feature files, relative to the working directory. */

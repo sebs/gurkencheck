@@ -314,9 +314,18 @@ extends, and later entries in a list win over earlier ones.
 Put one glob per line in a `.gurkencheckignore` file, or pass `--ignore` on the command
 line. Without either, `node_modules` is skipped and everything else is checked.
 
-A pattern that matches a directory skips everything below it, as in `.gitignore` and
-`.eslintignore`, so `build` is enough and you do not have to write `build/**`. Blank lines
-and lines starting with `#` are ignored.
+Patterns are read the way `.gitignore` reads them:
+
+- A pattern that matches a directory skips everything below it, so `build` is enough and
+  you do not have to write `build/**`.
+- A pattern with no slash in it, such as `build` or `*.wip.feature`, matches at any depth.
+  One with a slash, such as `features/legacy`, is anchored to the directory gurkencheck
+  runs in.
+- A trailing slash, as in `tmp/`, matches only a directory.
+- A leading `!` brings back something an earlier pattern skipped. The last pattern to match
+  decides, and nothing inside a skipped directory can be brought back.
+
+Blank lines and lines starting with `#` are ignored.
 
 ## Custom formatters
 

@@ -222,3 +222,9 @@ test('the streaming search finds a file named explicitly', async () => {
   fs.writeFileSync('.hidden.feature', '');
   assert.deepEqual(await streamed(['.hidden.feature']), ['.hidden.feature']);
 });
+
+test('node_modules is skipped by default at any depth', () => {
+  fs.mkdirSync('packages/app/node_modules/dep', {recursive: true});
+  fs.writeFileSync('packages/app/node_modules/dep/vendored.feature', '');
+  assert.deepEqual(findFeatureFiles([]).files, bothFeatures);
+});
