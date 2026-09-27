@@ -328,6 +328,30 @@ test('sarif lists only the rules that found something, with a link to their page
   assert.match(rules[0]!.helpUri, /rules\/no-trailing-spaces\.html$/u);
 });
 
+test('sarif links only the rules that have a page', () => {
+  const log = toSarif(
+    [
+      {
+        filePath: '/a.feature',
+        errors: [
+          {line: 1, message: 'm', rule: 'unexpected-error'},
+          {line: 1, message: 'm', rule: 'my-custom-rule'},
+          {line: 1, message: 'm', rule: 'one-feature-per-file'},
+        ],
+      },
+    ],
+    '/',
+  ) as {runs: {tool: {driver: {rules: {id: string; helpUri?: string}[]}}}[]};
+  assert.deepEqual(
+    log.runs[0]!.tool.driver.rules.map((rule) => [rule.id, rule.helpUri !== undefined]),
+    [
+      ['my-custom-rule', false],
+      ['one-feature-per-file', true],
+      ['unexpected-error', false],
+    ],
+  );
+});
+
 test('sarif reports paths relative to the working directory', () => {
   const log = toSarif(RESULTS, '/') as {
     runs: {results: {locations: {physicalLocation: {artifactLocation: {uri: string}}}[]}[]}[];

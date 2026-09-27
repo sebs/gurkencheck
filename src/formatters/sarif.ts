@@ -9,12 +9,20 @@
  */
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {ALWAYS_ON_RULES} from '../gherkin/parse.ts';
+import {BUILT_IN_RULES} from '../rules/index.ts';
 import type {FileResult, RuleError} from '../types.ts';
 import {version} from '../version.ts';
 
 const SCHEMA = 'https://json.schemastore.org/sarif-2.1.0.json';
 const SARIF_VERSION = '2.1.0';
 const DOCUMENTATION = 'https://sebs.github.io/gurkencheck/';
+
+/** The rules with a page on the documentation site. */
+const DOCUMENTED_RULES = new Set<string>([
+  ...BUILT_IN_RULES.map((rule) => rule.name),
+  ...ALWAYS_ON_RULES,
+]);
 
 /** SARIF's levels, which happen to line up with ours. */
 const LEVEL = {error: 'error', warning: 'warning'} as const;
@@ -86,10 +94,11 @@ export function toSarif(results: readonly FileResult[], cwd: string = process.cw
             name: 'gurkencheck',
             informationUri: DOCUMENTATION,
             version: version(),
-            rules: ruleIds.map((id) => ({
-              id,
-              helpUri: `${DOCUMENTATION}rules/${id}.html`,
-            })),
+            // Only the rules documented on the site get a link: one to a
+            // custom rule's page, or to unexpected-error's, would be a 404.
+            rules: ruleIds.map((id) =>
+              DOCUMENTED_RULES.has(id) ? {id, helpUri: `${DOCUMENTATION}rules/${id}.html`} : {id},
+            ),
           },
         },
         results: findings,
