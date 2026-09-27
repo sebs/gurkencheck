@@ -6,7 +6,9 @@
  * ever be the reason a build goes red. Only being unable to run at all -
  * an option that makes no sense, a path that names nothing - fails.
  */
+import fs from 'node:fs';
 import {parseArgs} from 'node:util';
+import {DEFAULT_CONFIG_FILE_NAME, readConfiguredLanguage} from '../config-parser.ts';
 import {EXIT_OK, EXIT_USAGE} from '../exit-codes.ts';
 import {DEFAULT_IGNORE_FILE_NAME, findFeatureFileStream} from '../feature-finder.ts';
 import {isKnownLanguage} from '../gherkin/dialects.ts';
@@ -31,6 +33,8 @@ export function statsUsage(): string {
     'Options:',
     `  -f, --format <format>   output format: ${Object.keys(STATS_FORMATTERS).join(', ')}`,
     `                          (default: ${DEFAULT_STATS_FORMAT})`,
+    `  -c, --config <path>     configuration file to take the language from`,
+    `                          (default: ${DEFAULT_CONFIG_FILE_NAME})`,
     `  -i, --ignore <globs>    comma separated globs to skip, overriding ${DEFAULT_IGNORE_FILE_NAME}`,
     '  -l, --language <code>   dialect for files with no "# language:" header',
     `      --top <n>           how many entries each list shows (default: ${DEFAULT_TOP})`,
@@ -52,6 +56,7 @@ export async function runStats(
       args: [...argv],
       options: {
         format: {type: 'string', short: 'f'},
+        config: {type: 'string', short: 'c'},
         ignore: {type: 'string', short: 'i'},
         language: {type: 'string', short: 'l'},
         top: {type: 'string'},
@@ -96,7 +101,17 @@ export async function runStats(
     }
   }
 
-  const language = values.language;
+  if (values.config !== undefined && !fs.existsSync(values.config)) {
+    diagnostics.report({
+      level: 'error',
+      message: `Could not find specified config file "${values.config}"`,
+    });
+    return EXIT_USAGE;
+  }
+
+  // The same dialect the linter would read the files in: --language, or else
+  // the configuration's. Nothing else in the configuration matters here.
+  const language = values.language ?? (await readConfiguredLanguage(values.config));
   if (language !== undefined && !isKnownLanguage(language)) {
     diagnostics.report({
       level: 'error',

@@ -182,6 +182,34 @@ async function flatten(
 }
 
 /**
+ * The `language` a configuration file sets, following what it extends, or
+ * `undefined` when there is no file, it sets none, or it cannot be read.
+ *
+ * For commands that read feature files without linting them, such as
+ * `stats`: they need the dialect, but should not refuse to run over a rule
+ * setting they never use.
+ */
+export async function readConfiguredLanguage(
+  configPath: string = DEFAULT_CONFIG_FILE_NAME,
+): Promise<string | undefined> {
+  if (!fs.existsSync(configPath)) {
+    return undefined;
+  }
+  try {
+    const flattened = (await flatten(parseFile(configPath), configPath, new Set(), new Set())) as {
+      [LANGUAGE]?: unknown;
+    };
+    const language = flattened[LANGUAGE];
+    return typeof language === 'string' ? language : undefined;
+  } catch (thrown) {
+    if (thrown instanceof ConfigurationError) {
+      return undefined;
+    }
+    throw thrown;
+  }
+}
+
+/**
  * Reads the configuration file at `configPath`, or the default file in the
  * working directory when no path is given. With neither, the recommended
  * rules are used.

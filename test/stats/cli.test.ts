@@ -130,3 +130,30 @@ test('--ignore leaves files out of the count', async () => {
   assert.equal(report.inventory.features, 2);
   assert.deepEqual(report.languages, [{code: 'en', files: 2}]);
 });
+
+test('stats reads files in the language the configuration sets', async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-stats-language-'));
+  try {
+    fs.writeFileSync(
+      path.join(cwd, 'deconnexion.feature'),
+      'Fonctionnalité: Se déconnecter\n\n  Scénario: Se déconnecter\n    Quand Ulrick se déconnecte\n',
+    );
+    // A rule stats knows nothing about must not stop it reading the language.
+    fs.writeFileSync(path.join(cwd, 'team.json'), '{"language": "fr", "my-custom-rule": "on"}');
+    fs.writeFileSync(path.join(cwd, '.gurkencheckrc'), '{"extends": "./team.json"}');
+
+    const {code, stdout} = await cli(['stats', '.'], cwd);
+    assert.equal(code, 0);
+    assert.match(stdout, /^1 file, 1 feature/mu);
+
+    fs.rmSync(path.join(cwd, '.gurkencheckrc'));
+    const configured = await cli(['stats', '-c', 'team.json', '.'], cwd);
+    assert.match(configured.stdout, /^1 file, 1 feature/mu);
+
+    const missing = await cli(['stats', '-c', 'nowhere.json', '.'], cwd);
+    assert.equal(missing.code, 2);
+    assert.match(missing.stderr, /Could not find specified config file "nowhere\.json"/u);
+  } finally {
+    fs.rmSync(cwd, {recursive: true, force: true});
+  }
+});

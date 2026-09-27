@@ -154,6 +154,8 @@ Statistics are for reading, not for failing a build — that is what the rules a
 gurkencheck stats [options] <feature-files>
 
   -f, --format <format>   output format: text, json, md (default: text)
+  -c, --config <path>     configuration file to take the language from
+                          (default: .gurkencheckrc)
   -i, --ignore <globs>    comma separated globs to skip
   -l, --language <code>   dialect for files with no "# language:" header
       --top <n>           how many entries each list shows (default: 10)
