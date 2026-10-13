@@ -26,3 +26,7 @@ test('leaves the content of a doc string alone, but not its delimiters', async (
     {message: 'Trailing spaces are not allowed', line: 7},
   ]);
 });
+
+test('leaves a content line starting with ``` alone inside a """ doc string', async () => {
+  await checkRule(rule, 'no-trailing-spaces/MarkdownDocString.feature', {}, []);
+});

@@ -21,19 +21,26 @@ export function contentLines(file: FeatureFile): string[] {
 /** The delimiters that open and close a doc string. */
 const DOC_STRING_DELIMITERS = ['"""', '```'];
 
+/** What part of a doc string a line is, if it is part of one. */
+export type DocStringPart = 'delimiter' | 'content' | undefined;
+
 /**
- * Marks which lines sit inside a doc string, delimiters included.
+ * Says of each line whether it opens or closes a doc string, sits inside one,
+ * or neither.
  *
  * Text inside a doc string is data belonging to the step, not part of the
- * layout of the file, so rules about formatting have to leave it alone.
+ * layout of the file, so rules about formatting have to leave it alone - but
+ * its delimiters are layout like any other line. Which is which is taken from
+ * where the parser found them, not from how a line starts: a Markdown doc
+ * string between """ may well hold lines starting with ```.
  *
  * Given the parsed document, the doc strings are taken from it, which is
  * exact. Without one - a file the parser rejected - the raw lines are read
  * instead, and a line opening with a delimiter is taken to open a doc
  * string, which a description line starting with `"""` also does.
  */
-export function markDocStrings(lines: readonly string[], feature?: Feature): boolean[] {
-  const inside = new Array<boolean>(lines.length).fill(false);
+export function docStringParts(lines: readonly string[], feature?: Feature): DocStringPart[] {
+  const parts = new Array<DocStringPart>(lines.length).fill(undefined);
 
   if (feature !== undefined) {
     for (const {node} of stepContainersOf(feature)) {
@@ -44,11 +51,11 @@ export function markDocStrings(lines: readonly string[], feature?: Feature): boo
         // The opening delimiter, the content, and the closing delimiter.
         const last = location.line + contentLines + 1;
         for (let line = location.line; line <= last && line <= lines.length; line++) {
-          inside[line - 1] = true;
+          parts[line - 1] = line === location.line || line === last ? 'delimiter' : 'content';
         }
       }
     }
-    return inside;
+    return parts;
   }
 
   let openDelimiter: string | undefined;
@@ -61,16 +68,23 @@ export function markDocStrings(lines: readonly string[], feature?: Feature): boo
       const delimiter = DOC_STRING_DELIMITERS.find((candidate) => trimmed.startsWith(candidate));
       if (delimiter !== undefined) {
         openDelimiter = delimiter;
-        inside[index] = true;
+        parts[index] = 'delimiter';
       }
       return;
     }
 
-    inside[index] = true;
     if (trimmed.startsWith(openDelimiter)) {
       openDelimiter = undefined;
+      parts[index] = 'delimiter';
+    } else {
+      parts[index] = 'content';
     }
   });
 
-  return inside;
+  return parts;
+}
+
+/** Marks which lines sit inside a doc string, delimiters included. */
+export function markDocStrings(lines: readonly string[], feature?: Feature): boolean[] {
+  return docStringParts(lines, feature).map((part) => part !== undefined);
 }
