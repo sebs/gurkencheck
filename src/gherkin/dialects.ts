@@ -26,29 +26,33 @@ export const DEFAULT_LANGUAGE = 'en';
 
 /** The dialect for a language code, falling back to English. */
 export function getDialect(language: string | undefined): Dialect {
-  return ALL_DIALECTS[language ?? DEFAULT_LANGUAGE] ?? ALL_DIALECTS[DEFAULT_LANGUAGE]!;
+  const code = language ?? DEFAULT_LANGUAGE;
+  return isKnownLanguage(code) ? ALL_DIALECTS[code]! : ALL_DIALECTS[DEFAULT_LANGUAGE]!;
 }
 
-/** True when `language` is one Gherkin knows about. */
+/**
+ * True when `language` is one Gherkin knows about.
+ *
+ * Only the table's own entries count: `constructor`, `__proto__` and
+ * `toString` are found on any object, and taken for dialects they got past
+ * this check and broke every file read in them.
+ */
 export function isKnownLanguage(language: string): boolean {
-  return language in ALL_DIALECTS;
+  return Object.hasOwn(ALL_DIALECTS, language);
 }
 
 const LANGUAGE_HEADER = /^\s*#\s*language\s*:\s*([\w-]+)\s*$/;
 
 /**
- * Reads the `# language: xx` header from the top of a feature file. Only the
- * leading comment and blank lines are inspected, which is where Gherkin
- * itself expects the header to be.
- *
- * A file with no header is read in `fallback`, which lets a project written
- * entirely in one language set it once instead of in every file.
+ * The `# language: xx` header at the top of a feature file, and the line it is
+ * on, whether or not Gherkin knows the language. Only the leading comment and
+ * blank lines are inspected, which is where Gherkin itself expects the header
+ * to be.
  */
-export function detectLanguage(
+export function languageHeader(
   lines: readonly string[],
-  fallback: string = DEFAULT_LANGUAGE,
-): string {
-  for (const line of lines) {
+): {language: string; line: number} | undefined {
+  for (const [index, line] of lines.entries()) {
     const trimmed = line.trim();
     if (trimmed === '') {
       continue;
@@ -57,9 +61,27 @@ export function detectLanguage(
       break;
     }
     const header = LANGUAGE_HEADER.exec(trimmed);
-    if (header?.[1] !== undefined && isKnownLanguage(header[1])) {
-      return header[1];
+    if (header?.[1] !== undefined) {
+      return {language: header[1], line: index + 1};
     }
+  }
+  return undefined;
+}
+
+/**
+ * The language a feature file is read in: the one its `# language: xx`
+ * header names, when Gherkin knows it.
+ *
+ * A file with no header is read in `fallback`, which lets a project written
+ * entirely in one language set it once instead of in every file.
+ */
+export function detectLanguage(
+  lines: readonly string[],
+  fallback: string = DEFAULT_LANGUAGE,
+): string {
+  const header = languageHeader(lines);
+  if (header !== undefined && isKnownLanguage(header.language)) {
+    return header.language;
   }
   return isKnownLanguage(fallback) ? fallback : DEFAULT_LANGUAGE;
 }

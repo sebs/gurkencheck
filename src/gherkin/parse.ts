@@ -16,7 +16,7 @@ import {mapWithWindow} from '../util/stream.ts';
 import type {Sequence} from '../util/stream.ts';
 import type {FeatureFile, RuleError} from '../types.ts';
 import type {Dialect} from './dialects.ts';
-import {DEFAULT_LANGUAGE, detectLanguage, getDialect} from './dialects.ts';
+import {DEFAULT_LANGUAGE, detectLanguage, getDialect, isKnownLanguage, languageHeader} from './dialects.ts';
 
 /**
  * Rules the parser enforces on every file. They cannot be turned off, but
@@ -270,6 +270,27 @@ export function parseFeature(
   const lines = toLines(source.replace(/^\uFEFF/u, ''));
   const file: FeatureFile = {relativePath, lines};
   const dialect = getDialect(detectLanguage(lines, defaultLanguage));
+
+  // Gherkin looks a header's language up on a plain object, so `constructor`
+  // or `toString` is found there and breaks it somewhere deep inside. Such a
+  // name is refused here, as Gherkin refuses any other it does not know.
+  // The same goes for the default language a caller of the library passes.
+  const header = languageHeader(lines);
+  const asked = header ?? {language: defaultLanguage, line: 0};
+  if (!isKnownLanguage(asked.language) && asked.language in Object.prototype) {
+    return {
+      file,
+      feature: undefined,
+      errors: [
+        {
+          message: `Language not supported: ${asked.language}`,
+          rule: 'unexpected-error',
+          line: asked.line,
+          ...(asked.line > 0 ? {column: 1} : {}),
+        },
+      ],
+    };
+  }
 
   const errors: RuleError[] = [];
   let workingLines: readonly string[] = lines;

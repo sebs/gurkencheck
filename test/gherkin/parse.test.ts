@@ -219,3 +219,21 @@ test('a byte order mark does not hide a language header', () => {
   const parsed = parseFeature('x.feature', '﻿# language: fr\nFonctionnalité: A\n');
   assert.equal(parsed.feature?.language, 'fr');
 });
+
+test('a name every object carries is not a language', () => {
+  for (const name of ['constructor', '__proto__', 'toString', 'hasOwnProperty']) {
+    assert.equal(isKnownLanguage(name), false, name);
+    assert.equal(getDialect(name).name, 'English', name);
+  }
+});
+
+test('a header or a default language naming one is refused, not taken for a dialect', () => {
+  const header = parseFeature('a.feature', '# language: constructor\nFeature: A\n');
+  assert.deepEqual(header.errors, [
+    {message: 'Language not supported: constructor', rule: 'unexpected-error', line: 1, column: 1},
+  ]);
+  const fallback = parseFeature('a.feature', 'Feature: A\n', 'toString');
+  assert.deepEqual(fallback.errors, [
+    {message: 'Language not supported: toString', rule: 'unexpected-error', line: 0},
+  ]);
+});
