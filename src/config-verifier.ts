@@ -160,15 +160,19 @@ export function verifyConfiguration(configuration: Configuration, rules: RuleReg
       continue;
     }
 
+    // ["on"] is a state written as a list, which is how a configuration reads
+    // once some rules in it take settings; it needs nothing more. A list with
+    // nothing in it, or too much, is one mistake and is reported once.
+    if (ruleConfig.length === 0 || ruleConfig.length > 2) {
+      errors.push(`${prefix}the config should be a state, or a list of a state and the rule's settings`);
+      continue;
+    }
     if (!STATES.includes(ruleConfig[0] as string)) {
       errors.push(`${prefix}the first part of the config should be "on", "warn" or "off"`);
     }
-    if (ruleConfig.length !== 2) {
-      errors.push(`${prefix}the config should have exactly 2 parts: a state and the rule's settings`);
-      continue;
+    if (ruleConfig.length === 2) {
+      verifySettings(rule, ruleConfig[1], errors);
     }
-
-    verifySettings(rule, ruleConfig[1], errors);
   }
 
   return errors;

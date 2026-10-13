@@ -53,7 +53,7 @@ export type Severity = 'error' | 'warning';
  * A rule's entry in the configuration file: either just a state, or a state
  * plus the rule's own settings.
  */
-export type RuleConfig = RuleState | readonly [RuleState, unknown];
+export type RuleConfig = RuleState | readonly [RuleState] | readonly [RuleState, unknown];
 
 /** The parsed contents of a `.gurkencheckrc` file. */
 export type Configuration = Record<string, RuleConfig>;

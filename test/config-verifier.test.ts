@@ -48,9 +48,16 @@ test('reports a bad state in the array form', () => {
   ]);
 });
 
-test('reports an array config with the wrong number of parts', () => {
-  const errors = verify({'name-length': ['on']} as unknown as Configuration);
-  assert.match(errors[0]!, /should have exactly 2 parts/u);
+test('takes a state written as a list of one', () => {
+  assert.deepEqual(verify({'name-length': ['on'], 'no-empty-file': ['warn']} as unknown as Configuration), []);
+});
+
+test('reports an empty or overlong list once', () => {
+  for (const config of [[], ['on', {}, 'extra']]) {
+    const errors = verify({'name-length': config} as unknown as Configuration);
+    assert.equal(errors.length, 1, JSON.stringify(config));
+    assert.match(errors[0]!, /should be a state, or a list of a state and the rule's settings/u);
+  }
 });
 
 test('reports a setting the rule does not have', () => {
