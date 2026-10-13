@@ -92,3 +92,21 @@ export function mergeDefaults<T>(defaults: T, override: unknown): T {
   }
   return merged as T;
 }
+
+/** How many places a finding names before it says how many more there are. */
+export const MAX_LISTED = 5;
+
+/**
+ * `a, b, c` - or, past `max` of them, the first `max` and how many more.
+ *
+ * A finding naming every other place a name is used grows with the number of
+ * places, and one is reported for each of them: three thousand files sharing
+ * a scenario name came to 195 MB of output. A handful is enough to start
+ * from, and the count says how big the job is.
+ */
+export function listSome(items: readonly string[], max: number = MAX_LISTED): string {
+  if (items.length <= max) {
+    return items.join(', ');
+  }
+  return `${items.slice(0, max).join(', ')} and ${items.length - max} more`;
+}

@@ -1,5 +1,6 @@
 import path from 'node:path';
 import type {LintRule, RunFinding} from '../types.ts';
+import {listSome} from '../util/collections.ts';
 
 const name = 'no-dupe-file-names';
 
@@ -49,7 +50,7 @@ const rule: LintRule = {
       for (const filePath of paths) {
         const others = paths.filter((other) => other !== filePath);
         findings.push({
-          message: `File name is also used in: ${others.join(', ')}`,
+          message: `File name is also used in: ${listSome(others)}`,
           rule: name,
           line: 0,
           filePath,

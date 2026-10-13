@@ -4,6 +4,7 @@ import {
   groupBy,
   intersection,
   intersectionBy,
+  listSome,
   mergeDefaults,
   sortBy,
   uniq,
@@ -79,4 +80,12 @@ test('mergeDefaults never writes back into the defaults', () => {
 test('mergeDefaults ignores undefined overrides', () => {
   assert.deepEqual(mergeDefaults({a: 1}, undefined), {a: 1});
   assert.deepEqual(mergeDefaults({a: 1}, {a: undefined}), {a: 1});
+});
+
+test('listSome names a handful and counts the rest', () => {
+  assert.equal(listSome([]), '');
+  assert.equal(listSome(['a', 'b']), 'a, b');
+  assert.equal(listSome(['a', 'b', 'c', 'd', 'e']), 'a, b, c, d, e');
+  assert.equal(listSome(['a', 'b', 'c', 'd', 'e', 'f', 'g']), 'a, b, c, d, e and 2 more');
+  assert.equal(listSome(['a', 'b', 'c'], 1), 'a and 2 more');
 });

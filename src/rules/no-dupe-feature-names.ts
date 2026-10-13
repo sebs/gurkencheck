@@ -1,4 +1,5 @@
 import type {LintRule, RunFinding} from '../types.ts';
+import {listSome} from '../util/collections.ts';
 import {at} from '../util/location.ts';
 
 const name = 'no-dupe-feature-names';
@@ -45,7 +46,7 @@ const rule: LintRule = {
       for (const sighting of sightings) {
         const others = sightings.filter((other) => other !== sighting);
         findings.push({
-          message: `Feature name is also used in: ${others.map((other) => other.filePath).join(', ')}`,
+          message: `Feature name is also used in: ${listSome(others.map((other) => other.filePath))}`,
           rule: name,
           ...sighting.at,
           filePath: sighting.filePath,

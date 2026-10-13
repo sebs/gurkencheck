@@ -1,5 +1,6 @@
 import {scenariosOf} from '../gherkin/traverse.ts';
 import type {LintRule, RunFinding} from '../types.ts';
+import {listSome} from '../util/collections.ts';
 import {at} from '../util/location.ts';
 
 const name = 'no-dupe-scenario-names';
@@ -56,9 +57,7 @@ const rule: LintRule = {
       // start from whichever one is easiest to change.
       for (const sighting of sightings) {
         const others = sightings.filter((other) => other !== sighting);
-        const where = others
-          .map((other) => `${other.filePath}:${other.at.line}`)
-          .join(', ');
+        const where = listSome(others.map((other) => `${other.filePath}:${other.at.line}`));
         findings.push({
           message: `Scenario name is also used in: ${where}`,
           rule: name,
