@@ -205,6 +205,35 @@ function lineOf(finding: {line?: unknown}): number {
 }
 
 /**
+ * A finding from a rule, put in the shape every formatter relies on.
+ *
+ * A custom rule's findings are whatever it hands back, and a formatter meeting
+ * one without a message or a rule name either crashed - taking every other
+ * finding of the run with it - or printed `undefined`. A missing message is
+ * said to be missing, and a finding naming no rule is put down to the rule
+ * that reported it.
+ */
+function normalise<T extends RuleError | RunFinding>(
+  finding: T,
+  ruleName: string,
+  severity: Severity,
+): T {
+  const {message, rule} = finding as {message?: unknown; rule?: unknown};
+  return {
+    severity,
+    ...finding,
+    message:
+      typeof message === 'string'
+        ? message
+        : message === undefined || message === null
+          ? `Rule "${ruleName}" reported a finding with no message`
+          : String(message),
+    rule: typeof rule === 'string' && rule !== '' ? rule : ruleName,
+    line: lineOf(finding),
+  };
+}
+
+/**
  * The finding reported in place of a rule's own when it hands back something
  * other than a list. Iterating it anyway would throw somewhere far from the
  * rule, and the message would name whatever happened to be running there.
@@ -246,7 +275,7 @@ export async function finishRun(
         continue;
       }
       for (const finding of found as RunFinding[]) {
-        findings.push({severity, ...finding, line: lineOf(finding)});
+        findings.push(normalise(finding, rule.name, severity));
       }
     } catch (thrown) {
       // No file to blame: what failed was the look back over all of them.
@@ -321,7 +350,7 @@ export async function runEnabledRules(
     for (const error of found as RuleError[]) {
       // The configuration decides how loudly a rule reports, so a custom rule
       // needs no say in it - but one that sets a severity itself is respected.
-      errors.push({severity, ...error, line: lineOf(error)});
+      errors.push(normalise(error, rule.name, severity));
     }
   }
 
