@@ -16,7 +16,9 @@ const WORD = new RegExp(
   [
     `[${UPPER}]{2,}(?=[${UPPER}][${LOWER}]+[${DIGIT}]*|(?![${UPPER}${LOWER}${DIGIT}]))`,
     `[${UPPER}]?[${LOWER}]+[${DIGIT}]*`,
-    `[${UPPER}]+[${DIGIT}]*`,
+    // A capital followed by a small letter starts the next word, so OAuth
+    // is O and Auth rather than OA and uth.
+    `[${UPPER}]+(?![${LOWER}])[${DIGIT}]*`,
     `[${DIGIT}]+`,
   ].join('|'),
   'gu',

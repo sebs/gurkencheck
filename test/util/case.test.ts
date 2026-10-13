@@ -13,6 +13,15 @@ test('words splits on separators and case changes', () => {
   ]);
   assert.deepEqual(words('XMLHttpRequest'), ['XML', 'Http', 'Request']);
   assert.deepEqual(words('version2Point3'), ['version2', 'Point3']);
+  assert.deepEqual(words('OAuthLogin'), ['O', 'Auth', 'Login']);
+  assert.deepEqual(words('IOStream'), ['IO', 'Stream']);
+  assert.deepEqual(words('ABC'), ['ABC']);
+});
+
+test('a name already in a style stays as it is', () => {
+  assert.equal(pascalCase('OAuthLogin'), 'OAuthLogin');
+  assert.equal(pascalCase('OAuth2Login'), 'OAuth2Login');
+  assert.equal(kebabCase('OAuthLogin'), 'o-auth-login');
 });
 
 const SAMPLES = ['PascalCaseWithFiveWords', 'pascal case with five words', 'pascal_case_with_five_words'];
