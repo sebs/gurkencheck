@@ -67,3 +67,24 @@ test('the edit cap holds however long the steps are', () => {
   assert.equal(groupSimilar(entries, DEFAULT_SIMILARITY).length, 0);
   assert.equal(groupSimilar(entries, {ratio: 0.85, minLength: 8, maxEdits: 8}).length, 1);
 });
+
+test('a chain of one-edit neighbours does not join steps far apart', () => {
+  const chain = [
+    'the cat sat on the mat',
+    'the bat sat on the mat',
+    'the bot sat on the mat',
+    'the bot sit on the mat',
+    'the bot sit in the mat',
+    'the bot sit in the hut',
+  ];
+  const groups = groupSimilar(steps(...chain));
+  for (const group of groups) {
+    for (const a of group) {
+      for (const b of group) {
+        assert.ok(boundedEditDistance(a.text, b.text, 3) <= 3, `${a.text} / ${b.text}`);
+      }
+    }
+  }
+  // The most used step starts the first group, with what is close to it.
+  assert.deepEqual(groups[0]!.map((entry) => entry.text), chain.slice(0, 4));
+});

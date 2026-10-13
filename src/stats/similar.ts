@@ -130,40 +130,18 @@ export function boundedEditDistance(left: string, right: string, limit: number):
   return previous[width] ?? limit + 1;
 }
 
-/** Disjoint sets, used to join pairs of close steps into groups. */
-function makeSets(size: number): {find: (item: number) => number; union: (a: number, b: number) => void} {
-  const parent = Array.from({length: size}, (_, index) => index);
-
-  function find(item: number): number {
-    let root = item;
-    while ((parent[root] ?? root) !== root) {
-      root = parent[root] ?? root;
-    }
-    let walk = item;
-    while ((parent[walk] ?? walk) !== root) {
-      const next = parent[walk] ?? walk;
-      parent[walk] = root;
-      walk = next;
-    }
-    return root;
-  }
-
-  return {
-    find,
-    union(a, b) {
-      const rootA = find(a);
-      const rootB = find(b);
-      if (rootA !== rootB) {
-        parent[rootB] = rootA;
-      }
-    },
-  };
-}
-
 /**
  * Groups entries whose text is close enough to be the same step written two
  * ways. Entries that are close to nothing are left out, so every group
  * returned has at least two members, in the order they were given in.
+ *
+ * Every member of a group is within the budget of every other. Joining any
+ * two close steps into one group instead lets a chain of one-edit neighbours
+ * gather steps that are nothing alike: `the cat sat on the mat` and `the bot
+ * sit in the hut` are six edits apart, and each is one edit from the next
+ * step along. Entries come most used first, so a group starts from the most
+ * used step and takes each of its neighbours that is close to every member
+ * so far.
  */
 export function groupSimilar<T extends {text: string}>(
   entries: readonly T[],
@@ -176,8 +154,21 @@ export function groupSimilar<T extends {text: string}>(
     .filter((candidate) => candidate.text.length >= options.minLength)
     .sort((a, b) => a.text.length - b.text.length);
 
-  const sets = makeSets(entries.length);
-  let joined = false;
+  /** Entry index -> the indices of the entries close to it. */
+  const neighbours = new Map<number, Set<number>>();
+  const join = (a: number, b: number): void => {
+    for (const [from, to] of [
+      [a, b],
+      [b, a],
+    ] as const) {
+      const close = neighbours.get(from);
+      if (close === undefined) {
+        neighbours.set(from, new Set([to]));
+      } else {
+        close.add(to);
+      }
+    }
+  };
 
   for (let i = 0; i < candidates.length; i++) {
     const left = candidates[i]!;
@@ -197,29 +188,33 @@ export function groupSimilar<T extends {text: string}>(
         continue;
       }
       if (boundedEditDistance(left.text, right.text, limit) <= limit) {
-        sets.union(left.index, right.index);
-        joined = true;
+        join(left.index, right.index);
       }
     }
   }
 
-  if (!joined) {
-    return [];
-  }
-
-  const groups = new Map<number, {index: number; entry: T}[]>();
-  for (const candidate of candidates) {
-    const root = sets.find(candidate.index);
-    const member = {index: candidate.index, entry: entries[candidate.index]!};
-    const group = groups.get(root);
-    if (group === undefined) {
-      groups.set(root, [member]);
-    } else {
-      group.push(member);
+  const grouped = new Set<number>();
+  const groups: T[][] = [];
+  for (let index = 0; index < entries.length; index++) {
+    const close = neighbours.get(index);
+    if (close === undefined || grouped.has(index)) {
+      continue;
+    }
+    const members = [index];
+    for (const neighbour of [...close].sort((a, b) => a - b)) {
+      if (grouped.has(neighbour)) {
+        continue;
+      }
+      if (members.every((member) => neighbours.get(member)?.has(neighbour) === true)) {
+        members.push(neighbour);
+      }
+    }
+    if (members.length > 1) {
+      for (const member of members) {
+        grouped.add(member);
+      }
+      groups.push(members.sort((a, b) => a - b).map((member) => entries[member]!));
     }
   }
-
-  return [...groups.values()]
-    .filter((group) => group.length > 1)
-    .map((group) => group.sort((a, b) => a.index - b.index).map((member) => member.entry));
+  return groups;
 }

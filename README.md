@@ -191,7 +191,9 @@ everybody invents their own phrasing, and the step definitions rot.
 against `I'm logged in`, or a `<placeholder>` against a value written in its place. Those
 are one behaviour costing two step definitions. The budget is at most three edits, and no
 more than about a seventh of the longer of the two, so a short step is allowed only one;
-steps under eight characters are left out altogether. That is deliberately tight — further
+steps under eight characters are left out altogether. Every step in a group is within that
+budget of every other one, so a chain of small edits cannot gather steps that are nothing
+alike. That is deliberately tight — further
 apart than that and a step is a different sentence rather than the same one spelled two
 ways.
 
