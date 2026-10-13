@@ -97,8 +97,13 @@ export async function loadStreamingFormatter(
   }
 
   const module = await loadFormatterModule(format!, cwd);
-  const startRun = module['startRun'];
-  return typeof startRun === 'function' ? (startRun as StreamingFormatter) : undefined;
+  for (const exported of exportsOf(module)) {
+    const startRun = exported['startRun'];
+    if (typeof startRun === 'function') {
+      return startRun as StreamingFormatter;
+    }
+  }
+  return undefined;
 }
 
 /** The formatter for a built-in format name, or `undefined` for anything else. */
@@ -108,6 +113,28 @@ export function getFormatter(format: string | undefined): Formatter | undefined 
 
 function asFormatter(candidate: unknown): Formatter | undefined {
   return typeof candidate === 'function' ? (candidate as Formatter) : undefined;
+}
+
+/**
+ * The objects a formatter's exports may sit on: the module, its default
+ * export, and that export's own `default`.
+ *
+ * The last is what tsc and Babel make of `export default` when they compile
+ * to CommonJS - `exports.default = ...`, which `import` then hands over as
+ * the module's default - and a default export may as well be an object
+ * holding `printResults` as the function itself.
+ */
+function exportsOf(module: Record<string, unknown>): Record<string, unknown>[] {
+  const found = [module];
+  let candidate = module['default'];
+  for (let depth = 0; depth < 2; depth++) {
+    if (typeof candidate !== 'object' || candidate === null) {
+      break;
+    }
+    found.push(candidate as Record<string, unknown>);
+    candidate = (candidate as Record<string, unknown>)['default'];
+  }
+  return found;
 }
 
 /**
@@ -161,7 +188,8 @@ async function importFormatter(
  * The formatter for a format name, a path, or a package.
  *
  * The module may export the formatter as its default export, as
- * `printResults`, or be the function itself.
+ * `printResults`, or be the function itself - or hold either on its default
+ * export, as compiled TypeScript does.
  */
 export async function loadFormatter(
   format: string | undefined,
@@ -175,8 +203,11 @@ export async function loadFormatter(
   const specifier = format!;
   const module = await loadFormatterModule(specifier, cwd);
 
-  const formatter =
-    asFormatter(module['default']) ?? asFormatter(module['printResults']) ?? asFormatter(module);
+  let formatter: Formatter | undefined;
+  for (const exported of exportsOf(module)) {
+    formatter ??= asFormatter(exported['default']) ?? asFormatter(exported['printResults']);
+  }
+  formatter ??= asFormatter(module);
   if (formatter === undefined) {
     throw new Error(
       `"${specifier}" does not export a formatter. A formatter module exports a function taking the results.`,

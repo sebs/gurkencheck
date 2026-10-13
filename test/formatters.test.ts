@@ -185,6 +185,18 @@ test('loadFormatter accepts a CommonJS module exporting printResults', async () 
   assert.match(capture(formatter as Formatter, RESULTS), /legacy formatter saw 2 files/u);
 });
 
+test('loadFormatter finds a formatter compiled from TypeScript to CommonJS', async () => {
+  const formatter = await loadFormatter('./test/formatters/compiled.cjs');
+  assert.equal(await formatter(RESULTS), 'compiled formatter saw 2 files');
+});
+
+test('loadFormatter finds a formatter held on a default export', async () => {
+  const formatter = await loadFormatter('./test/formatters/default-object.mjs');
+  assert.equal(await formatter(RESULTS), 'default object saw 2 files');
+  const streaming = await loadStreamingFormatter('./test/formatters/default-object.mjs');
+  assert.equal(typeof streaming, 'function');
+});
+
 test('loadFormatter explains an unknown format', async () => {
   await assert.rejects(() => loadFormatter('yaml'), /Unsupported format "yaml"/u);
 });
