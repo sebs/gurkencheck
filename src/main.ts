@@ -320,22 +320,28 @@ async function runStreaming(
   // rather than guessed at: a message blaming the formatter for a rule's
   // mistake sends you looking in the wrong place.
   let formatting = false;
-  const format = <T>(step: () => T): T => {
+  const format = async (hook: string, step: () => unknown): Promise<string | undefined> => {
     formatting = true;
-    const written = step();
+    // A hook may be async; what it hands back has to be text to write.
+    const written = await step();
+    if (written !== undefined && typeof written !== 'string') {
+      throw new Error(`${hook}() returned ${written === null ? 'null' : typeof written} instead of a string`);
+    }
     formatting = false;
     return written;
   };
 
   let failed = false;
   try {
-    const run = format(() => streaming());
-    write(format(() => run.start?.()));
+    formatting = true;
+    const run = streaming();
+    formatting = false;
+    write(await format('start', () => run.start?.()));
     for await (const result of lintStream(files, configuration, rules, {language})) {
       failed ||= result.errors.some((error) => (error.severity ?? 'error') === 'error');
-      write(format(() => run.file(result)));
+      write(await format('file', () => run.file(result)));
     }
-    write(format(() => run.end?.()));
+    write(await format('end', () => run.end?.()));
   } catch (thrown) {
     const reason = thrown instanceof Error ? thrown.message : String(thrown);
     diagnostics.report({

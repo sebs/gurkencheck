@@ -12,7 +12,7 @@
  * instead of first, because the count is only known then - TAP 13 allows it
  * at either end for exactly this reason.
  */
-import type {FormatterRun} from './index.ts';
+import type {SyncFormatterRun} from './index.ts';
 import type {FileResult, RuleError} from '../types.ts';
 
 /**
@@ -89,7 +89,7 @@ function diagnostics(result: FileResult): string[] {
  * A new one per run, so its counter belongs to that run and two at once
  * cannot number each other's test points.
  */
-export function startRun(): FormatterRun {
+export function startRun(): SyncFormatterRun {
   let count = 0;
 
   return {

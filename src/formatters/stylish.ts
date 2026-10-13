@@ -1,5 +1,5 @@
 import {style} from '../logger.ts';
-import type {FormatterRun} from './index.ts';
+import type {SyncFormatterRun} from './index.ts';
 import type {FileResult, RuleError} from '../types.ts';
 
 /** `12:5` when the rule knows a column, `12` when it does not. */
@@ -86,7 +86,7 @@ function widthOfConsole(): number {
 }
 
 /** Blocks written as each file is done rather than at the end of the run. */
-export function startRun(): FormatterRun {
+export function startRun(): SyncFormatterRun {
   const consoleWidth = widthOfConsole();
   return {
     file: (result: FileResult): string => block(result, consoleWidth),

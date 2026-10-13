@@ -8,7 +8,7 @@ import {
   loadFormatter,
   loadStreamingFormatter,
 } from '../src/formatters/index.ts';
-import type {StreamingFormatter} from '../src/formatters/index.ts';
+import type {StreamingFormatter, SyncFormatterRun} from '../src/formatters/index.ts';
 import {format as formatJunit} from '../src/formatters/junit.ts';
 import {toSarif} from '../src/formatters/sarif.ts';
 import type {FileResult, Formatter} from '../src/index.ts';
@@ -472,7 +472,7 @@ test('streaming tap writes the same report the batch one does', () => {
 });
 
 test('streaming tap numbers its test points as they arrive', () => {
-  const run = getStreamingFormatter('tap')!();
+  const run = getStreamingFormatter('tap')!() as SyncFormatterRun;
   assert.equal(run.start?.(), 'TAP version 13\n');
   assert.match(run.file(RESULTS[0]!), /^not ok 1 - /u);
   assert.match(run.file(RESULTS[1]!), /^ok 2 - /u);

@@ -518,3 +518,22 @@ test('finds the configuration in a directory above the working directory', async
     assert.match(stdout, /warning +Missing Scenario name/u);
   });
 });
+
+test('a streaming formatter may be async', async () => {
+  const formatter = path.resolve('test/formatters/async-streaming.mjs');
+  await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
+    const {code, stdout, stderr} = await cli(['-f', formatter, '.'], cwd);
+    assert.equal(stderr, '');
+    assert.equal(stdout, 'start|Example.feature|end\n');
+    assert.equal(code, 1);
+  });
+});
+
+test('a streaming formatter handing back something other than text is blamed', async () => {
+  const formatter = path.resolve('test/formatters/bad-streaming.mjs');
+  await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
+    const {code, stderr} = await cli(['-f', formatter, '.'], cwd);
+    assert.equal(code, 2);
+    assert.match(stderr, /The formatter failed: file\(\) returned number instead of a string/u);
+  });
+});

@@ -40,15 +40,23 @@ export const DEFAULT_FORMAT = 'stylish';
  * in.
  *
  * Text comes back written verbatim, line breaks included, so a formatter says
- * exactly what goes on the stream. `start` and `end` are optional: a format
- * with no preamble and no trailer needs neither.
+ * exactly what goes on the stream. Each hook may return a promise of it
+ * instead. `start` and `end` are optional: a format with no preamble and no
+ * trailer needs neither.
  */
 export interface FormatterRun {
   /** Written before the first result. */
-  start?(): string;
+  start?(): string | Promise<string>;
   /** Written for one file, as soon as that file is done. */
-  file(result: FileResult): string;
+  file(result: FileResult): string | Promise<string>;
   /** Written after the last result. */
+  end?(): string | Promise<string>;
+}
+
+/** A run whose hooks all write straight away, as the built-in formats do. */
+export interface SyncFormatterRun extends FormatterRun {
+  start?(): string;
+  file(result: FileResult): string;
   end?(): string;
 }
 
