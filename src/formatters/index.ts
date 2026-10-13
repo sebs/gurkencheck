@@ -1,6 +1,7 @@
 /**
  * Output formats.
  */
+import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import type {FileResult} from '../types.ts';
@@ -127,6 +128,12 @@ async function loadFormatterModule(
     try {
       resolved = resolvePackage(specifier, from);
     } catch {
+      // `fmt/count.mjs` is as likely a path as a package, and a path does not
+      // have to start with ./ to be one.
+      const asPath = path.resolve(cwd, specifier);
+      if (fs.existsSync(asPath)) {
+        return await importFormatter(asPath, specifier);
+      }
       throw new Error(
         `Unsupported format "${specifier}". Use one of ${Object.keys(FORMATTERS).join(', ')}, ` +
           'or the path to a formatter of your own.',
@@ -134,6 +141,13 @@ async function loadFormatterModule(
     }
   }
 
+  return await importFormatter(resolved, specifier);
+}
+
+async function importFormatter(
+  resolved: string,
+  specifier: string,
+): Promise<Record<string, unknown>> {
   try {
     return (await import(pathToFileURL(resolved).href)) as Record<string, unknown>;
   } catch (thrown) {
