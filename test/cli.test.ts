@@ -539,3 +539,11 @@ test('a streaming formatter handing back something other than text is blamed', a
     assert.match(stderr, /The formatter failed: file\(\) returned number instead of a string/u);
   });
 });
+
+test('stats given after an option says to put it first', async () => {
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    const {code, stderr} = await cli(['-f', 'json', 'stats'], cwd);
+    assert.equal(code, 2);
+    assert.match(stderr, /To run the stats command, put stats first/u);
+  });
+});

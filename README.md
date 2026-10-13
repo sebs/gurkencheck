@@ -115,6 +115,9 @@ much of the step vocabulary is shared, and where it has drifted apart.
 npx gurkencheck stats features
 ```
 
+`stats` has to be the first argument, before any option. A directory that is really called
+`stats` is linted as `./stats`.
+
 ```
 124 files, 124 features, 811 test cases
 

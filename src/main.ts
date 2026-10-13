@@ -193,6 +193,14 @@ export async function run(
       level: 'detail',
       message: 'Name a feature file, a directory or a glob.',
     });
+    // `gurkencheck -f json stats` reads as asking for the stats command, but
+    // only a first argument is taken for one.
+    if (invalidPatterns.includes('stats')) {
+      diagnostics.report({
+        level: 'detail',
+        message: 'To run the stats command, put stats first: gurkencheck stats [options] [paths]',
+      });
+    }
     return EXIT_USAGE;
   }
   for (const file of ignoredFiles) {
