@@ -3,6 +3,7 @@
  * The gurkencheck command line interface.
  */
 import fs from 'node:fs';
+import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {parseArgs} from 'node:util';
 import {describeArgumentError} from './util/args.ts';
@@ -144,9 +145,14 @@ export async function run(
     }
     const language = values.language ?? read.language;
     if (language !== undefined && !isKnownLanguage(language)) {
+      // Said where it came from: a flag is fixed differently from a file.
+      const from =
+        values.language === undefined && read.languageSource !== undefined
+          ? `, set in "${path.relative(process.cwd(), read.languageSource) || read.languageSource}"`
+          : ' given to --language';
       diagnostics.report({
         level: 'error',
-        message: `Unknown language "${language}". Use a Gherkin language code, such as "fr".`,
+        message: `Unknown language "${language}"${from}. Use a Gherkin language code, such as "fr".`,
       });
       return undefined;
     }

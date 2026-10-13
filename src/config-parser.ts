@@ -50,6 +50,8 @@ export type ConfigurationResult =
       configuration: Configuration;
       source: string;
       language?: string;
+      /** The file the language was set in, which may be one extended. */
+      languageSource?: string;
       /**
        * Every file the configuration was read from - the file itself and
        * each one it extends, as absolute paths. What a watch has to keep an
@@ -178,6 +180,7 @@ async function flatten(
   source: string,
   ancestors: Set<string>,
   files: Set<string>,
+  origins: Map<string, string> = new Map(),
 ): Promise<Configuration> {
   if (ancestors.has(source)) {
     throw new ConfigurationError(`"${source}" ends up extending itself.`);
@@ -193,7 +196,7 @@ async function flatten(
       const extended = await loadExtended(specifier, source);
       merged = {
         ...merged,
-        ...(await flatten(extended.configuration, extended.source, ancestors, files)),
+        ...(await flatten(extended.configuration, extended.source, ancestors, files, origins)),
       };
     }
   } finally {
@@ -202,7 +205,20 @@ async function flatten(
 
   const own = {...configuration};
   delete own[EXTENDS];
+  // Set after what this file extends, so the file that wins says where an
+  // entry came from.
+  for (const key of Object.keys(own)) {
+    origins.set(key, source);
+  }
   return {...merged, ...(own as Configuration)};
+}
+
+/** ` (in "team.json")` for an entry from a file other than the one read. */
+function inFile(source: string | undefined, configPath: string): string {
+  if (source === undefined || path.resolve(source) === path.resolve(configPath)) {
+    return '';
+  }
+  return ` (in "${Object.hasOwn(PRESETS, source) ? source : path.relative(process.cwd(), source)}")`;
 }
 
 /**
@@ -275,8 +291,9 @@ export async function readConfiguration(
 
   let flattened: Configuration;
   const files = new Set<string>();
+  const origins = new Map<string, string>();
   try {
-    flattened = await flatten(parseFile(configPath), configPath, new Set(), files);
+    flattened = await flatten(parseFile(configPath), configPath, new Set(), files, origins);
   } catch (thrown) {
     if (thrown instanceof ConfigurationError) {
       return {
@@ -298,13 +315,22 @@ export async function readConfiguration(
     return {
       ok: false,
       message: `Could not read config file "${configPath}"`,
-      details: [`"${LANGUAGE}" must be a language code, such as "fr".`],
+      details: [`"${LANGUAGE}" must be a language code, such as "fr".${inFile(origins.get(LANGUAGE), configPath)}`],
     };
   }
 
-  const errors = verifyConfiguration(configuration, rules);
+  // Checked file by file, so a mistake in something extended says where it
+  // is rather than leaving you to search the chain for it.
+  const bySource = new Map<string, Configuration>();
+  for (const [key, value] of Object.entries(configuration)) {
+    const source = origins.get(key) ?? configPath;
+    bySource.set(source, {...bySource.get(source), [key]: value});
+  }
+  const errors = [...bySource].flatMap(([source, entries]) =>
+    verifyConfiguration(entries, rules).map((error) => `${error}${inFile(source, configPath)}`),
+  );
   if (errors.length > 0) {
-    return {ok: false, message: 'Error(s) in configuration file:', details: errors};
+    return {ok: false, message: `Error(s) in configuration file "${configPath}":`, details: errors};
   }
 
   return {
@@ -312,6 +338,6 @@ export async function readConfiguration(
     configuration,
     source: configPath,
     files: [...files],
-    ...(language === undefined ? {} : {language}),
+    ...(language === undefined ? {} : {language, languageSource: origins.get(LANGUAGE) ?? configPath}),
   };
 }

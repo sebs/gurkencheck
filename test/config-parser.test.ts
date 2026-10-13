@@ -32,8 +32,24 @@ test('reports a configuration file that does not exist', async () => {
 test('reports a rule name that does not exist', async () => {
   const result = await readConfiguration(`${FIXTURES}/bad-config.gurkencheckrc`, rules);
   assert.ok(!result.ok);
-  assert.equal(result.message, 'Error(s) in configuration file:');
+  assert.equal(result.message, `Error(s) in configuration file "${FIXTURES}/bad-config.gurkencheckrc":`);
   assert.deepEqual(result.details, ['Rule "fake-rule" does not exist']);
+});
+
+test('says which extended file a mistake is in', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-origin-'));
+  try {
+    fs.writeFileSync(path.join(directory, 'team.json'), '{"fake-rule": "on", "language": "fr"}');
+    fs.writeFileSync(path.join(directory, 'top.json'), '{"extends": "./team.json", "also-fake": "on"}');
+    const result = await readConfiguration(path.join(directory, 'top.json'), rules);
+    assert.ok(!result.ok);
+    assert.deepEqual(result.details.sort(), [
+      'Rule "also-fake" does not exist',
+      `Rule "fake-rule" does not exist (in "${path.relative(process.cwd(), path.join(directory, 'team.json'))}")`,
+    ]);
+  } finally {
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
 });
 
 test('reports a configuration file that is not valid JSON', async () => {
