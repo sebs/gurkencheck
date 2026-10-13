@@ -764,7 +764,8 @@ themselves.</p>
 <tbody>
 <tr><td><code>-f, --format</code></td><td>Output format: <code>text</code> (the default), <code>json</code> or <code>md</code>. These are the stats command's own formats; the linter's do not apply here.</td></tr>
 <tr><td><code>-i, --ignore</code></td><td>Comma separated globs to skip. Replaces <code>${DEFAULT_IGNORE_FILE_NAME}</code> rather than adding to it.</td></tr>
-<tr><td><code>-l, --language</code></td><td>The dialect to read files in when they carry no <code>#&nbsp;language:</code> header. This command does not read <code>${DEFAULT_CONFIG_FILE_NAME}</code>, so a <code>language</code> key there does not reach it.</td></tr>
+<tr><td><code>-c, --config</code></td><td>The configuration file to take the <code>language</code> from, if it is not the nearest <code>${DEFAULT_CONFIG_FILE_NAME}</code>. Its rules are not read.</td></tr>
+<tr><td><code>-l, --language</code></td><td>The dialect to read files in when they carry no <code>#&nbsp;language:</code> header, overriding the configuration's <code>language</code>.</td></tr>
 <tr><td><code>--top</code></td><td>How many entries each list in the text and Markdown reports shows. Ten by default, and it changes nothing under <code>--format json</code>, which never cuts a list short.</td></tr>
 <tr><td><code>-h, --help</code></td><td>Show the options.</td></tr>
 </tbody>
