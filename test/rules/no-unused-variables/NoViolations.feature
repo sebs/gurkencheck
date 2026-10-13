@@ -50,3 +50,14 @@ Scenario Outline: Examples variable is in a step string
   Examples:
     | a |
     | 1 |
+
+Scenario Outline: Examples variable is the content type of a step string
+  Given this
+  When I do that
+  Then this should be written as:
+    """<format>
+    {}
+    """
+  Examples:
+    | format |
+    | json   |

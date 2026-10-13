@@ -106,7 +106,9 @@ export function variablesOf(scenario: Scenario): ScenarioVariables {
     // A doc string's content starts on the line below its opening delimiter,
     // and each line of it is reported where it is.
     if (step.docString !== undefined) {
-      const {content, location} = step.docString;
+      const {content, location, mediaType, delimiter} = step.docString;
+      // Cucumber fills in the content type too, as in """<format>.
+      collect(mediaType, {line: location.line, column: (location.column ?? 1) + delimiter.length}, used);
       content.split('\n').forEach((line, index) => {
         collect(line, {line: location.line + 1 + index, column: location.column}, used);
       });
