@@ -98,8 +98,9 @@ export async function run(
       allowPositionals: true,
     });
   } catch (thrown) {
-    diagnostics.report({level: 'error', message: describeArgumentError(thrown)});
-    diagnostics.report({level: 'notice', message: usage()});
+    // One line saying what is wrong, rather than the whole help burying it.
+    diagnostics.report({level: 'error', message: describeArgumentError(thrown, usage())});
+    diagnostics.report({level: 'notice', message: 'Run "gurkencheck --help" to see the options.'});
     return EXIT_USAGE;
   }
 

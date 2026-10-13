@@ -117,7 +117,9 @@ test('exits 2 when a rule name is unknown', async () => {
 test('exits 2 for an unknown option', async () => {
   const {code, stderr} = await cli(['--nonsense']);
   assert.equal(code, 2);
-  assert.match(stderr, /Usage: gurkencheck/u);
+  assert.match(stderr, /Unknown option "--nonsense"/u);
+  assert.match(stderr, /Run "gurkencheck --help" to see the options/u);
+  assert.doesNotMatch(stderr, /Usage: gurkencheck/u);
 });
 
 test('exits 2 for a path that names nothing', async () => {

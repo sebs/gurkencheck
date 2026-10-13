@@ -85,8 +85,8 @@ test('the same failures do report when given somewhere to report to', async () =
   assert.equal(code, 2);
   assert.equal(diagnostics.reported[0]?.level, 'error');
   assert.ok(
-    diagnostics.reported.some((entry) => entry.message.includes('Usage: gurkencheck')),
-    'the usage text should be offered as well',
+    diagnostics.reported.some((entry) => entry.message.includes('gurkencheck --help')),
+    'the way to the options should be offered as well',
   );
 });
 

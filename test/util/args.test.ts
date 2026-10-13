@@ -18,3 +18,9 @@ test('an unknown option is named, with every quote closed', () => {
     'Unknown option "--bogus". To name a file starting with -, put it after --, as in -- --bogus',
   );
 });
+
+test('a missing value is named as the help names it', () => {
+  const usage = '  -c, --config <path>     configuration file';
+  assert.equal(describeArgumentError(errorFor(['-c']), usage), '-c, --config needs a value: -c, --config <path>');
+  assert.equal(describeArgumentError(errorFor(['--config'])), '-c, --config needs a value: -c, --config <value>');
+});
