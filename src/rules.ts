@@ -46,7 +46,7 @@ function extractRule(loaded: Record<string, unknown>, source: string): LintRule 
   );
 }
 
-async function loadRulesFrom(directory: string): Promise<LintRule[]> {
+async function loadRulesFrom(directory: string): Promise<{rule: LintRule; file: string}[]> {
   const resolved = path.resolve(directory);
   // A directory that is not there would otherwise contribute no rules and no
   // complaint, and a run meant to include them would pass without them.
@@ -64,7 +64,7 @@ async function loadRulesFrom(directory: string): Promise<LintRule[]> {
   const files = globSync(`*.${RULE_EXTENSIONS}`, {cwd: resolved}).filter(
     (file) => !/\.d\.[mc]?ts$/u.test(file),
   );
-  const loaded: LintRule[] = [];
+  const loaded: {rule: LintRule; file: string}[] = [];
 
   for (const file of files) {
     const absolute = path.join(resolved, file);
@@ -76,7 +76,7 @@ async function loadRulesFrom(directory: string): Promise<LintRule[]> {
         `Could not load the rule "${absolute}": ${thrown instanceof Error ? thrown.message : String(thrown)}`,
       );
     }
-    loaded.push(extractRule(module, absolute));
+    loaded.push({rule: extractRule(module, absolute), file: absolute});
   }
 
   return loaded;
@@ -94,8 +94,20 @@ export async function loadRules(
   for (const rule of BUILT_IN_RULES) {
     registry.set(rule.name, rule);
   }
+  // Two custom rules with one name would leave whichever came last, and the
+  // other would never run without a word. Replacing a built-in rule is what
+  // reusing its name is for, so only a second custom one is refused.
+  const loadedFrom = new Map<string, string>();
   for (const directory of additionalRulesDirs) {
-    for (const rule of await loadRulesFrom(directory)) {
+    for (const {rule, file} of await loadRulesFrom(directory)) {
+      const earlier = loadedFrom.get(rule.name);
+      if (earlier === file) {
+        continue;
+      }
+      if (earlier !== undefined) {
+        throw new Error(`The rule "${rule.name}" is defined twice: in ${earlier} and in ${file}.`);
+      }
+      loadedFrom.set(rule.name, file);
       registry.set(rule.name, rule);
     }
   }

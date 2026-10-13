@@ -402,7 +402,8 @@ npx gurkencheck --rulesdir ./rules
 
 gurkencheck says so when a rule from `--rulesdir` is left out of the configuration.
 
-A custom rule may reuse a built-in rule's name to replace it.
+A custom rule may reuse a built-in rule's name to replace it. Two of your own may not share
+a name.
 
 Every module directly inside the directory has to be a rule; TypeScript declaration files
 (`.d.ts`) are skipped. Code the rules share belongs in a subdirectory, which is not read.

@@ -172,3 +172,15 @@ test('a finding with no line is taken as one about the whole file', async () => 
   const results = await lint(['test/linter/NoViolations.feature'], {lineless: 'on'}, rules);
   assert.equal(results[0]?.errors[0]?.line, 0);
 });
+
+test('two custom rules with one name are an error, naming both files', async () => {
+  await assert.rejects(
+    loadRules(['test/rulesdir/rules', 'test/rulesdir/duplicate_rules']),
+    /The rule "custom" is defined twice: in .*rules[/\\]custom\.cjs and in .*duplicate_rules[/\\]custom\.mjs/u,
+  );
+});
+
+test('the same rules directory given twice is not a clash with itself', async () => {
+  const rules = await loadRules(['test/rulesdir/rules', 'test/rulesdir/rules']);
+  assert.ok(rules.has('custom'));
+});
