@@ -9,14 +9,20 @@ const name = 'no-dupe-file-names';
  * file - quietly overwrite one with the other.
  */
 
-/** File name without its extension -> every path it was seen at. */
+/** File name without its extension, in lower case -> every path it was seen at. */
 type Seen = Map<string, string[]>;
 
 const rule: LintRule = {
   name,
   run(_feature, file, _configuration, context) {
     const seen = context.state<Seen>(() => new Map());
-    const fileName = path.basename(file.relativePath, path.extname(file.relativePath));
+    // Compared without case: Login and login are one file on a file system
+    // that ignores case, and one report on a CI server that names it after
+    // the file.
+    const fileName = path
+      .basename(file.relativePath, path.extname(file.relativePath))
+      .normalize('NFC')
+      .toLowerCase();
     const paths = seen.get(fileName);
 
     if (paths === undefined) {

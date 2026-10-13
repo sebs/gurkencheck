@@ -44,3 +44,11 @@ test('the same file given twice is not a clash with itself', async () => {
   ]);
   assert.deepEqual(findings, []);
 });
+
+test('names that differ only in case are the same name', async () => {
+  const findings = await runAcrossFiles(rule, [`${DIR}/Login.feature`, `${DIR}/lower/login.feature`]);
+  assert.deepEqual(
+    findings.map((finding) => finding.filePath),
+    [`${ROOT}/Login.feature`, `${ROOT}/lower/login.feature`],
+  );
+});
