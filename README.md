@@ -318,6 +318,10 @@ extends, and later entries in a list win over earlier ones.
 Put one glob per line in a `.gurkencheckignore` file, or pass `--ignore` on the command
 line. Without either, `node_modules` is skipped and everything else is checked.
 
+A search of a directory, like a glob's `*` and `**`, also passes over anything whose name
+starts with a dot, such as `.git` or `.hidden.feature`, and does not follow symlinks. Name
+such a file or directory on the command line to check it.
+
 Patterns are read the way `.gitignore` reads them:
 
 - A pattern that matches a directory skips everything below it, so `build` is enough and
