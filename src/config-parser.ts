@@ -13,6 +13,30 @@ import {resolvePackage} from './util/resolve.ts';
 /** The configuration file looked for when none is given on the command line. */
 export const DEFAULT_CONFIG_FILE_NAME = '.gurkencheckrc';
 
+/**
+ * The configuration file a run with no --config uses: the nearest
+ * `.gurkencheckrc` in the working directory or any directory above it, or
+ * `undefined` when there is none.
+ *
+ * Looking only in the working directory meant that running from a
+ * subdirectory of a project fell back to the recommended preset without a
+ * word, and a run that looks right is checking the wrong thing.
+ */
+export function findConfigFile(cwd: string = process.cwd()): string | undefined {
+  let directory = path.resolve(cwd);
+  for (;;) {
+    const candidate = path.join(directory, DEFAULT_CONFIG_FILE_NAME);
+    if (fs.existsSync(candidate)) {
+      return path.relative(cwd, candidate);
+    }
+    const parent = path.dirname(directory);
+    if (parent === directory) {
+      return undefined;
+    }
+    directory = parent;
+  }
+}
+
 /** The key naming the configurations to build on top of. */
 const EXTENDS = 'extends';
 
@@ -194,18 +218,19 @@ async function flatten(
 export async function readConfiguredLanguage(
   configPath: string | undefined,
 ): Promise<{ok: true; language: string | undefined} | {ok: false; message: string; details: string[]}> {
-  const path = configPath ?? DEFAULT_CONFIG_FILE_NAME;
-  if (!fs.existsSync(path)) {
-    return configPath === undefined
-      ? {ok: true, language: undefined}
-      : {ok: false, message: `Could not find specified config file "${configPath}"`, details: []};
+  const file = configPath ?? findConfigFile();
+  if (file === undefined) {
+    return {ok: true, language: undefined};
+  }
+  if (!fs.existsSync(file)) {
+    return {ok: false, message: `Could not find specified config file "${file}"`, details: []};
   }
   let flattened: {[LANGUAGE]?: unknown};
   try {
-    flattened = await flatten(parseFile(path), path, new Set(), new Set());
+    flattened = await flatten(parseFile(file), file, new Set(), new Set());
   } catch (thrown) {
     if (thrown instanceof ConfigurationError) {
-      return {ok: false, message: `Could not read config file "${path}"`, details: [thrown.message]};
+      return {ok: false, message: `Could not read config file "${file}"`, details: [thrown.message]};
     }
     throw thrown;
   }
@@ -213,7 +238,7 @@ export async function readConfiguredLanguage(
   if (language !== undefined && typeof language !== 'string') {
     return {
       ok: false,
-      message: `Could not read config file "${path}"`,
+      message: `Could not read config file "${file}"`,
       details: [`"${LANGUAGE}" must be a language code, such as "fr".`],
     };
   }
@@ -221,9 +246,9 @@ export async function readConfiguredLanguage(
 }
 
 /**
- * Reads the configuration file at `configPath`, or the default file in the
- * working directory when no path is given. With neither, the recommended
- * rules are used.
+ * Reads the configuration file at `configPath`, or the nearest
+ * `.gurkencheckrc` in the working directory or above it when no path is
+ * given. With neither, the recommended rules are used.
  */
 export async function readConfiguration(
   configPath: string | undefined,
@@ -238,13 +263,14 @@ export async function readConfiguration(
       };
     }
   } else {
-    if (!fs.existsSync(DEFAULT_CONFIG_FILE_NAME)) {
+    const found = findConfigFile();
+    if (found === undefined) {
       // Nothing to read, so fall back to the recommended rules rather than
       // refusing to run. Writing a configuration file is then a way to change
       // the defaults, not a hurdle before the first run.
       return {ok: true, configuration: RECOMMENDED, source: 'the recommended preset'};
     }
-    configPath = DEFAULT_CONFIG_FILE_NAME;
+    configPath = found;
   }
 
   let flattened: Configuration;

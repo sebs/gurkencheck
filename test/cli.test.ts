@@ -505,3 +505,16 @@ test('says so when a rule from --rulesdir is not switched on', async () => {
     assert.doesNotMatch(stderr, /not switched on/u);
   });
 });
+
+test('finds the configuration in a directory above the working directory', async () => {
+  await withProject(DIRTY_FEATURE, '{"no-unnamed-scenarios": "warn"}', async (cwd) => {
+    const subdirectory = path.join(cwd, 'features', 'deep');
+    fs.mkdirSync(subdirectory, {recursive: true});
+    fs.renameSync(path.join(cwd, 'Example.feature'), path.join(subdirectory, 'Example.feature'));
+
+    // Set to warn above, an error under the recommended preset.
+    const {code, stdout} = await cli(['.'], subdirectory);
+    assert.equal(code, 0);
+    assert.match(stdout, /warning +Missing Scenario name/u);
+  });
+});

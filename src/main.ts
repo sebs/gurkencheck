@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import {pathToFileURL} from 'node:url';
 import {parseArgs} from 'node:util';
-import {DEFAULT_CONFIG_FILE_NAME, readConfiguration} from './config-parser.ts';
+import {DEFAULT_CONFIG_FILE_NAME, findConfigFile, readConfiguration} from './config-parser.ts';
 import {EXIT_LINT_ERRORS, EXIT_OK, EXIT_USAGE} from './exit-codes.ts';
 import {
   DEFAULT_IGNORE_FILE_NAME,
@@ -273,7 +273,7 @@ export async function run(
     // Watching never fails: a run that found something is the normal state of
     // affairs while you are fixing it, and the exit code is only read once,
     // when you stop.
-    const configPath = values.config ?? DEFAULT_CONFIG_FILE_NAME;
+    const configPath = values.config ?? findConfigFile() ?? DEFAULT_CONFIG_FILE_NAME;
     return await watch(
       featureRoots(positionals),
       configPath,

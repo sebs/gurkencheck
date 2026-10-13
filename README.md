@@ -30,9 +30,10 @@ a mistake rather than express a preference — an empty file, a scenario with no
 variable that will never be substituted. Nothing in that set depends on how you lay a file
 out, so it should be quiet on a codebase that has never been linted.
 
-When you want something different, create a `.gurkencheckrc` and list the rules you want. A
-configuration file replaces the recommended set rather than adding to it, so every rule is
-off until you switch it on:
+When you want something different, create a `.gurkencheckrc` and list the rules you want.
+gurkencheck uses the nearest one, in the directory it runs in or any directory above it, so
+it finds the project's configuration from a subdirectory too. A configuration file replaces
+the recommended set rather than adding to it, so every rule is off until you switch it on:
 
 ```jsonc
 {

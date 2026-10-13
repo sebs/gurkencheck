@@ -12,7 +12,7 @@
  * }
  * ```
  */
-export {DEFAULT_CONFIG_FILE_NAME, readConfiguration} from './config-parser.ts';
+export {DEFAULT_CONFIG_FILE_NAME, findConfigFile, readConfiguration} from './config-parser.ts';
 export type {ConfigurationResult} from './config-parser.ts';
 export {verifyConfiguration} from './config-verifier.ts';
 export {PRESETS, RECOMMENDED} from './presets.ts';

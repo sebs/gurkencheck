@@ -328,7 +328,8 @@ depends on how you lay a file out, so it should be quiet on a codebase that has 
 linted.</p>
 ${codeBlock('npx gurkencheck')}
 <p>When you want something different, create a file called
-<code>${DEFAULT_CONFIG_FILE_NAME}</code> and list the rules you want. A configuration file
+<code>${DEFAULT_CONFIG_FILE_NAME}</code> and list the rules you want. gurkencheck uses the
+nearest one, in the directory it runs in or any directory above it. A configuration file
 replaces the recommended set rather than adding to it, so every rule is off until you switch
 it on.</p>
 <p>A rule is set to <code>"on"</code>, <code>"warn"</code> or <code>"off"</code>.
@@ -380,7 +381,7 @@ ${codeBlock(`{
 <thead><tr><th>Option</th><th>What it does</th></tr></thead>
 <tbody>
 <tr><td><code>-f, --format</code></td><td>Output format: <code>stylish</code> (the default), <code>json</code>, <code>junit</code>, <code>sarif</code> or <code>tap</code>, or the path to a formatter of your own.</td></tr>
-<tr><td><code>-c, --config</code></td><td>Path to a configuration file, if it is not <code>${DEFAULT_CONFIG_FILE_NAME}</code> in the current directory.</td></tr>
+<tr><td><code>-c, --config</code></td><td>Path to a configuration file, if it is not the nearest <code>${DEFAULT_CONFIG_FILE_NAME}</code> in the current directory or above it.</td></tr>
 <tr><td><code>-i, --ignore</code></td><td>Comma separated globs to skip. Overrides <code>${DEFAULT_IGNORE_FILE_NAME}</code>.</td></tr>
 <tr><td><code>-r, --rulesdir</code></td><td>A directory holding your own rules. May be given more than once.</td></tr>
 <tr><td><code>-l, --language</code></td><td>The dialect to read files in when they carry no <code>#&nbsp;language:</code> header.</td></tr>
