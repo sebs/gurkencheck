@@ -51,18 +51,23 @@ function toSlashes(pattern: string): string {
 }
 
 /**
- * Expands one command line argument into a glob that only matches feature
- * files, or `undefined` when it does not name anything usable.
+ * Expands one command line argument into the globs to search, or `undefined`
+ * when it does not name anything usable. Only feature files are kept from
+ * what they match.
  *
  * Something that exists is taken as a name rather than as a glob, and
  * escaped, so a file or directory whose name holds glob characters - `[wip]`,
  * `{x}` - is still found, and a directory called `x.feature` is searched. A
  * name without glob syntax that does not exist is reported rather than
  * searched for: matching nothing, it would end in a clean run.
+ *
+ * Any other glob is searched as written, and the directories it matches are
+ * searched as well, so `features/*`, `**` and `features/**\/` all mean what a
+ * shell would make of them.
  */
-function toFeatureGlob(pattern: string): string | undefined {
+function toFeatureGlobs(pattern: string): string[] | undefined {
   if (pattern === '.') {
-    return '**/*.feature';
+    return ['**/*.feature'];
   }
 
   let stats: fs.Stats | undefined;
@@ -72,30 +77,36 @@ function toFeatureGlob(pattern: string): string | undefined {
     stats = undefined;
   }
   if (stats?.isDirectory() === true) {
-    return `${escapeGlob(toSlashes(pattern)).replace(/\/+$/, '')}/**/*.feature`;
+    return [`${escapeGlob(toSlashes(pattern)).replace(/\/+$/, '')}/**/*.feature`];
   }
   if (stats?.isFile() === true) {
-    return pattern.endsWith('.feature') ? escapeGlob(toSlashes(pattern)) : undefined;
+    return isFeatureFile(pattern) ? [escapeGlob(toSlashes(pattern))] : undefined;
   }
 
-  if (literalPath(toSlashes(pattern)) !== undefined) {
+  const glob = toSlashes(pattern).replace(/(?<=.)\/+$/, '');
+  if (literalPath(glob) !== undefined) {
     return undefined;
   }
-  if (/\/\*\*$/.test(pattern)) {
-    return `${pattern}/*.feature`;
+  if (isFeatureFile(glob)) {
+    return [glob];
   }
-  if (pattern.endsWith('.feature')) {
-    return pattern;
+  if (/(?:^|\/)\*\*$/.test(glob)) {
+    return [`${glob}/*.feature`];
   }
-  return undefined;
+  return [glob, `${glob}/**/*.feature`];
+}
+
+function isFeatureFile(name: string): boolean {
+  return name.endsWith('.feature');
 }
 
 /** True when the argument names a feature file that the ignore patterns skip. */
-function isIgnoredFile(pattern: string, featureGlob: string, ignore: readonly string[]): boolean {
-  if (!pattern.endsWith('.feature') || literalPath(featureGlob) === undefined) {
+function isIgnoredFile(pattern: string, globs: readonly string[], ignore: readonly string[]): boolean {
+  const [featureGlob] = globs;
+  if (globs.length !== 1 || !isFeatureFile(pattern) || literalPath(featureGlob!) === undefined) {
     return false;
   }
-  return globSync(featureGlob).length > 0 && globSync(featureGlob, {ignore}).length === 0;
+  return globSync(featureGlob!).length > 0 && globSync(featureGlob!, {ignore}).length === 0;
 }
 
 /**
@@ -149,15 +160,17 @@ export function findFeatureFiles(
   const ignoredFiles: string[] = [];
 
   for (const pattern of searched) {
-    const featureGlob = toFeatureGlob(pattern);
-    if (featureGlob === undefined) {
+    const globs = toFeatureGlobs(pattern);
+    if (globs === undefined) {
       invalidPatterns.push(pattern);
       continue;
     }
-    if (isIgnoredFile(pattern, featureGlob, ignore)) {
+    if (isIgnoredFile(pattern, globs, ignore)) {
       ignoredFiles.push(pattern);
     }
-    files.push(...globSync(featureGlob, {ignore}));
+    for (const featureGlob of globs) {
+      files.push(...globSync(featureGlob, {ignore}).filter(isFeatureFile));
+    }
   }
 
   return {files: uniq(files), invalidPatterns, ignoredFiles};
@@ -186,14 +199,14 @@ export function findFeatureFileStream(
   const ignoredFiles: string[] = [];
 
   for (const pattern of searched) {
-    const featureGlob = toFeatureGlob(pattern);
-    if (featureGlob === undefined) {
+    const expanded = toFeatureGlobs(pattern);
+    if (expanded === undefined) {
       invalidPatterns.push(pattern);
     } else {
-      if (isIgnoredFile(pattern, featureGlob, ignore)) {
+      if (isIgnoredFile(pattern, expanded, ignore)) {
         ignoredFiles.push(pattern);
       }
-      globs.push(featureGlob);
+      globs.push(...expanded);
     }
   }
 
@@ -202,6 +215,7 @@ export function findFeatureFileStream(
 
     for (const featureGlob of globs) {
       for await (const file of globStream(featureGlob, {ignore})) {
+        if (!isFeatureFile(file)) continue;
         if (seen !== undefined) {
           if (seen.has(file)) continue;
           seen.add(file);
@@ -230,8 +244,7 @@ export function featureRoots(patterns: readonly string[]): string[] {
   const roots = new Set<string>();
 
   for (const pattern of searched) {
-    const featureGlob = toFeatureGlob(pattern);
-    if (featureGlob !== undefined) {
+    for (const featureGlob of toFeatureGlobs(pattern) ?? []) {
       roots.add(globRoot(featureGlob));
     }
   }

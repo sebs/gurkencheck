@@ -336,5 +336,5 @@ test('featureRoots drops a directory already covered by another', () => {
 });
 
 test('featureRoots ignores a pattern that names nothing', () => {
-  assert.deepEqual(featureRoots(['nowhere-at-all**']), []);
+  assert.deepEqual(featureRoots(['nowhere-at-all']), []);
 });

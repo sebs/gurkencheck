@@ -122,7 +122,7 @@ test('exits 2 for an unknown option', async () => {
 
 test('exits 2 for a path that names nothing', async () => {
   await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
-    const {code, stderr} = await cli(['badpattern**'], cwd);
+    const {code, stderr} = await cli(['no-such-directory'], cwd);
     assert.equal(code, 2);
     assert.match(stderr, /Invalid format of the feature file path\/pattern/u);
   });

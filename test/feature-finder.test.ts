@@ -92,9 +92,9 @@ test(`skips files matching ${DEFAULT_IGNORE_FILE_NAME}`, () => {
 });
 
 test('reports a pattern that names nothing usable', () => {
-  const {files, invalidPatterns} = findFeatureFiles(['badpattern**']);
+  const {files, invalidPatterns} = findFeatureFiles(['no-such-directory']);
   assert.deepEqual(files, []);
-  assert.deepEqual(invalidPatterns, ['badpattern**']);
+  assert.deepEqual(invalidPatterns, ['no-such-directory']);
 });
 
 test('ignores node_modules by default', () => {
@@ -175,10 +175,10 @@ test('the streaming search honours the ignore patterns', async () => {
 
 test('the streaming search reports a bad pattern before walking anything', () => {
   buildTree();
-  const {invalidPatterns} = findFeatureFileStream(['badpattern**']);
+  const {invalidPatterns} = findFeatureFileStream(['no-such-directory']);
   // Known without the stream having been touched, so a bad argument can be
   // given up on before any searching is done.
-  assert.deepEqual(invalidPatterns, ['badpattern**']);
+  assert.deepEqual(invalidPatterns, ['no-such-directory']);
 });
 
 test('the streaming search hands the same file over only once', async () => {
@@ -258,4 +258,23 @@ test('an ignore list that comes to nothing still skips node_modules', () => {
   fs.rmSync(DEFAULT_IGNORE_FILE_NAME);
   assert.deepEqual(readIgnorePatterns(['']), DEFAULT_IGNORED_PATTERNS);
   assert.deepEqual(readIgnorePatterns(['  ', 'build']), ['build']);
+});
+
+test('takes any glob, and the directories it matches, keeping only feature files', () => {
+  assert.deepEqual(findFeatureFiles([`${FOUND}/*`]).files.sort(), bothFeatures);
+  assert.deepEqual(findFeatureFiles([`${FOUND}/**/`]).files, bothFeatures);
+  assert.deepEqual(findFeatureFiles(['folder/*/found']).files.sort(), bothFeatures);
+  assert.deepEqual(findFeatureFiles(['**']).files, bothFeatures);
+  assert.deepEqual(findFeatureFiles([`${FOUND}/?.feature`]).files, [`${FOUND}/a.feature`]);
+  // c.txt matches the glob, but is not a feature file.
+  assert.deepEqual(findFeatureFiles([`${FOUND}/c*`]).files, []);
+  assert.deepEqual(findFeatureFiles([`${FOUND}/c*`]).invalidPatterns, []);
+});
+
+test('the streaming search takes the same globs, handing each file over once', async () => {
+  const found: string[] = [];
+  for await (const file of findFeatureFileStream([`${FOUND}/*`]).files) {
+    found.push(file);
+  }
+  assert.deepEqual(found.sort(), bothFeatures);
 });
