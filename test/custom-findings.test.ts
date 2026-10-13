@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {FORMATTERS} from '../src/formatters/index.ts';
-import {lint} from '../src/linter.ts';
+import {hasErrors, lint} from '../src/linter.ts';
 import type {LintRule, RuleError} from '../src/types.ts';
 
 const FILE = 'test/linter/NoViolations.feature';
@@ -55,4 +55,34 @@ test('a finding naming no rule is put down to the rule that reported it', async 
     errors.map((error) => error.rule),
     ['custom', 'custom'],
   );
+});
+
+test('a rule set to warn never fails the run, whatever its findings say', async () => {
+  const rule = {
+    name: 'custom',
+    run: () => [
+      {message: 'says error', rule: 'custom', line: 1, severity: 'error'},
+      {message: 'says info', rule: 'custom', line: 1, severity: 'info'},
+    ],
+  } as unknown as LintRule;
+  const rules = new Map([['custom', rule]]);
+
+  const warned = await lint([FILE], {custom: 'warn'}, rules);
+  assert.deepEqual(
+    warned[0]!.errors.map((error) => error.severity),
+    ['warning', 'warning'],
+  );
+  assert.equal(hasErrors(warned), false);
+
+  // Set to on, an unknown severity counts as the error the configuration asks for.
+  const on = await lint([FILE], {custom: 'on'}, rules);
+  assert.deepEqual(
+    on[0]!.errors.map((error) => error.severity),
+    ['error', 'error'],
+  );
+});
+
+test('a rule set to on may still mark a finding as only a warning', async () => {
+  const errors = await findingsOf([{message: 'soft', rule: 'custom', line: 1, severity: 'warning'}]);
+  assert.equal(errors[0]!.severity, 'warning');
 });

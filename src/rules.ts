@@ -220,7 +220,6 @@ function normalise<T extends RuleError | RunFinding>(
 ): T {
   const {message, rule} = finding as {message?: unknown; rule?: unknown};
   return {
-    severity,
     ...finding,
     message:
       typeof message === 'string'
@@ -230,6 +229,11 @@ function normalise<T extends RuleError | RunFinding>(
           : String(message),
     rule: typeof rule === 'string' && rule !== '' ? rule : ruleName,
     line: lineOf(finding),
+    // A rule set to warn never fails the run, whatever it says about its own
+    // findings; one set to on may still mark one as only a warning. Anything
+    // but those two - "info", a typo - would count as neither, so a JUnit
+    // report said failures="0" over a <failure> while the run passed.
+    severity: severity === 'warning' || finding.severity === 'warning' ? 'warning' : 'error',
   };
 }
 
@@ -348,8 +352,6 @@ export async function runEnabledRules(
     }
 
     for (const error of found as RuleError[]) {
-      // The configuration decides how loudly a rule reports, so a custom rule
-      // needs no say in it - but one that sets a severity itself is respected.
       errors.push(normalise(error, rule.name, severity));
     }
   }
