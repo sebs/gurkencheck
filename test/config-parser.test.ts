@@ -239,3 +239,19 @@ test('reads a configuration file starting with a byte order mark', async () => {
     fs.rmSync(file, {force: true});
   }
 });
+
+test('a configuration that is a directory is said to be one, not a parse error', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-dir-config-'));
+  try {
+    const result = await readConfiguration(directory, rules);
+    assert.ok(!result.ok);
+    assert.deepEqual(result.details, [`Could not read "${directory}": it is a directory, not a file.`]);
+
+    fs.writeFileSync(path.join(directory, 'rc.json'), '{"extends": "./"}');
+    const extended = await readConfiguration(path.join(directory, 'rc.json'), rules);
+    assert.ok(!extended.ok);
+    assert.match(extended.details[0]!, /it is a directory, not a file/u);
+  } finally {
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});

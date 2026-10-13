@@ -67,11 +67,28 @@ function isConfigurationObject(value: unknown): value is Record<string, unknown>
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** Why a file could not be read, in words rather than as an errno. */
+function unreadableBecause(thrown: unknown): string {
+  const code = (thrown as NodeJS.ErrnoException | undefined)?.code;
+  if (code === 'EISDIR') return 'it is a directory, not a file';
+  if (code === 'EACCES' || code === 'EPERM') return 'permission was denied';
+  if (code === 'ENOENT') return 'it does not exist';
+  return thrown instanceof Error ? thrown.message : String(thrown);
+}
+
 function parseFile(filePath: string): Record<string, unknown> {
+  // Reading and parsing fail for different reasons, and a directory or a
+  // file you may not read is not a mistake in its JSON.
+  let text: string;
+  try {
+    text = fs.readFileSync(filePath, 'utf8');
+  } catch (thrown) {
+    throw new ConfigurationError(`Could not read "${filePath}": ${unreadableBecause(thrown)}.`);
+  }
   let parsed: unknown;
   try {
     // JSON.parse refuses a byte order mark, which some editors write.
-    parsed = JSON.parse(stripJsonComments(fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/u, '')));
+    parsed = JSON.parse(stripJsonComments(text.replace(/^\uFEFF/u, '')));
   } catch (thrown) {
     throw new ConfigurationError(
       `Could not parse "${filePath}": ${thrown instanceof Error ? thrown.message : String(thrown)}`,
