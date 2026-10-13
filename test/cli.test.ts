@@ -460,3 +460,26 @@ test('--watch exits 0 when it is stopped', async () => {
     assert.equal(await stop(child), 0);
   });
 });
+
+test('stops quietly when whoever reads the output goes away', async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-cli-'));
+  try {
+    // Enough output to fill the pipe several times over.
+    for (let index = 0; index < 400; index++) {
+      fs.writeFileSync(path.join(cwd, `f${index}.feature`), DIRTY_FEATURE);
+    }
+    fs.writeFileSync(path.join(cwd, '.gurkencheckrc'), CONFIG);
+
+    const child = spawn(process.execPath, [CLI, '.'], {cwd});
+    let stderr = '';
+    child.stderr.on('data', (chunk) => (stderr += String(chunk)));
+    // Read one chunk, then hang up, as `| head -1` does.
+    child.stdout.once('data', () => child.stdout.destroy());
+    const code = await new Promise<number | null>((resolve) => child.on('exit', resolve));
+
+    assert.equal(stderr, '');
+    assert.notEqual(code, 2);
+  } finally {
+    fs.rmSync(cwd, {recursive: true, force: true});
+  }
+});
