@@ -131,6 +131,18 @@ const WITH_COLUMNS: FileResult[] = [
   },
 ];
 
+test('stylish writes control characters out rather than sending them to the terminal', () => {
+  const output = capture(getFormatter('stylish')!, [
+    {
+      filePath: '/a\nb.feature',
+      errors: [{line: 1, message: 'Step "\u001b]0;PWNED\u0007\u001b[2J" \u202Eright', rule: 'r'}],
+    },
+  ]);
+  assert.doesNotMatch(output, /[\u0000-\u0009\u000B-\u001F\u202E]/u);
+  assert.match(output, /\/a\\nb\.feature/u);
+  assert.match(output, /Step "\\u001b\]0;PWNED\\u0007\\u001b\[2J" \\u202eright/u);
+});
+
 test('stylish shows line:column when the rule knows a column', () => {
   const output = capture(getFormatter('stylish')!, WITH_COLUMNS);
   assert.match(output, /\s3:5\s/u);

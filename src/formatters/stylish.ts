@@ -2,6 +2,30 @@ import {style} from '../logger.ts';
 import type {SyncFormatterRun} from './index.ts';
 import type {FileResult, RuleError} from '../types.ts';
 
+/**
+ * Control characters, and the ones that reorder text on screen, as found in
+ * C0, DEL, C1 and the bidirectional overrides.
+ */
+const UNPRINTABLE = /[\u0000-\u001F\u007F-\u009F\u200E\u200F\u202A-\u202E\u2066-\u2069]/gu;
+
+const NAMED_ESCAPES: Record<string, string> = {'\n': '\\n', '\r': '\\r', '\t': '\\t'};
+
+/**
+ * Text from a feature file, made safe to put in front of a terminal.
+ *
+ * A message quotes the file it is about, and a file can hold anything: an
+ * escape sequence that clears the screen or retitles the window, or a line
+ * break that pulls the columns apart. Each such character is written out as
+ * an escape instead, which shows it is there without letting it act.
+ */
+function printable(text: string): string {
+  return text.replace(
+    UNPRINTABLE,
+    (character) =>
+      NAMED_ESCAPES[character] ?? `\\u${character.codePointAt(0)!.toString(16).padStart(4, '0')}`,
+  );
+}
+
 /** `12:5` when the rule knows a column, `12` when it does not. */
 function position(error: RuleError): string {
   return error.column === undefined ? String(error.line) : `${error.line}:${error.column}`;
@@ -70,12 +94,20 @@ function block(result: FileResult, consoleWidth: number): string {
     return '';
   }
 
-  const lineWidth = widestLineNumber(result);
-  const messageWidth = messageColumnWidth(result, lineWidth, consoleWidth);
+  const shown: FileResult = {
+    filePath: printable(result.filePath),
+    errors: result.errors.map((error) => ({
+      ...error,
+      message: printable(error.message),
+      rule: printable(error.rule),
+    })),
+  };
+  const lineWidth = widestLineNumber(shown);
+  const messageWidth = messageColumnWidth(shown, lineWidth, consoleWidth);
 
   const lines = [
-    style.underline(result.filePath),
-    ...result.errors.map((error) => formatError(error, lineWidth, messageWidth, true)),
+    style.underline(shown.filePath),
+    ...shown.errors.map((error) => formatError(error, lineWidth, messageWidth, true)),
   ];
   // A blank line between blocks, as printing '\n' with console.log gave.
   return `${lines.join('\n')}\n\n\n`;
@@ -103,17 +135,10 @@ export function printResults(results: readonly FileResult[]): void {
   const consoleWidth = widthOfConsole();
 
   for (const result of results) {
-    if (result.errors.length === 0) {
-      continue;
+    const text = block(result, consoleWidth);
+    if (text !== '') {
+      // console.log adds the last line break itself.
+      console.log(text.slice(0, -1));
     }
-
-    const lineWidth = widestLineNumber(result);
-    const messageWidth = messageColumnWidth(result, lineWidth, consoleWidth);
-
-    console.log(style.underline(result.filePath));
-    for (const error of result.errors) {
-      console.log(formatError(error, lineWidth, messageWidth, true));
-    }
-    console.log('\n');
   }
 }
