@@ -46,14 +46,15 @@ test('a finding with no message says so, and every formatter can write it', asyn
   }
 });
 
-test('a finding naming no rule is put down to the rule that reported it', async () => {
+test('a finding is put down to the rule that reported it', async () => {
   const errors = await findingsOf([
     {message: 'no rule', line: 1},
     {message: 'empty rule', rule: '', line: 1},
+    {message: 'another rule', rule: 'no-trailing-spaces', line: 1},
   ]);
   assert.deepEqual(
     errors.map((error) => error.rule),
-    ['custom', 'custom'],
+    ['custom', 'custom', 'custom'],
   );
 });
 

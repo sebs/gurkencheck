@@ -210,15 +210,15 @@ function lineOf(finding: {line?: unknown}): number {
  * A custom rule's findings are whatever it hands back, and a formatter meeting
  * one without a message or a rule name either crashed - taking every other
  * finding of the run with it - or printed `undefined`. A missing message is
- * said to be missing, and a finding naming no rule is put down to the rule
- * that reported it.
+ * said to be missing, and a finding is put down to the rule that reported
+ * it.
  */
 function normalise<T extends RuleError | RunFinding>(
   finding: T,
   ruleName: string,
   severity: Severity,
 ): T {
-  const {message, rule, column, ...rest} = finding as T & {message?: unknown; rule?: unknown};
+  const {message, column, ...rest} = finding as T & {message?: unknown};
   const line = lineOf(finding);
   return {
     ...(rest as T),
@@ -232,7 +232,10 @@ function normalise<T extends RuleError | RunFinding>(
         : message === undefined || message === null
           ? `Rule "${ruleName}" reported a finding with no message`
           : String(message),
-    rule: typeof rule === 'string' && rule !== '' ? rule : ruleName,
+    // Always the rule that reported it: a finding claiming another rule's name
+    // could not be switched off under its own, and SARIF would link it to the
+    // other rule's documentation.
+    rule: ruleName,
     line,
     // A rule set to warn never fails the run, whatever it says about its own
     // findings; one set to on may still mark one as only a warning. Anything
