@@ -23,7 +23,8 @@ import {isKnownLanguage} from './gherkin/dialects.ts';
 import {hasErrors, lint, lintStream} from './linter.ts';
 import {SILENT, TO_STDERR} from './diagnostics.ts';
 import type {Diagnostics} from './diagnostics.ts';
-import {loadRules} from './rules.ts';
+import {isRuleEnabled, loadRules} from './rules.ts';
+import {BUILT_IN_RULES} from './rules/index.ts';
 import type {StreamingFormatter} from './formatters/index.ts';
 import type {Configuration, RuleRegistry} from './types.ts';
 import type {Sequence} from './util/stream.ts';
@@ -155,6 +156,17 @@ export async function run(
   let settings = await readSettings();
   if (settings === undefined) {
     return EXIT_USAGE;
+  }
+  // A configuration switches on only what it names, so a rule brought in with
+  // --rulesdir and left out of it is loaded and then never run - and a run
+  // without it looks the same as one in which it found nothing.
+  for (const [name, rule] of rules) {
+    if (!BUILT_IN_RULES.includes(rule) && !isRuleEnabled(settings.configuration[name])) {
+      diagnostics.report({
+        level: 'notice',
+        message: `The rule "${name}" from --rulesdir is not switched on in the configuration, so it does not run.`,
+      });
+    }
   }
 
   // Given more than once, the lists add up rather than the last one winning.

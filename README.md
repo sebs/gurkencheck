@@ -387,9 +387,17 @@ export default {
 };
 ```
 
+Like any other rule, it runs only once the configuration switches it on:
+
+```json
+{"no-lorem": "on"}
+```
+
 ```sh
 npx gurkencheck --rulesdir ./rules
 ```
+
+gurkencheck says so when a rule from `--rulesdir` is left out of the configuration.
 
 A custom rule may reuse a built-in rule's name to replace it.
 

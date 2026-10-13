@@ -492,3 +492,16 @@ test('says so when a file named outright is skipped by an ignore pattern', async
     assert.match(stderr, /Skipped "Example\.feature": it matches an ignore pattern/u);
   });
 });
+
+test('says so when a rule from --rulesdir is not switched on', async () => {
+  const rulesDir = path.resolve('test/rulesdir/rules');
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    const {code, stderr} = await cli(['--rulesdir', rulesDir, '.'], cwd);
+    assert.equal(code, 0);
+    assert.match(stderr, /The rule "custom" from --rulesdir is not switched on/u);
+  });
+  await withProject(CLEAN_FEATURE, '{"custom": "on"}', async (cwd) => {
+    const {stderr} = await cli(['--rulesdir', rulesDir, '.'], cwd);
+    assert.doesNotMatch(stderr, /not switched on/u);
+  });
+});
