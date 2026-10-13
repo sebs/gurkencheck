@@ -6,10 +6,12 @@
  * really are different sentences - so they are grouped by how many single
  * character edits it takes to turn one into the other.
  *
- * Edit distance is quadratic in the number of distinct steps, which on a
- * large suite is millions of comparisons, so two cheap tests run first. Both
- * are lower bounds on the distance, never overestimates, so a pair they
- * reject could not have been close enough anyway:
+ * Comparing every pair is quadratic in the number of distinct steps, which on
+ * a large suite is hundreds of millions of comparisons, so the steps that
+ * could be close are looked up by the pieces they share (see groupSimilar),
+ * and two cheap tests run before an edit distance. Both are lower bounds on
+ * the distance, never overestimates, so a pair they reject could not have
+ * been close enough anyway:
  *
  * - two strings are at least as far apart as their lengths differ;
  * - every edit changes the tally of characters by at most two, so half the
@@ -130,90 +132,132 @@ export function boundedEditDistance(left: string, right: string, limit: number):
   return previous[width] ?? limit + 1;
 }
 
+interface Candidate {
+  index: number;
+  text: string;
+  tally: number[];
+}
+
+/**
+ * The pieces a step is cut into for the search: `edits + 1` of them, as even
+ * in length as they can be, each with where it starts.
+ */
+function pieces(length: number, edits: number): {start: number; length: number}[] {
+  const count = edits + 1;
+  const short = Math.floor(length / count);
+  const longer = length % count;
+  const cut: {start: number; length: number}[] = [];
+  let start = 0;
+  for (let piece = 0; piece < count; piece++) {
+    const pieceLength = piece < count - longer ? short : short + 1;
+    cut.push({start, length: pieceLength});
+    start += pieceLength;
+  }
+  return cut;
+}
+
 /**
  * Groups entries whose text is close enough to be the same step written two
  * ways. Entries that are close to nothing are left out, so every group
  * returned has at least two members, in the order they were given in.
  *
- * Every member of a group is within the budget of every other. Joining any
- * two close steps into one group instead lets a chain of one-edit neighbours
- * gather steps that are nothing alike: `the cat sat on the mat` and `the bot
- * sit in the hut` are six edits apart, and each is one edit from the next
- * step along. Entries come most used first, so a group starts from the most
- * used step and takes each of its neighbours that is close to every member
- * so far.
+ * Entries come most used first, and a group is built around the first entry
+ * not yet in one: it takes every other entry still free that is within the
+ * budget of it. So every member is a few edits from the group's first, most
+ * used step - joining any two close steps instead let a chain of one-edit
+ * neighbours gather steps that are nothing alike, `the cat sat on the mat`
+ * with `the bot sit in the hut`.
+ *
+ * Comparing every step with every other of about its length is quadratic,
+ * and a suite of twenty thousand steps took over a minute. The search uses
+ * the pigeonhole filter of pass-join instead: cut a step into `maxEdits + 1`
+ * pieces, and that many edits leave at least one of them untouched - so a
+ * step close to it holds that piece too, moved by no more than `maxEdits`
+ * places. Only the steps found holding such a piece are compared at all.
  */
 export function groupSimilar<T extends {text: string}>(
   entries: readonly T[],
   options: SimilarityOptions = DEFAULT_SIMILARITY,
 ): T[][] {
-  // Sorting by length lets the search stop early: once two steps are too
-  // different in length, every step after this one is longer still.
-  const candidates = entries
-    .map((entry, index) => ({index, text: entry.text, tally: tally(entry.text)}))
-    .filter((candidate) => candidate.text.length >= options.minLength)
-    .sort((a, b) => a.text.length - b.text.length);
-
-  /** Entry index -> the indices of the entries close to it. */
-  const neighbours = new Map<number, Set<number>>();
-  const join = (a: number, b: number): void => {
-    for (const [from, to] of [
-      [a, b],
-      [b, a],
-    ] as const) {
-      const close = neighbours.get(from);
-      if (close === undefined) {
-        neighbours.set(from, new Set([to]));
-      } else {
-        close.add(to);
-      }
-    }
-  };
-
-  for (let i = 0; i < candidates.length; i++) {
-    const left = candidates[i]!;
-    for (let j = i + 1; j < candidates.length; j++) {
-      const right = candidates[j]!;
-      const limit = Math.min(
-        options.maxEdits,
-        Math.floor((1 - options.ratio) * right.text.length),
-      );
-
-      // Sorted by length, so once a step is too much longer than this one,
-      // every step after it is longer still.
-      if (right.text.length - left.text.length > limit) {
-        break;
-      }
-      if (limit < 1 || tallyRulesOut(left.tally, right.tally, limit)) {
-        continue;
-      }
-      if (boundedEditDistance(left.text, right.text, limit) <= limit) {
-        join(left.index, right.index);
-      }
-    }
+  const edits = options.maxEdits;
+  if (edits < 1) {
+    return [];
   }
+  const candidates: Candidate[] = entries
+    .map((entry, index) => ({index, text: entry.text, tally: tally(entry.text)}))
+    .filter((candidate) => candidate.text.length >= options.minLength);
 
-  const grouped = new Set<number>();
-  const groups: T[][] = [];
-  for (let index = 0; index < entries.length; index++) {
-    const close = neighbours.get(index);
-    if (close === undefined || grouped.has(index)) {
+  /** `length:piece:text` -> the candidates of that length holding that piece. */
+  const index = new Map<string, Candidate[]>();
+  /** Candidates too short to cut into pieces, compared with every step. */
+  const short: Candidate[] = [];
+  for (const candidate of candidates) {
+    const {length} = candidate.text;
+    if (length <= edits) {
+      short.push(candidate);
       continue;
     }
-    const members = [index];
-    for (const neighbour of [...close].sort((a, b) => a - b)) {
-      if (grouped.has(neighbour)) {
-        continue;
+    pieces(length, edits).forEach((piece, number) => {
+      const key = `${length}:${number}:${candidate.text.slice(piece.start, piece.start + piece.length)}`;
+      const holding = index.get(key);
+      if (holding === undefined) {
+        index.set(key, [candidate]);
+      } else {
+        holding.push(candidate);
       }
-      if (members.every((member) => neighbours.get(member)?.has(neighbour) === true)) {
-        members.push(neighbour);
+    });
+  }
+
+  /** The candidates that could be within the budget of `step`. */
+  const nearby = (step: Candidate): Iterable<Candidate> => {
+    const length = step.text.length;
+    if (length <= edits) {
+      return candidates;
+    }
+    const found = new Set<Candidate>(short);
+    for (let other = Math.max(edits + 1, length - edits); other <= length + edits; other++) {
+      pieces(other, edits).forEach((piece, number) => {
+        const from = Math.max(0, piece.start - edits);
+        const to = Math.min(length - piece.length, piece.start + edits);
+        for (let start = from; start <= to; start++) {
+          const key = `${other}:${number}:${step.text.slice(start, start + piece.length)}`;
+          for (const candidate of index.get(key) ?? []) {
+            found.add(candidate);
+          }
+        }
+      });
+    }
+    return found;
+  };
+
+  const close = (a: Candidate, b: Candidate): boolean => {
+    const [shorter, longer] = a.text.length <= b.text.length ? [a, b] : [b, a];
+    const limit = Math.min(edits, Math.floor((1 - options.ratio) * longer.text.length));
+    return (
+      limit >= 1 &&
+      longer.text.length - shorter.text.length <= limit &&
+      !tallyRulesOut(shorter.tally, longer.tally, limit) &&
+      boundedEditDistance(shorter.text, longer.text, limit) <= limit
+    );
+  };
+
+  const grouped = new Set<Candidate>();
+  const groups: T[][] = [];
+  for (const anchor of candidates) {
+    if (grouped.has(anchor)) {
+      continue;
+    }
+    const members = [anchor];
+    for (const candidate of nearby(anchor)) {
+      if (candidate !== anchor && !grouped.has(candidate) && close(anchor, candidate)) {
+        members.push(candidate);
       }
     }
     if (members.length > 1) {
       for (const member of members) {
         grouped.add(member);
       }
-      groups.push(members.sort((a, b) => a - b).map((member) => entries[member]!));
+      groups.push(members.sort((a, b) => a.index - b.index).map((member) => entries[member.index]!));
     }
   }
   return groups;

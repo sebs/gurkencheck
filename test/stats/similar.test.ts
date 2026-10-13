@@ -78,11 +78,10 @@ test('a chain of one-edit neighbours does not join steps far apart', () => {
     'the bot sit in the hut',
   ];
   const groups = groupSimilar(steps(...chain));
-  for (const group of groups) {
-    for (const a of group) {
-      for (const b of group) {
-        assert.ok(boundedEditDistance(a.text, b.text, 3) <= 3, `${a.text} / ${b.text}`);
-      }
+  // Every member is within the budget of the group's first, most used, step.
+  for (const [first, ...rest] of groups) {
+    for (const member of rest) {
+      assert.ok(boundedEditDistance(first!.text, member.text, 3) <= 3, `${first!.text} / ${member.text}`);
     }
   }
   // The most used step starts the first group, with what is close to it.
