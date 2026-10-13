@@ -4,7 +4,7 @@ import {rulesOf, stepContainersOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
 import {mergeDefaults} from '../util/collections.ts';
 import {at} from '../util/location.ts';
-import {invalidPatterns} from '../util/patterns.ts';
+import {compilePattern, invalidPatterns} from '../util/patterns.ts';
 
 const name = 'no-restricted-patterns';
 
@@ -33,7 +33,7 @@ const ESCAPED_NEWLINE_SENTINEL = '<!gurkencheck new line sentinel!>';
 
 /** Builds the pattern list for each block kind, keyed by neutral keyword. */
 function compilePatterns(config: PatternConfig): Map<string, RegExp[]> {
-  const global = config.Global.map((pattern) => new RegExp(pattern, 'i'));
+  const global = config.Global.map((pattern) => compilePattern(pattern, 'i'));
   const compiled = new Map<string, RegExp[]>();
 
   for (const key of Object.keys(availableConfigs) as (keyof PatternConfig)[]) {
@@ -42,7 +42,7 @@ function compilePatterns(config: PatternConfig): Map<string, RegExp[]> {
     }
     const neutralKey = key.toLowerCase().replace(/ /g, '');
     compiled.set(neutralKey, [
-      ...config[key].map((pattern) => new RegExp(pattern, 'i')),
+      ...config[key].map((pattern) => compilePattern(pattern, 'i')),
       ...global,
     ]);
   }
@@ -86,7 +86,7 @@ const rule: LintRule = {
       for (const pattern of applicable) {
         if (pattern.test(text)) {
           errors.push({
-            message: `${type} ${property}: "${text}" matches restricted pattern "${pattern}"`,
+            message: `${type} ${property}: "${text}" matches restricted pattern "/${pattern.source}/i"`,
             rule: name,
             ...position,
           });

@@ -3,7 +3,7 @@ import {scenariosOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
 import {mergeDefaults} from '../util/collections.ts';
 import {at} from '../util/location.ts';
-import {invalidPatterns} from '../util/patterns.ts';
+import {compilePattern, invalidPatterns} from '../util/patterns.ts';
 
 const name = 'required-tags';
 
@@ -45,7 +45,7 @@ const rule: LintRule = {
 
       const scenarioType = getNodeType(scenario, feature.language);
       for (const required of config.tags) {
-        const pattern = new RegExp(required);
+        const pattern = compilePattern(required);
         const found = tagSets.every((tags) => tags.some((tag) => pattern.test(tag.name)));
         if (!found) {
           errors.push({
