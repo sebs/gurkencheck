@@ -165,3 +165,19 @@ test('--top takes plain digits only', async () => {
     assert.match(stderr, /--top needs a whole number/u, top);
   }
 });
+
+test('stats refuses a configuration it cannot read, rather than reading in English', async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-stats-config-'));
+  try {
+    fs.writeFileSync(path.join(cwd, 'a.feature'), 'Fonctionnalité: A\n');
+    for (const config of ['{bad', '{"extends": "./missing.json"}', '{"language": 3}']) {
+      fs.writeFileSync(path.join(cwd, '.gurkencheckrc'), config);
+      const {code, stdout, stderr} = await cli(['stats', '.'], cwd);
+      assert.equal(code, 2, config);
+      assert.equal(stdout, '', config);
+      assert.match(stderr, /Could not read config file "\.gurkencheckrc"/u, config);
+    }
+  } finally {
+    fs.rmSync(cwd, {recursive: true, force: true});
+  }
+});

@@ -183,30 +183,41 @@ async function flatten(
 
 /**
  * The `language` a configuration file sets, following what it extends, or
- * `undefined` when there is no file, it sets none, or it cannot be read.
+ * `undefined` when there is no file or it sets none.
  *
  * For commands that read feature files without linting them, such as
  * `stats`: they need the dialect, but should not refuse to run over a rule
- * setting they never use.
+ * setting they never use. A file that cannot be read at all is still an
+ * error - passed over, it would leave the files read in English without a
+ * word.
  */
 export async function readConfiguredLanguage(
-  configPath: string = DEFAULT_CONFIG_FILE_NAME,
-): Promise<string | undefined> {
-  if (!fs.existsSync(configPath)) {
-    return undefined;
+  configPath: string | undefined,
+): Promise<{ok: true; language: string | undefined} | {ok: false; message: string; details: string[]}> {
+  const path = configPath ?? DEFAULT_CONFIG_FILE_NAME;
+  if (!fs.existsSync(path)) {
+    return configPath === undefined
+      ? {ok: true, language: undefined}
+      : {ok: false, message: `Could not find specified config file "${configPath}"`, details: []};
   }
+  let flattened: {[LANGUAGE]?: unknown};
   try {
-    const flattened = (await flatten(parseFile(configPath), configPath, new Set(), new Set())) as {
-      [LANGUAGE]?: unknown;
-    };
-    const language = flattened[LANGUAGE];
-    return typeof language === 'string' ? language : undefined;
+    flattened = await flatten(parseFile(path), path, new Set(), new Set());
   } catch (thrown) {
     if (thrown instanceof ConfigurationError) {
-      return undefined;
+      return {ok: false, message: `Could not read config file "${path}"`, details: [thrown.message]};
     }
     throw thrown;
   }
+  const language = flattened[LANGUAGE];
+  if (language !== undefined && typeof language !== 'string') {
+    return {
+      ok: false,
+      message: `Could not read config file "${path}"`,
+      details: [`"${LANGUAGE}" must be a language code, such as "fr".`],
+    };
+  }
+  return {ok: true, language};
 }
 
 /**

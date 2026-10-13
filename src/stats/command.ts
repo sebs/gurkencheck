@@ -114,7 +114,15 @@ export async function runStats(
 
   // The same dialect the linter would read the files in: --language, or else
   // the configuration's. Nothing else in the configuration matters here.
-  const language = values.language ?? (await readConfiguredLanguage(values.config));
+  let language = values.language;
+  if (language === undefined) {
+    const configured = await readConfiguredLanguage(values.config);
+    if (!configured.ok) {
+      diagnostics.report({level: 'error', message: configured.message, details: configured.details});
+      return EXIT_USAGE;
+    }
+    language = configured.language;
+  }
   if (language !== undefined && !isKnownLanguage(language)) {
     diagnostics.report({
       level: 'error',
