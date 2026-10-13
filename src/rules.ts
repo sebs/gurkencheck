@@ -218,9 +218,14 @@ function normalise<T extends RuleError | RunFinding>(
   ruleName: string,
   severity: Severity,
 ): T {
-  const {message, rule} = finding as {message?: unknown; rule?: unknown};
+  const {message, rule, column, ...rest} = finding as T & {message?: unknown; rule?: unknown};
+  const line = lineOf(finding);
   return {
-    ...finding,
+    ...(rest as T),
+    // A column belongs to a line, and counts from 1; SARIF rejects a 0.
+    ...(line > 0 && typeof column === 'number' && Number.isInteger(column) && column >= 1
+      ? {column}
+      : {}),
     message:
       typeof message === 'string'
         ? message
@@ -228,7 +233,7 @@ function normalise<T extends RuleError | RunFinding>(
           ? `Rule "${ruleName}" reported a finding with no message`
           : String(message),
     rule: typeof rule === 'string' && rule !== '' ? rule : ruleName,
-    line: lineOf(finding),
+    line,
     // A rule set to warn never fails the run, whatever it says about its own
     // findings; one set to on may still mark one as only a warning. Anything
     // but those two - "info", a typo - would count as neither, so a JUnit

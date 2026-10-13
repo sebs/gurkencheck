@@ -86,3 +86,22 @@ test('a rule set to on may still mark a finding as only a warning', async () => 
   const errors = await findingsOf([{message: 'soft', rule: 'custom', line: 1, severity: 'warning'}]);
   assert.equal(errors[0]!.severity, 'warning');
 });
+
+test('a column is kept only where it can be one', async () => {
+  const errors = await findingsOf([
+    {message: 'good', rule: 'custom', line: 2, column: 3},
+    {message: 'zero', rule: 'custom', line: 2, column: 0},
+    {message: 'fraction', rule: 'custom', line: 2, column: 1.5},
+    {message: 'no line', rule: 'custom', line: 'two', column: 3},
+  ]);
+  // Findings come back in line order, so they are told apart by message.
+  assert.deepEqual(
+    Object.fromEntries(errors.map(({message, line, column}) => [message, [line, column]])),
+    {
+      good: [2, 3],
+      zero: [2, undefined],
+      fraction: [2, undefined],
+      'no line': [0, undefined],
+    },
+  );
+});
