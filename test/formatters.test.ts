@@ -321,6 +321,16 @@ test('junit escapes reserved characters in messages', () => {
   assert.match(output, /a &lt; b &amp; &quot;c&quot;<\/failure>/u);
 });
 
+test('junit keeps the line breaks in a message as they were', () => {
+  const output = capture(getFormatter('junit')!, [
+    {filePath: '/a.feature', errors: [{line: 1, message: 'line one\nline two\ttabbed', rule: 'r'}]},
+  ]);
+  assert.match(output, /message="line one&#10;line two&#9;tabbed"/u);
+  assert.match(output, /\(r\) line one&#10;line two&#9;tabbed<\/failure>/u);
+  // No line of the message is left to be indented with the markup.
+  assert.doesNotMatch(output, /^\s*line two/mu);
+});
+
 test('junit output is well formed XML', () => {
   // A crude well-formedness check: every opened tag is closed in order.
   const output = capture(getFormatter('junit')!, RESULTS);

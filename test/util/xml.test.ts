@@ -29,5 +29,6 @@ test('replaces characters XML cannot carry', () => {
 });
 
 test('keeps tabs, line breaks and characters beyond the BMP', () => {
-  assert.equal(escapeXml('a\tb\nc\r😀'), 'a\tb\nc\r😀');
+  // Written as references, so that neither an attribute nor indenting changes them.
+  assert.equal(escapeXml('a\tb\nc\r😀'), 'a&#9;b&#10;c&#13;😀');
 });

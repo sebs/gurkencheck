@@ -19,14 +19,24 @@ function toXmlCharacters(value: string): string {
   return value.replace(NOT_XML, '\uFFFD');
 }
 
-/** Escapes the five characters that may not appear literally in XML text. */
+/**
+ * Escapes the five characters that may not appear literally in XML text, and
+ * writes line breaks and tabs as character references.
+ *
+ * A parser turns a literal line break or tab in an attribute into a space,
+ * and one in text would be indented along with the markup around it, so
+ * either way the message read back would not be the one written.
+ */
 export function escapeXml(value: string): string {
   return toXmlCharacters(value)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
+    .replace(/'/g, '&apos;')
+    .replace(/\n/g, '&#10;')
+    .replace(/\r/g, '&#13;')
+    .replace(/\t/g, '&#9;');
 }
 
 /**
