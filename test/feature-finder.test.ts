@@ -249,3 +249,13 @@ test('names a feature file asked for outright that the ignore patterns skip', ()
 test('does not count a directory or a glob as a file asked for outright', () => {
   assert.deepEqual(findFeatureFiles([FOUND, `${FOUND}/**`], [FOUND]).ignoredFiles, []);
 });
+
+test('an ignore list that comes to nothing still skips node_modules', () => {
+  fs.writeFileSync(DEFAULT_IGNORE_FILE_NAME, '# nothing to skip yet\n\n');
+  assert.deepEqual(readIgnorePatterns(undefined), DEFAULT_IGNORED_PATTERNS);
+  fs.writeFileSync(DEFAULT_IGNORE_FILE_NAME, '');
+  assert.deepEqual(readIgnorePatterns(undefined), DEFAULT_IGNORED_PATTERNS);
+  fs.rmSync(DEFAULT_IGNORE_FILE_NAME);
+  assert.deepEqual(readIgnorePatterns(['']), DEFAULT_IGNORED_PATTERNS);
+  assert.deepEqual(readIgnorePatterns(['  ', 'build']), ['build']);
+});

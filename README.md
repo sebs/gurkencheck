@@ -337,7 +337,9 @@ Patterns are read the way `.gitignore` reads them:
 - A leading `!` brings back something an earlier pattern skipped. The last pattern to match
   decides, and nothing inside a skipped directory can be brought back.
 
-Blank lines and lines starting with `#` are ignored.
+Blank lines and lines starting with `#` are ignored. A list with no patterns left in it, such
+as an ignore file holding only comments, counts as no list, so `node_modules` is still
+skipped.
 
 ## Custom formatters
 

@@ -98,13 +98,20 @@ function isIgnoredFile(pattern: string, featureGlob: string, ignore: readonly st
   return globSync(featureGlob).length > 0 && globSync(featureGlob, {ignore}).length === 0;
 }
 
-/** Reads the ignore file, one glob pattern per line, ignoring blank lines. */
+/**
+ * Reads the ignore file, one glob pattern per line, ignoring blank lines.
+ *
+ * A list that comes to nothing - an ignore file holding only comments, or
+ * `--ignore ''` - is the same as no list, so node_modules stays skipped. Taken
+ * as an empty list, it would start linting every installed package.
+ */
 export function readIgnorePatterns(
   ignoreArgument: readonly string[] | undefined,
   ignoreFileName: string = DEFAULT_IGNORE_FILE_NAME,
 ): string[] {
-  if (ignoreArgument !== undefined && ignoreArgument.length > 0) {
-    return [...ignoreArgument];
+  const given = ignoreArgument?.filter((pattern) => pattern.trim() !== '') ?? [];
+  if (given.length > 0) {
+    return given;
   }
 
   let contents: string;
@@ -118,11 +125,12 @@ export function readIgnorePatterns(
     return [...DEFAULT_IGNORED_PATTERNS];
   }
 
-  return contents
+  const patterns = contents
     .replace(/^\uFEFF/u, '')
     .split(/\r\n|\r|\n/)
     .map((line) => line.trim())
     .filter((line) => line !== '' && !line.startsWith('#'));
+  return patterns.length > 0 ? patterns : [...DEFAULT_IGNORED_PATTERNS];
 }
 
 /**
