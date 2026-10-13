@@ -322,6 +322,10 @@ A search of a directory, like a glob's `*` and `**`, also passes over anything w
 starts with a dot, such as `.git` or `.hidden.feature`, and does not follow symlinks. Name
 such a file or directory on the command line to check it.
 
+A feature file named on the command line is still skipped when an ignore pattern matches
+it, so a list of changed files can be passed as it is, but gurkencheck says that it
+skipped it.
+
 Patterns are read the way `.gitignore` reads them:
 
 - A pattern that matches a directory skips everything below it, so `build` is enough and

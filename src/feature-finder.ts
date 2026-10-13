@@ -18,6 +18,8 @@ export interface FeatureSearch {
   files: string[];
   /** Arguments that were neither a feature file, a directory nor a glob. */
   invalidPatterns: string[];
+  /** Feature files named outright that the ignore patterns skip. */
+  ignoredFiles: string[];
 }
 
 export interface FeatureFileStream {
@@ -33,6 +35,14 @@ export interface FeatureFileStream {
    * argument without having searched for the good ones.
    */
   invalidPatterns: string[];
+  /**
+   * Feature files named outright that the ignore patterns skip.
+   *
+   * They stay skipped, so a list of changed files can be handed over whole,
+   * but a file you asked for by name and did not get is worth a word: said
+   * nothing about, it reads as a clean result.
+   */
+  ignoredFiles: string[];
 }
 
 /** The argument with forward slashes, whatever the platform writes. */
@@ -80,6 +90,14 @@ function toFeatureGlob(pattern: string): string | undefined {
   return undefined;
 }
 
+/** True when the argument names a feature file that the ignore patterns skip. */
+function isIgnoredFile(pattern: string, featureGlob: string, ignore: readonly string[]): boolean {
+  if (!pattern.endsWith('.feature') || literalPath(featureGlob) === undefined) {
+    return false;
+  }
+  return globSync(featureGlob).length > 0 && globSync(featureGlob, {ignore}).length === 0;
+}
+
 /** Reads the ignore file, one glob pattern per line, ignoring blank lines. */
 export function readIgnorePatterns(
   ignoreArgument: readonly string[] | undefined,
@@ -120,6 +138,7 @@ export function findFeatureFiles(
 
   const files: string[] = [];
   const invalidPatterns: string[] = [];
+  const ignoredFiles: string[] = [];
 
   for (const pattern of searched) {
     const featureGlob = toFeatureGlob(pattern);
@@ -127,10 +146,13 @@ export function findFeatureFiles(
       invalidPatterns.push(pattern);
       continue;
     }
+    if (isIgnoredFile(pattern, featureGlob, ignore)) {
+      ignoredFiles.push(pattern);
+    }
     files.push(...globSync(featureGlob, {ignore}));
   }
 
-  return {files: uniq(files), invalidPatterns};
+  return {files: uniq(files), invalidPatterns, ignoredFiles};
 }
 
 /**
@@ -153,12 +175,16 @@ export function findFeatureFileStream(
 
   const globs: string[] = [];
   const invalidPatterns: string[] = [];
+  const ignoredFiles: string[] = [];
 
   for (const pattern of searched) {
     const featureGlob = toFeatureGlob(pattern);
     if (featureGlob === undefined) {
       invalidPatterns.push(pattern);
     } else {
+      if (isIgnoredFile(pattern, featureGlob, ignore)) {
+        ignoredFiles.push(pattern);
+      }
       globs.push(featureGlob);
     }
   }
@@ -177,7 +203,7 @@ export function findFeatureFileStream(
     }
   }
 
-  return {files: files(), invalidPatterns};
+  return {files: files(), invalidPatterns, ignoredFiles};
 }
 
 /**

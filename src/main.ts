@@ -162,7 +162,7 @@ export async function run(
   // Files are handed over as the walk finds them, so reading and checking
   // start on the first one rather than after the last. Only the patterns are
   // checked here; the walk itself happens once per pass.
-  const {invalidPatterns} = findFeatureFileStream(positionals, ignore);
+  const {invalidPatterns, ignoredFiles} = findFeatureFileStream(positionals, ignore);
 
   if (invalidPatterns.length > 0) {
     for (const pattern of invalidPatterns) {
@@ -176,6 +176,12 @@ export async function run(
       message: 'To run the linter please specify an existing feature file, directory or glob.',
     });
     return EXIT_USAGE;
+  }
+  for (const file of ignoredFiles) {
+    diagnostics.report({
+      level: 'notice',
+      message: `Skipped "${file}": it matches an ignore pattern.`,
+    });
   }
 
   // A format that can write as the run goes on is driven from the stream, so

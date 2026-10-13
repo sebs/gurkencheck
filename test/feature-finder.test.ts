@@ -233,3 +233,19 @@ test('an ignore file starting with a byte order mark still reads its first patte
   fs.writeFileSync(DEFAULT_IGNORE_FILE_NAME, '﻿build\n');
   assert.deepEqual(readIgnorePatterns(undefined), ['build']);
 });
+
+test('names a feature file asked for outright that the ignore patterns skip', () => {
+  fs.mkdirSync('node_modules/pkg', {recursive: true});
+  fs.writeFileSync('node_modules/pkg/x.feature', '');
+
+  const search = findFeatureFiles(['node_modules/pkg/x.feature', `${FOUND}/a.feature`]);
+  assert.deepEqual(search.files, [`${FOUND}/a.feature`]);
+  assert.deepEqual(search.ignoredFiles, ['node_modules/pkg/x.feature']);
+
+  const stream = findFeatureFileStream([`${FOUND}/a.feature`], [`${FOUND}/a.feature`]);
+  assert.deepEqual(stream.ignoredFiles, [`${FOUND}/a.feature`]);
+});
+
+test('does not count a directory or a glob as a file asked for outright', () => {
+  assert.deepEqual(findFeatureFiles([FOUND, `${FOUND}/**`], [FOUND]).ignoredFiles, []);
+});

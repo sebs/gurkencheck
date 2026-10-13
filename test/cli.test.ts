@@ -483,3 +483,12 @@ test('stops quietly when whoever reads the output goes away', async () => {
     fs.rmSync(cwd, {recursive: true, force: true});
   }
 });
+
+test('says so when a file named outright is skipped by an ignore pattern', async () => {
+  await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
+    const {code, stdout, stderr} = await cli(['--ignore', 'Example.feature', 'Example.feature'], cwd);
+    assert.equal(code, 0);
+    assert.equal(stdout, '');
+    assert.match(stderr, /Skipped "Example\.feature": it matches an ignore pattern/u);
+  });
+});
