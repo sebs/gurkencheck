@@ -8,6 +8,7 @@
  */
 import fs from 'node:fs';
 import {parseArgs} from 'node:util';
+import {describeArgumentError} from '../util/args.ts';
 import {DEFAULT_CONFIG_FILE_NAME, readConfiguredLanguage} from '../config-parser.ts';
 import {EXIT_OK, EXIT_USAGE} from '../exit-codes.ts';
 import {DEFAULT_IGNORE_FILE_NAME, findFeatureFileStream} from '../feature-finder.ts';
@@ -66,10 +67,7 @@ export async function runStats(
       allowPositionals: true,
     });
   } catch (thrown) {
-    diagnostics.report({
-      level: 'error',
-      message: thrown instanceof Error ? thrown.message : String(thrown),
-    });
+    diagnostics.report({level: 'error', message: describeArgumentError(thrown)});
     diagnostics.report({level: 'notice', message: statsUsage()});
     return EXIT_USAGE;
   }

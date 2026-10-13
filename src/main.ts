@@ -5,6 +5,7 @@
 import fs from 'node:fs';
 import {pathToFileURL} from 'node:url';
 import {parseArgs} from 'node:util';
+import {describeArgumentError} from './util/args.ts';
 import {DEFAULT_CONFIG_FILE_NAME, findConfigFile, readConfiguration} from './config-parser.ts';
 import {EXIT_LINT_ERRORS, EXIT_OK, EXIT_USAGE} from './exit-codes.ts';
 import {
@@ -97,10 +98,7 @@ export async function run(
       allowPositionals: true,
     });
   } catch (thrown) {
-    diagnostics.report({
-      level: 'error',
-      message: thrown instanceof Error ? thrown.message : String(thrown),
-    });
+    diagnostics.report({level: 'error', message: describeArgumentError(thrown)});
     diagnostics.report({level: 'notice', message: usage()});
     return EXIT_USAGE;
   }
