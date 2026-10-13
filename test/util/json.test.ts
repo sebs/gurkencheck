@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {parseJsonWithComments, stripJsonComments} from '../../src/util/json.ts';
+import {parseJsonWithComments, stripJsonComments, stripTrailingCommas} from '../../src/util/json.ts';
 
 test('removes line comments', () => {
   assert.deepEqual(parseJsonWithComments('{"a": 1} // trailing'), {a: 1});
@@ -32,4 +32,10 @@ test('keeps line breaks inside block comments', () => {
 
 test('copes with an unterminated block comment', () => {
   assert.deepEqual(parseJsonWithComments('{"a": 1} /* never closed'), {a: 1});
+});
+
+test('a trailing comma is allowed, outside strings only', () => {
+  assert.deepEqual(parseJsonWithComments('{"a": [1, 2,], "b": "x,}",\n // last\n}'), {a: [1, 2], b: 'x,}'});
+  assert.equal(stripTrailingCommas('{"a": 1 ,  }'), '{"a": 1    }');
+  assert.throws(() => parseJsonWithComments('{"a": 1,, }'));
 });

@@ -65,7 +65,50 @@ export function stripJsonComments(json: string): string {
   return result;
 }
 
-/** Parses JSON that may contain comments. */
+/**
+ * Blanks out a comma left before a closing `}` or `]`, which JSON with
+ * comments allows - the README's examples are `jsonc`, and an editor treating
+ * the file that way will not flag one. Run after the comments are gone, so a
+ * comment between the comma and the bracket does not hide it.
+ */
+export function stripTrailingCommas(json: string): string {
+  let result = '';
+  let inString = false;
+
+  for (let index = 0; index < json.length; index++) {
+    const character = json[index]!;
+    if (inString) {
+      result += character;
+      if (character === '\\' && index + 1 < json.length) {
+        result += json[++index];
+      } else if (character === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (character === '"') {
+      inString = true;
+    } else if (character === ',' && closesNext(json, index + 1)) {
+      result += ' ';
+      continue;
+    }
+    result += character;
+  }
+
+  return result;
+}
+
+/** True when the next character after whitespace from `from` is `}` or `]`. */
+function closesNext(json: string, from: number): boolean {
+  for (let index = from; index < json.length; index++) {
+    const character = json[index]!;
+    if (character === '}' || character === ']') return true;
+    if (!/\s/u.test(character)) return false;
+  }
+  return false;
+}
+
+/** Parses JSON that may contain comments and trailing commas. */
 export function parseJsonWithComments(json: string): unknown {
-  return JSON.parse(stripJsonComments(json));
+  return JSON.parse(stripTrailingCommas(stripJsonComments(json)));
 }

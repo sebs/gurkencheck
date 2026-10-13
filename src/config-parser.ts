@@ -7,7 +7,7 @@ import {pathToFileURL} from 'node:url';
 import {verifyConfiguration} from './config-verifier.ts';
 import {PRESETS, RECOMMENDED} from './presets.ts';
 import type {Configuration, RuleRegistry} from './types.ts';
-import {stripJsonComments} from './util/json.ts';
+import {stripJsonComments, stripTrailingCommas} from './util/json.ts';
 import {resolvePackage} from './util/resolve.ts';
 
 /** The configuration file looked for when none is given on the command line. */
@@ -85,10 +85,16 @@ function parseFile(filePath: string): Record<string, unknown> {
   } catch (thrown) {
     throw new ConfigurationError(`Could not read "${filePath}": ${unreadableBecause(thrown)}.`);
   }
+  // JSON.parse refuses a byte order mark, which some editors write.
+  const json = stripJsonComments(text.replace(/^\uFEFF/u, ''));
+  if (json.trim() === '') {
+    throw new ConfigurationError(
+      `"${filePath}" is empty. Write {} to switch every rule off, or remove it to use the recommended rules.`,
+    );
+  }
   let parsed: unknown;
   try {
-    // JSON.parse refuses a byte order mark, which some editors write.
-    parsed = JSON.parse(stripJsonComments(text.replace(/^\uFEFF/u, '')));
+    parsed = JSON.parse(stripTrailingCommas(json));
   } catch (thrown) {
     throw new ConfigurationError(
       `Could not parse "${filePath}": ${thrown instanceof Error ? thrown.message : String(thrown)}`,

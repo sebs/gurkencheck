@@ -255,3 +255,22 @@ test('a configuration that is a directory is said to be one, not a parse error',
     fs.rmSync(directory, {recursive: true, force: true});
   }
 });
+
+test('a trailing comma is fine, and an empty file is said to be empty', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-jsonc-'));
+  try {
+    const trailing = path.join(directory, 'trailing.json');
+    fs.writeFileSync(trailing, '{\n  "no-empty-file": "on",\n}\n');
+    const read = await readConfiguration(trailing, rules);
+    assert.ok(read.ok);
+    assert.deepEqual(read.configuration, {'no-empty-file': 'on'});
+
+    const empty = path.join(directory, 'empty.json');
+    fs.writeFileSync(empty, '// nothing yet\n');
+    const refused = await readConfiguration(empty, rules);
+    assert.ok(!refused.ok);
+    assert.match(refused.details[0]!, /is empty\. Write \{\} to switch every rule off/u);
+  } finally {
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});
