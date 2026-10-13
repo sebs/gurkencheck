@@ -121,7 +121,7 @@ test('a language that is not a dialect is reported', async () => {
 test('a path that names nothing is reported', async () => {
   const {code, stderr} = await cli(['stats', 'nowhere-at-all']);
   assert.equal(code, 2);
-  assert.match(stderr, /Invalid format of the feature file path\/pattern/u);
+  assert.match(stderr, /"nowhere-at-all" does not exist/u);
 });
 
 test('--ignore leaves files out of the count', async () => {

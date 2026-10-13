@@ -19,6 +19,7 @@ export {PRESETS, RECOMMENDED} from './presets.ts';
 export {
   DEFAULT_IGNORE_FILE_NAME,
   DEFAULT_IGNORED_PATTERNS,
+  describeInvalidPattern,
   featureRoots,
   findFeatureFileStream,
   findFeatureFiles,

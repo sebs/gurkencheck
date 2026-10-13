@@ -11,6 +11,7 @@ import {EXIT_LINT_ERRORS, EXIT_OK, EXIT_USAGE} from './exit-codes.ts';
 import {
   DEFAULT_IGNORE_FILE_NAME,
   featureRoots,
+  describeInvalidPattern,
   findFeatureFileStream,
 } from './feature-finder.ts';
 import {watch} from './watch.ts';
@@ -179,12 +180,12 @@ export async function run(
     for (const pattern of invalidPatterns) {
       diagnostics.report({
         level: 'error',
-        message: `Invalid format of the feature file path/pattern: "${pattern}".`,
+        message: describeInvalidPattern(pattern),
       });
     }
     diagnostics.report({
       level: 'detail',
-      message: 'To run the linter please specify an existing feature file, directory or glob.',
+      message: 'Name a feature file, a directory or a glob.',
     });
     return EXIT_USAGE;
   }

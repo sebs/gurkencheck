@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -6,6 +7,7 @@ import {after, before, beforeEach, test} from 'node:test';
 import {
   DEFAULT_IGNORED_PATTERNS,
   DEFAULT_IGNORE_FILE_NAME,
+  describeInvalidPattern,
   findFeatureFileStream,
   findFeatureFiles,
   readIgnorePatterns,
@@ -277,4 +279,14 @@ test('the streaming search takes the same globs, handing each file over once', a
     found.push(file);
   }
   assert.deepEqual(found.sort(), bothFeatures);
+});
+
+test('says why a name was refused', () => {
+  assert.equal(describeInvalidPattern('missing.feature'), '"missing.feature" does not exist.');
+  assert.equal(describeInvalidPattern(`${FOUND}/c.txt`), `"${FOUND}/c.txt" is not a .feature file.`);
+  if (process.platform !== 'win32') {
+    execFileSync('mkfifo', ['pipe.feature']);
+    assert.equal(describeInvalidPattern('pipe.feature'), '"pipe.feature" is neither a file nor a directory.');
+    assert.deepEqual(findFeatureFiles(['pipe.feature']).invalidPatterns, ['pipe.feature']);
+  }
 });

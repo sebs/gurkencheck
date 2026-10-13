@@ -100,6 +100,26 @@ function isFeatureFile(name: string): boolean {
   return name.endsWith('.feature');
 }
 
+/**
+ * Why an argument the search refused names nothing to check, in a sentence.
+ *
+ * Only a name can be refused - any glob is searched - and a name is refused
+ * for one of three reasons, each with its own remedy. Calling all three an
+ * invalid format sent you looking at the spelling of a file that was there.
+ */
+export function describeInvalidPattern(pattern: string): string {
+  let stats: fs.Stats | undefined;
+  try {
+    stats = fs.statSync(pattern);
+  } catch {
+    return `"${pattern}" does not exist.`;
+  }
+  if (stats.isFile()) {
+    return `"${pattern}" is not a .feature file.`;
+  }
+  return `"${pattern}" is neither a file nor a directory.`;
+}
+
 /** True when the argument names a feature file that the ignore patterns skip. */
 function isIgnoredFile(pattern: string, globs: readonly string[], ignore: readonly string[]): boolean {
   const [featureGlob] = globs;

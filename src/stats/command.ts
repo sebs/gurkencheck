@@ -11,7 +11,11 @@ import {parseArgs} from 'node:util';
 import {describeArgumentError} from '../util/args.ts';
 import {DEFAULT_CONFIG_FILE_NAME, readConfiguredLanguage} from '../config-parser.ts';
 import {EXIT_OK, EXIT_USAGE} from '../exit-codes.ts';
-import {DEFAULT_IGNORE_FILE_NAME, findFeatureFileStream} from '../feature-finder.ts';
+import {
+  DEFAULT_IGNORE_FILE_NAME,
+  describeInvalidPattern,
+  findFeatureFileStream,
+} from '../feature-finder.ts';
 import {isKnownLanguage} from '../gherkin/dialects.ts';
 import {readAndParseFiles} from '../gherkin/parse.ts';
 import {SILENT} from '../diagnostics.ts';
@@ -138,12 +142,12 @@ export async function runStats(
     for (const pattern of invalidPatterns) {
       diagnostics.report({
         level: 'error',
-        message: `Invalid format of the feature file path/pattern: "${pattern}".`,
+        message: describeInvalidPattern(pattern),
       });
     }
     diagnostics.report({
       level: 'detail',
-      message: 'To run the linter please specify an existing feature file, directory or glob.',
+      message: 'Name a feature file, a directory or a glob.',
     });
     return EXIT_USAGE;
   }
