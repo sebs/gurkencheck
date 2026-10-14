@@ -428,3 +428,23 @@ test('given only some feature files, a change to another one beside them is pass
     fs.rmSync(directory, {recursive: true, force: true});
   }
 });
+
+test('a new empty directory starts no pass, and a directory is not counted as a file', async () => {
+  await withWatch(async ({directory, passes, notices}) => {
+    fs.mkdirSync(path.join(directory, 'empty'));
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    assert.equal(passes(), 1, 'an empty directory changes nothing');
+
+    fs.mkdirSync(path.join(directory, 'gone'));
+    const before = passes();
+    await waitFor('a pass for the file in it', () => passes() > before, () =>
+      fs.writeFileSync(path.join(directory, 'gone', 'a.feature'), 'Feature: A\n'),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const removed = passes();
+    fs.rmSync(path.join(directory, 'gone'), {recursive: true});
+    await waitFor('a pass for the removal', () => passes() > removed);
+    const counts = notices().filter((message) => /\d+ (files?|director)/u.test(message));
+    assert.ok(counts.every((message) => !/2 files changed/u.test(message)), JSON.stringify(counts));
+  });
+});

@@ -71,11 +71,52 @@ export interface WatchOptions {
  */
 function mayHoldFeatures(absolutePath: string): boolean {
   try {
-    return fs.statSync(absolutePath).isDirectory();
+    // A directory now there is worth a pass only if it holds a feature file:
+    // a new empty one, made before anything is put in it, changes nothing.
+    return fs.statSync(absolutePath).isDirectory() && holdsFeatureFile(absolutePath);
   } catch {
     const name = path.basename(absolutePath);
     return path.extname(name) === '' && !name.startsWith('.');
   }
+}
+
+/** True when a feature file sits anywhere below `directory`, stopping at the first. */
+function holdsFeatureFile(directory: string): boolean {
+  const pending = [directory];
+  while (pending.length > 0) {
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(pending.pop()!, {withFileTypes: true});
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+      const full = path.join(entry.parentPath, entry.name);
+      if (entry.isFile() && entry.name.endsWith('.feature')) return true;
+      if (entry.isDirectory()) pending.push(full);
+    }
+  }
+  return false;
+}
+
+/** True when the path is a directory now, or was not a feature file when it went. */
+function isDirectoryChange(absolutePath: string): boolean {
+  try {
+    return fs.statSync(absolutePath).isDirectory();
+  } catch {
+    return !absolutePath.endsWith('.feature') && !path.basename(absolutePath).startsWith('.');
+  }
+}
+
+/** `3 files`, or `2 files and 1 directory`, for a notice. */
+function countChanges(changes: readonly string[]): string {
+  const directories = changes.filter((change) => change.endsWith(path.sep)).length;
+  const files = changes.length - directories;
+  const plural = (count: number, one: string, many: string): string => `${count} ${count === 1 ? one : many}`;
+  if (directories === 0) return plural(files, 'file', 'files');
+  if (files === 0) return plural(directories, 'directory', 'directories');
+  return `${plural(files, 'file', 'files')} and ${plural(directories, 'directory', 'directories')}`;
 }
 
 /** A path relative to the working directory, as a notice shows it. */
@@ -160,7 +201,7 @@ export async function watch(
     timer = setTimeout(() => {
       timer = undefined;
       const what =
-        changed.size === 1 ? (([...changed][0] ?? 'a file') as string) : `${changed.size} files`;
+        changed.size === 1 ? (([...changed][0] ?? 'a file') as string) : countChanges([...changed]);
       changed.clear();
       diagnostics.report({level: 'notice', message: `\n${what} changed - checking again`});
       void runCheck();
@@ -218,7 +259,10 @@ export async function watch(
         }
         // The path as you would type it: two files called login.feature in
         // different folders are two changes, and either could be the one.
-        changed.add(shown(path.resolve(root, relativePath)));
+        // A directory is named as one, so a notice does not count it as a file.
+        changed.add(
+          isDirectoryChange(absolutePath) && !listed ? `${shown(absolutePath)}${path.sep}` : shown(absolutePath),
+        );
         schedule();
       });
       watcher.on('error', (thrown: Error) => {
