@@ -46,7 +46,10 @@ the recommended set rather than adding to it, so every rule is off until you swi
 
 With no paths given it searches the current directory for `.feature` files. A path, directory
 or glob that matches none - a typo in a glob, or a directory holding no feature files - is an
-error rather than a clean run, as is a working directory with none below it.
+error rather than a clean run, as is a working directory with none below it. Quote a glob
+so the shell leaves it to gurkencheck: it is searched as a glob even where a file of that
+very name exists, and only a glob that matches nothing is taken as a name - which is how
+`features/[draft].feature` is still found.
 
 | Exit code | Meaning |
 |---|---|

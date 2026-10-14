@@ -117,9 +117,9 @@ function toSlashes(pattern: string): string {
  * searched as well, so `features/*`, `**` and `features/**\/` all mean what a
  * shell would make of them.
  */
-function toFeatureGlobs(given: string): string[] | undefined {
+function toFeatureGlobs(given: string): FeatureGlobs | undefined {
   if (given === '.') {
-    return ['**/*.feature'];
+    return {globs: ['**/*.feature']};
   }
   // A file named with a slash after it - tab completion leaves one after a
   // directory, and a name like c.feature is easily taken for one - is the
@@ -127,25 +127,40 @@ function toFeatureGlobs(given: string): string[] | undefined {
   // it is not there.
   const withoutSlash = given.replace(/(?<=[^/])\/+$/u, '');
   const pattern = withoutSlash !== given && isFile(withoutSlash) ? withoutSlash : given;
+  const literal = literalGlobs(pattern);
 
+  const glob = toSlashes(pattern).replace(/(?<=.)\/+$/, '');
+  if (literalPath(glob) === undefined) {
+    // A glob is searched as a glob, as a shell would expand it, and taken as a
+    // name only when it matches nothing - which is how [wip].feature is still
+    // found. Taken as a name first, one committed file called *.feature, or a
+    // directory called **, narrowed the glob CI passes to itself, and every
+    // other feature file went unchecked with exit 0.
+    return {globs: globForms(glob), ...(literal === undefined ? {} : {fallback: literal})};
+  }
+  return literal === undefined ? undefined : {globs: literal};
+}
+
+/** The globs searching a path that exists, as the name it is, or undefined. */
+function literalGlobs(pattern: string): string[] | undefined {
   let stats: fs.Stats | undefined;
   try {
     stats = fs.statSync(pattern);
   } catch {
-    stats = undefined;
+    return undefined;
   }
-  if (stats?.isDirectory() === true) {
+  if (stats.isDirectory()) {
     return [`${escapeGlob(toSlashes(onDiskSpelling(pattern))).replace(/\/+$/, '')}/**/*.feature`];
   }
-  if (stats?.isFile() === true) {
+  if (stats.isFile()) {
     const spelled = onDiskSpelling(pattern);
     return isFeatureFile(spelled) ? [escapeGlob(toSlashes(spelled))] : undefined;
   }
+  return undefined;
+}
 
-  const glob = toSlashes(pattern).replace(/(?<=.)\/+$/, '');
-  if (literalPath(glob) !== undefined) {
-    return undefined;
-  }
+/** The globs a glob argument stands for: what it matches, and below the directories it matches. */
+function globForms(glob: string): string[] {
   if (isFeatureFile(glob)) {
     return [glob];
   }
@@ -153,6 +168,13 @@ function toFeatureGlobs(given: string): string[] | undefined {
     return [`${glob}/*.feature`];
   }
   return [glob, `${glob}/**/*.feature`];
+}
+
+/** What one argument is searched as. */
+interface FeatureGlobs {
+  globs: string[];
+  /** Searched instead when `globs` match no feature file: the argument as a name. */
+  fallback?: string[];
 }
 
 function isFile(name: string): boolean {
@@ -360,12 +382,12 @@ export function findFeatureFiles(
   };
 
   for (const pattern of searched) {
-    const globs = toFeatureGlobs(pattern);
-    if (globs === undefined) {
+    const expanded = toFeatureGlobs(pattern);
+    if (expanded === undefined) {
       invalidPatterns.push(pattern);
       continue;
     }
-    if (isIgnoredFile(pattern, globs, ignore)) {
+    if (isIgnoredFile(pattern, expanded.globs, ignore)) {
       ignoredFiles.push(pattern);
       continue;
     }
@@ -374,15 +396,21 @@ export function findFeatureFiles(
     const onIgnored = (file: string): void => {
       if (isFeatureFile(file)) skipped++;
     };
-    for (const featureGlob of globs) {
-      const found = globSync(featureGlob, {
-        ignore: ignore.patterns,
-        ignoreBase: ignore.base,
-        onUnreadable,
-        onIgnored,
-      }).filter(isFeatureFile);
-      matched += found.length;
-      files.push(...found);
+    const search = (globs: readonly string[]): void => {
+      for (const featureGlob of globs) {
+        const found = globSync(featureGlob, {
+          ignore: ignore.patterns,
+          ignoreBase: ignore.base,
+          onUnreadable,
+          onIgnored,
+        }).filter(isFeatureFile);
+        matched += found.length;
+        files.push(...found);
+      }
+    };
+    search(expanded.globs);
+    if (matched === 0 && skipped === 0 && expanded.fallback !== undefined) {
+      search(expanded.fallback);
     }
     if (matched === 0) {
       (skipped > 0 ? allIgnored : unmatched).push(pattern);
@@ -411,7 +439,7 @@ export function findFeatureFileStream(
   const ignore = readIgnoreList(ignoreArgument);
 
   /** Each argument still to search, with the globs it stands for. */
-  const searches: {pattern: string; globs: string[]}[] = [];
+  const searches: {pattern: string; globs: string[]; fallback?: string[]}[] = [];
   const invalidPatterns: string[] = [];
   const ignoredFiles: string[] = [];
   const unmatched: string[] = [];
@@ -429,41 +457,51 @@ export function findFeatureFileStream(
     if (expanded === undefined) {
       invalidPatterns.push(pattern);
     } else {
-      if (isIgnoredFile(pattern, expanded, ignore)) {
+      if (isIgnoredFile(pattern, expanded.globs, ignore)) {
         ignoredFiles.push(pattern);
       } else {
-        searches.push({pattern, globs: expanded});
+        searches.push({pattern, ...expanded});
       }
     }
   }
 
   async function* files(): AsyncGenerator<string> {
-    const globCount = searches.reduce((count, search) => count + search.globs.length, 0);
+    const globCount = searches.reduce(
+      (count, search) => count + search.globs.length + (search.fallback?.length ?? 0),
+      0,
+    );
     const seen = globCount > 1 ? new Set<string>() : undefined;
 
-    for (const {pattern, globs} of searches) {
+    for (const {pattern, globs, fallback} of searches) {
       // Counted before repeats are dropped: a pattern whose files another
       // one handed over already did match something.
       let matched = 0;
       let skipped = 0;
-      for (const featureGlob of globs) {
-        for await (const file of globStream(featureGlob, {
-          ignore: ignore.patterns,
-          ignoreBase: ignore.base,
-          onUnreadable,
-          onIgnored: (ignored) => {
-            if (isFeatureFile(ignored)) skipped++;
-          },
-        })) {
-          if (!isFeatureFile(file)) continue;
-          matched++;
-          if (seen !== undefined) {
-            const identity = identityOf(file);
-            if (seen.has(identity)) continue;
-            seen.add(identity);
+      const search = async function* (featureGlobs: readonly string[]): AsyncGenerator<string> {
+        for (const featureGlob of featureGlobs) {
+          for await (const file of globStream(featureGlob, {
+            ignore: ignore.patterns,
+            ignoreBase: ignore.base,
+            onUnreadable,
+            onIgnored: (ignored) => {
+              if (isFeatureFile(ignored)) skipped++;
+            },
+          })) {
+            if (!isFeatureFile(file)) continue;
+            matched++;
+            if (seen !== undefined) {
+              const identity = identityOf(file);
+              if (seen.has(identity)) continue;
+              seen.add(identity);
+            }
+            yield file;
           }
-          yield file;
         }
+      };
+      yield* search(globs);
+      // The argument as a name only when, as a glob, it found nothing.
+      if (matched === 0 && skipped === 0 && fallback !== undefined) {
+        yield* search(fallback);
       }
       if (matched === 0) {
         (skipped > 0 ? allIgnored : unmatched).push(pattern);
@@ -510,7 +548,8 @@ export function featureRoots(patterns: readonly string[]): string[] {
   const roots = new Set<string>();
 
   for (const pattern of searched) {
-    for (const featureGlob of toFeatureGlobs(pattern) ?? []) {
+    const expanded = toFeatureGlobs(pattern);
+    for (const featureGlob of [...(expanded?.globs ?? []), ...(expanded?.fallback ?? [])]) {
       roots.add(globRoot(featureGlob));
     }
   }

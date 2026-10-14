@@ -391,3 +391,21 @@ test('an ignore list adds to node_modules, and !node_modules brings it back', ()
   ]);
   assert.deepEqual(findFeatureFiles(['.'], ['other']).files.filter((file) => file.startsWith('node_modules')), []);
 });
+
+test('a file or directory named like a glob does not narrow the glob to itself', () => {
+  fs.writeFileSync(`${FOUND}/*.feature`, '');
+  assert.deepEqual(findFeatureFiles([`${FOUND}/*.feature`]).files.sort(), [`${FOUND}/*.feature`, `${FOUND}/a.feature`]);
+
+  fs.mkdirSync('**', {recursive: true});
+  fs.writeFileSync('**/*.feature', '');
+  const found = findFeatureFiles(['**/*.feature']).files;
+  assert.ok(found.includes(`${FOUND}/a.feature`), JSON.stringify(found));
+  assert.ok(found.includes(`${FOUND}/folder/b.feature`), JSON.stringify(found));
+});
+
+test('a glob that matches nothing is still taken as the name it is', () => {
+  fs.mkdirSync('wip', {recursive: true});
+  fs.writeFileSync('wip/[draft].feature', '');
+  // As a glob, [draft] is one of d, r, a, f, t - none of which is there.
+  assert.deepEqual(findFeatureFiles(['wip/[draft].feature']).files, ['wip/[draft].feature']);
+});
