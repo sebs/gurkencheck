@@ -39,9 +39,11 @@ const QUOTED = /"(?:[^"\\]|\\.)*"/gu;
 /**
  * A whole number or decimal standing on its own, with its minus sign. The
  * word boundaries keep `1st` and `v2` intact, where the digits are part of a
- * name rather than a value a step definition would capture.
+ * name rather than a value a step definition would capture - in any script:
+ * `\b` knows only ASCII letters, so `Menü1` lost its digits where `Menu1`
+ * kept them.
  */
-const NUMBER = /(?:(?<![\p{L}\p{N}_])-)?\b\d+(?:[.,]\d+)*\b/gu;
+const NUMBER = /(?:(?<![\p{L}\p{M}\p{N}_])-)?(?<![\p{L}\p{M}\p{N}_])\d+(?:[.,]\d+)*(?![\p{L}\p{M}\p{N}_])/gu;
 
 const WHITESPACE = /\s+/gu;
 

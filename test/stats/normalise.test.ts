@@ -85,3 +85,10 @@ test('a < and a > with spaces inside them are comparisons, not a placeholder', (
   assert.notEqual(normaliseStepText('a < b and c > d'), normaliseStepText('a < x and y > d'));
   assert.equal(normaliseStepText('I have <count> items'), 'i have <> items');
 });
+
+test('digits that are part of a name are left alone in any script', () => {
+  assert.equal(normaliseStepText('ich öffne Menü1 jetzt'), 'ich öffne menü1 jetzt');
+  assert.equal(normaliseStepText('открыть меню2'), 'открыть меню2');
+  assert.equal(normaliseStepText('Menü2'), 'menü2', 'after a combining mark');
+  assert.equal(normaliseStepText('öffne 3 Menüs'), 'öffne 0 menüs');
+});
