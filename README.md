@@ -415,6 +415,21 @@ Every module directly inside the directory has to be a rule; TypeScript declarat
 something — reading a file, or asking an issue tracker whether a tag refers to a real
 ticket. Files are checked one after another, so rules see a predictable order.
 
+`run(feature, file, settings, context)` is handed four things:
+
+| Argument | What it is |
+|---|---|
+| `feature` | The parsed Gherkin document's feature, or `undefined` for a file with none, such as an empty one |
+| `file` | `{relativePath, lines}`: the path as it was given, and the file's lines |
+| `settings` | What the configuration gives the rule after its state: `{"max": 3}` from `["on", {"max": 3}]`, or `undefined` for `"on"` |
+| `context` | The same object for every file of one run. `context.state(() => new Map())` makes the rule's state on first use and hands back the same one after, for a rule that remembers something between files |
+
+Each finding is `{message, line, column?}`. The rule's name and how loudly it reports are
+filled in from the rule and the configuration. A rule that can only report once every file
+has been seen, such as one looking for two files with the same name, adds
+`onRunEnd(settings, context)`, returning findings that each carry the `filePath` they are
+about.
+
 ## Using it as a library
 
 ```ts
