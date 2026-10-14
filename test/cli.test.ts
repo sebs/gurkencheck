@@ -921,6 +921,35 @@ test('--watch passes over a feature file outside its glob, rather than calling i
   });
 });
 
+test('--watch notices a closer configuration being written', async () => {
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    const sub = path.join(cwd, 'sub');
+    fs.mkdirSync(path.join(sub, 'features'), {recursive: true});
+    fs.writeFileSync(path.join(sub, 'features', 'x.feature'), DIRTY_FEATURE);
+    const child = spawn(process.execPath, [CLI, '--watch', 'features'], {cwd: sub});
+    let output = '';
+    child.stdout.on('data', (chunk) => (output += String(chunk)));
+    child.stderr.on('data', (chunk) => (output += String(chunk)));
+    const waitFor = async (pattern: RegExp): Promise<void> => {
+      const deadline = Date.now() + 10000;
+      while (!pattern.test(output)) {
+        if (Date.now() > deadline) assert.fail(`timed out waiting for ${String(pattern)} in:\n${output}`);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+    };
+    try {
+      await waitFor(/Watching for changes/u);
+      assert.match(output, /no-unnamed-scenarios/u);
+      output = '';
+      fs.writeFileSync(path.join(sub, '.gurkencheckrc'), '{}');
+      await waitFor(/No errors found/u);
+      assert.match(output, /\.gurkencheckrc changed/u);
+    } finally {
+      await stop(child);
+    }
+  });
+});
+
 test('a directory named outright and skipped whole is a run that checked nothing', async () => {
   await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
     fs.mkdirSync(path.join(cwd, 'legacy'));

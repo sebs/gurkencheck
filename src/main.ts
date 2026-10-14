@@ -423,6 +423,7 @@ export async function run(
         // there to overrule it.
         files: () => [
           configPath,
+          ...(values.config === undefined ? configurationCandidates() : []),
           ...configurationFiles,
           ...(ignore === undefined ? [findIgnoreFile() ?? DEFAULT_IGNORE_FILE_NAME] : []),
         ],
@@ -449,6 +450,28 @@ export async function run(
   }
 
   return await checkOnce();
+}
+
+/**
+ * Where a configuration closer than the one in use would be found: in the
+ * working directory and each directory above it, up to the one that holds
+ * the configuration in use, or to the root when there is none. Writing one
+ * there changes which configuration a run reads, and a watch that looked
+ * only at the one it started with went on with it, without a word.
+ */
+function configurationCandidates(): string[] {
+  const found = findConfigFile();
+  const last = found === undefined ? undefined : path.dirname(path.resolve(found));
+  const candidates: string[] = [];
+  let directory = process.cwd();
+  for (;;) {
+    candidates.push(path.join(directory, DEFAULT_CONFIG_FILE_NAME));
+    const parent = path.dirname(directory);
+    if (directory === last || parent === directory) {
+      return candidates;
+    }
+    directory = parent;
+  }
 }
 
 /** The files as they go by, each noted in `seen` as an absolute path. */
