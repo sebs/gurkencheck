@@ -13,7 +13,7 @@
  * at either end for exactly this reason.
  */
 import type {SyncFormatterRun} from './index.ts';
-import {actsRatherThanShows, printable} from '../util/printable.ts';
+import {actsRatherThanShows, writtenOut} from '../util/printable.ts';
 import type {FileResult, RuleError} from '../types.ts';
 
 /**
@@ -76,7 +76,7 @@ function description(text: string): string {
   // Backslashes first, so that the escapes written after them read as ones;
   // then everything that would act rather than show - line breaks, C1
   // controls and NEL, bidirectional overrides, U+2028 - as stylish has it.
-  return printable(text.replace(/[\\#]/g, '\\$&'));
+  return writtenOut(text.replace(/[\\#]/g, '\\$&'));
 }
 
 function severityOf(error: RuleError): string {
