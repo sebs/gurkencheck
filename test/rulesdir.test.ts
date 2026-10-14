@@ -217,3 +217,10 @@ test('a rules directory reached through a symlink is not a second copy of its ru
     fs.rmSync(link, {force: true});
   }
 });
+
+test('a custom rule name with a space or comma is refused, as no directive could name it', async () => {
+  await assert.rejects(
+    loadRules(['test/rulesdir/spaced_rules']),
+    /is called "my rule"; a rule name may not be empty or hold spaces or commas/u,
+  );
+});

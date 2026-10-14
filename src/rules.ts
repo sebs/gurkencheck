@@ -124,6 +124,13 @@ export async function loadRules(
       // Names gurkencheck reports under itself. Taken by a custom rule, its
       // ordinary findings would read as a crash or a parse error - and could
       // not be switched off, as those cannot.
+      // A directive lists rule names separated by commas or spaces, so a name
+      // holding either could be switched on and never switched off.
+      if (rule.name === '' || /[\s,]/u.test(rule.name)) {
+        throw new Error(
+          `The rule in ${file} is called ${JSON.stringify(rule.name)}; a rule name may not be empty or hold spaces or commas.`,
+        );
+      }
       if ((RESERVED_RULE_NAMES as readonly string[]).includes(rule.name)) {
         throw new Error(
           `The rule in ${file} is called "${rule.name}", a name gurkencheck uses for its own findings. Give it another name.`,
