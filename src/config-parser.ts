@@ -183,7 +183,10 @@ async function loadExtended(
   specifier: string,
   fromFile: string,
 ): Promise<{configuration: Record<string, unknown>; source: string}> {
-  const preset = PRESETS[specifier];
+  // Only the table's own entries: constructor, toString and the like are on
+  // every object, and taken for presets they were empty ones - the
+  // configuration, or an installed package of that name, silently dropped.
+  const preset = Object.hasOwn(PRESETS, specifier) ? PRESETS[specifier] : undefined;
   if (preset !== undefined) {
     return {configuration: preset as Record<string, unknown>, source: specifier};
   }

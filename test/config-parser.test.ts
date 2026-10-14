@@ -356,3 +356,17 @@ test('a mistake in an extended file names it relative to the working directory',
     fs.rmSync(directory, {recursive: true, force: true});
   }
 });
+
+test('a name every object carries is no preset', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-proto-preset-'));
+  try {
+    for (const name of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+      fs.writeFileSync(path.join(directory, 'rc.json'), JSON.stringify({extends: name}));
+      const result = await readConfiguration(path.join(directory, 'rc.json'), rules);
+      assert.ok(!result.ok, name);
+      assert.match(result.details[0]!, /Could not resolve the package/u, name);
+    }
+  } finally {
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});
