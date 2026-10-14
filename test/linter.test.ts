@@ -286,3 +286,11 @@ test('the README library example lints with no configuration file', async () => 
     fs.rmSync(directory, {recursive: true, force: true});
   }
 });
+
+test('a single string given for the files is refused plainly', async () => {
+  const rules = await loadRules();
+  await assert.rejects(
+    lint('test/linter/NoViolations.feature' as never, {}, rules),
+    /Expected a list of files, not the string "test\/linter\/NoViolations\.feature"\. Put it in an array\./u,
+  );
+});

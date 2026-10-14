@@ -2,11 +2,20 @@
  * Working through a list without starting all of it at once.
  */
 
-/** Values to work through, however they arrive. */
-export type Sequence<T> = Iterable<T> | AsyncIterable<T>;
+/**
+ * Values to work through, however they arrive - but not a string. A string is
+ * iterable too, one character at a time, so `lint('a.feature', ...)` type
+ * checked and then failed somewhere deep inside; `charAt?: never` is what
+ * keeps one out.
+ */
+export type Sequence<T> = (Iterable<T> | AsyncIterable<T>) & {readonly charAt?: never};
 
 /** One iterator over either kind, so the rest need not care which it is. */
 async function* asAsync<T>(values: Sequence<T>): AsyncGenerator<T> {
+  // For a caller in plain JavaScript, whom the type does not stop.
+  if (typeof values === 'string') {
+    throw new TypeError(`Expected a list of files, not the string "${values as string}". Put it in an array.`);
+  }
   if (Symbol.asyncIterator in values) {
     yield* values;
   } else {
