@@ -77,6 +77,16 @@ export interface FeatureFileStream {
  */
 function onDiskSpelling(given: string): string {
   const absolute = path.resolve(given);
+  // Most paths are spelled as they are on disk already, which one call says;
+  // listing every directory on the way, for each of thousands of files named
+  // on the command line, made naming them fifty times slower than a walk.
+  try {
+    if (fs.realpathSync.native(absolute) === absolute) {
+      return given;
+    }
+  } catch {
+    return given;
+  }
   const {root} = path.parse(absolute);
   let spelled = root;
   for (const segment of absolute.slice(root.length).split(path.sep).filter((part) => part !== '')) {
