@@ -13,6 +13,7 @@ import {
   findFeatureFiles,
   readIgnorePatterns,
 } from '../src/feature-finder.ts';
+import {ignoresCase} from '../src/util/glob.ts';
 
 const FOUND = 'folder/with/found/features';
 const originalCwd = process.cwd();
@@ -329,4 +330,11 @@ test('names a directory asked for outright that the ignore patterns skip', () =>
   assert.deepEqual(search.files, []);
   assert.deepEqual(search.ignoredFiles, [FOUND]);
   assert.deepEqual(findFeatureFiles([FOUND], ['other']).ignoredFiles, []);
+});
+
+test('an ignore pattern skips a directory spelled in another case where the disk ignores case', () => {
+  if (!ignoresCase(workingDirectory)) return;
+  fs.mkdirSync('Build', {recursive: true});
+  fs.writeFileSync('Build/b.feature', '');
+  assert.deepEqual(findFeatureFiles(['.'], ['build']).files.filter((file) => file.startsWith('Build')), []);
 });

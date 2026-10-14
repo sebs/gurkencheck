@@ -17,7 +17,7 @@ const REGEXP_SPECIAL_CHARACTERS = new Set('.+^$()|\\[]{}*?'.split(''));
  * Translates a glob pattern into an anchored regular expression matching
  * slash-separated paths.
  */
-export function globToRegExp(pattern: string): RegExp {
+export function globToRegExp(pattern: string, flags = ''): RegExp {
   let source = '';
   let braceDepth = 0;
   let index = 0;
@@ -84,7 +84,7 @@ export function globToRegExp(pattern: string): RegExp {
     }
   }
 
-  return new RegExp(`^${source}$`);
+  return new RegExp(`^${source}$`, flags);
 }
 
 function escapeLiteral(character: string): string {
@@ -289,7 +289,7 @@ interface IgnoreRule {
  * `/`; a trailing slash means directories only; and a leading `!` brings back
  * what an earlier pattern left out.
  */
-function toIgnoreRule(pattern: string): IgnoreRule {
+function toIgnoreRule(pattern: string, ignoreCase = false): IgnoreRule {
   let text = pattern.split(path.sep).join('/');
   const negated = text.startsWith('!');
   if (negated) {
@@ -299,7 +299,7 @@ function toIgnoreRule(pattern: string): IgnoreRule {
   text = text.replace(/\/+$/u, '').replace(/^(?:\.\/)+/u, '');
   const anchored = text.includes('/');
   text = text.replace(/^\/+/u, '');
-  return {matches: globToRegExp(anchored ? text : `**/${text}`), negated, directoryOnly};
+  return {matches: globToRegExp(anchored ? text : `**/${text}`, ignoreCase ? 'i' : ''), negated, directoryOnly};
 }
 
 /**
@@ -332,6 +332,37 @@ function isIgnored(relativePath: string, rules: readonly IgnoreRule[], lastIsDir
   return false;
 }
 
+const caseInsensitive = new Map<string, boolean>();
+
+/**
+ * True when the file system holding `directory` ignores case, as macOS and
+ * Windows do by default. There `Build` and `build` are one directory, and an
+ * ignore pattern naming one has to skip the other - as git, which ignores
+ * case on such a file system, does.
+ */
+export function ignoresCase(directory: string): boolean {
+  const resolved = path.resolve(directory);
+  const known = caseInsensitive.get(resolved);
+  if (known !== undefined) {
+    return known;
+  }
+  // The same directory spelled in the other case: found, and the same one, on
+  // a file system that ignores case.
+  const flipped = resolved.replace(/\p{L}/gu, (letter) =>
+    letter === letter.toLowerCase() ? letter.toUpperCase() : letter.toLowerCase(),
+  );
+  let answer = false;
+  if (flipped !== resolved) {
+    try {
+      answer = fs.realpathSync.native(flipped) === fs.realpathSync.native(resolved);
+    } catch {
+      answer = false;
+    }
+  }
+  caseInsensitive.set(resolved, answer);
+  return answer;
+}
+
 /**
  * True when the ignore patterns skip this whole directory - which they do
  * when it, or any directory above it, matches - read from `ignoreBase`.
@@ -345,7 +376,8 @@ export function isDirectoryIgnored(
   if (relativePath === '' || relativePath.startsWith('../') || relativePath === '..') {
     return false;
   }
-  return isIgnored(relativePath, ignore.map(toIgnoreRule), true);
+  const ignoreCase = ignoresCase(ignoreBase);
+  return isIgnored(relativePath, ignore.map((pattern) => toIgnoreRule(pattern, ignoreCase)), true);
 }
 
 /** Everything a pattern needs in order to judge one path, worked out once. */
@@ -359,7 +391,8 @@ interface Search {
 function newSearch(pattern: string, options: GlobOptions): Search {
   const cwd = options.cwd ?? process.cwd();
   const normalisedPattern = pattern.split(path.sep).join('/');
-  const ignores = (options.ignore ?? []).map(toIgnoreRule);
+  const ignoreCase = (options.ignore ?? []).length > 0 && ignoresCase(options.ignoreBase ?? cwd);
+  const ignores = (options.ignore ?? []).map((pattern) => toIgnoreRule(pattern, ignoreCase));
 
   // Matched against absolute paths, with the literal start of the pattern
   // resolved first. Comparing the pattern as written with a path relative to
