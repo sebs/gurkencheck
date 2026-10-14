@@ -147,6 +147,12 @@ export function verifyConfiguration(configuration: Configuration, rules: RuleReg
           errors.push(
             `${prefix}this rule is always on. A file breaking it cannot be parsed at all, so there is nothing to switch off.`,
           );
+        } else if (state === 'warn') {
+          // Taken and then ignored, it left the finding an error that failed
+          // the run - and a file that cannot be read should fail it.
+          errors.push(
+            `${prefix}this rule always fails the run. A file breaking it cannot be parsed at all, so it cannot be only a warning.`,
+          );
         } else if (!STATES.includes(state as string)) {
           errors.push(`${prefix}the config should be "on", "warn" or "off"`);
         }

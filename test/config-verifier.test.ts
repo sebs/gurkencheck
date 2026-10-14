@@ -96,6 +96,15 @@ test('explains that an always-on rule cannot be turned off', () => {
   assert.match(errors[0]!, /nothing to switch off/u);
 });
 
+test('explains that an always-on rule cannot be only a warning', () => {
+  for (const config of ['warn', ['warn']]) {
+    const errors = verify({'one-feature-per-file': config} as unknown as Configuration);
+    assert.equal(errors.length, 1);
+    assert.match(errors[0]!, /always fails the run/u);
+  }
+  assert.deepEqual(verify({'one-feature-per-file': 'on'} as Configuration), []);
+});
+
 test('still rejects a nonsense state for an always-on rule', () => {
   const errors = verify({'no-multiline-steps': 'yes'} as unknown as Configuration);
   assert.deepEqual(errors, [
