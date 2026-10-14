@@ -7,7 +7,7 @@
  * an option that makes no sense, a path that names nothing - fails.
  */
 import {parseArgs} from 'node:util';
-import {describeArgumentError} from '../util/args.ts';
+import {describeArgumentError, optionThatIsFileMessage, optionsThatAreFiles} from '../util/args.ts';
 import {DEFAULT_CONFIG_FILE_NAME, readConfiguredLanguage} from '../config-parser.ts';
 import {EXIT_OK, EXIT_USAGE} from '../exit-codes.ts';
 import {
@@ -57,6 +57,14 @@ export async function runStats(
   argv: readonly string[],
   diagnostics: Diagnostics = SILENT,
 ): Promise<number> {
+  const filesAsOptions = optionsThatAreFiles(argv);
+  if (filesAsOptions.length > 0) {
+    for (const argument of filesAsOptions) {
+      diagnostics.report({level: 'error', message: optionThatIsFileMessage(argument, 'gurkencheck stats')});
+    }
+    return EXIT_USAGE;
+  }
+
   let parsed;
   try {
     parsed = parseArgs({

@@ -713,3 +713,17 @@ test('a run whose reader goes away at once still exits with what it found', asyn
     }
   });
 });
+
+test('a file whose name reads as an option is refused, not obeyed', async () => {
+  await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
+    fs.writeFileSync(path.join(cwd, '--ignore=**'), '');
+    for (const args of [['--ignore=**', 'Example.feature'], ['stats', '--ignore=**', 'Example.feature']]) {
+      const {code, stderr} = await cli(args, cwd);
+      assert.equal(code, 2, args.join(' '));
+      assert.match(stderr, /"--ignore=\*\*" is a file, but reads as an option\. Put file names after --/u, args.join(' '));
+    }
+    // After --, it is a name like any other.
+    const named = await cli(['--', 'Example.feature'], cwd);
+    assert.equal(named.code, 1);
+  });
+});

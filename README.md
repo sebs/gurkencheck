@@ -367,7 +367,9 @@ out, such as `.github/**`.
 
 A feature file named on the command line is still skipped when an ignore pattern matches
 it, so a list of changed files can be passed as it is, but gurkencheck says that it
-skipped it.
+skipped it. Pass such a list after `--`, as in `git diff --name-only | xargs gurkencheck --`,
+so that no file name is read as an option; a file whose name reads as one is refused
+otherwise.
 
 Patterns are read the way `.gitignore` reads them:
 

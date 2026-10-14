@@ -1,6 +1,37 @@
 /**
  * Saying what is wrong with the command line in gurkencheck's own words.
  */
+import fs from 'node:fs';
+
+/**
+ * The arguments before `--` that read as options but name a file or
+ * directory that exists.
+ *
+ * A list of changed files passed through xargs, or an unquoted glob, hands
+ * over whatever names are committed - and a file called --ignore=** would
+ * be taken for the option, skipping every file, and one called
+ * --rulesdir=x would load and run the code beside it. An option is not a
+ * file anybody has, so one that is a file is refused rather than obeyed.
+ */
+export function optionsThatAreFiles(argv: readonly string[]): string[] {
+  const found: string[] = [];
+  for (const argument of argv) {
+    if (argument === '--') break;
+    if (!argument.startsWith('-') || argument === '-') continue;
+    try {
+      fs.lstatSync(argument);
+      found.push(argument);
+    } catch {
+      // Not a file: an option, as it looks.
+    }
+  }
+  return found;
+}
+
+/** What to say about an argument that is a file but reads as an option. */
+export function optionThatIsFileMessage(argument: string, command: string): string {
+  return `"${argument}" is a file, but reads as an option. Put file names after --, as in ${command} -- <files>`;
+}
 
 /**
  * The message for an error `parseArgs` threw.

@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {parseArgs} from 'node:util';
-import {describeArgumentError} from './util/args.ts';
+import {describeArgumentError, optionThatIsFileMessage, optionsThatAreFiles} from './util/args.ts';
 import {DEFAULT_CONFIG_FILE_NAME, findConfigFile, readConfiguration} from './config-parser.ts';
 import {EXIT_LINT_ERRORS, EXIT_OK, EXIT_USAGE} from './exit-codes.ts';
 import {
@@ -83,6 +83,14 @@ export async function run(
   // A directory really called `stats` is still lintable, as `./stats`.
   if (argv[0] === 'stats') {
     return runStats(argv.slice(1), diagnostics);
+  }
+
+  const filesAsOptions = optionsThatAreFiles(argv);
+  if (filesAsOptions.length > 0) {
+    for (const argument of filesAsOptions) {
+      diagnostics.report({level: 'error', message: optionThatIsFileMessage(argument, 'gurkencheck')});
+    }
+    return EXIT_USAGE;
   }
 
   let parsed;
