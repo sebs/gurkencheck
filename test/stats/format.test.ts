@@ -137,3 +137,17 @@ test('the Markdown tag tables do not list the same tag twice', () => {
     assert.ok(!mostUsed.includes(`\`${once}\``), `${once} is in both tag tables`);
   }
 });
+
+test('the text report lines up locations after steps in wide characters', async () => {
+  const {displayWidth} = await import('../../src/util/width.ts');
+  const report = toText(
+    collectStatistics([
+      parseFeature('j.feature', '# language: ja\n機能: A\n  シナリオ: B\n    前提 ログインしている\n    前提 x is a short step\n'),
+    ]),
+    options,
+  );
+  const lines = report.split('\n').filter((line) => /(ログイン|short step).*j\.feature:/u.test(line));
+  assert.ok(lines.length >= 2, report);
+  const columns = new Set(lines.map((line) => displayWidth(line.slice(0, line.indexOf('j.feature:')))));
+  assert.equal(columns.size, 1, lines.join('\n'));
+});

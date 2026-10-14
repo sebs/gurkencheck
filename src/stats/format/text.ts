@@ -8,12 +8,13 @@ import {style} from '../../logger.ts';
 import type {SimilarGroup, StepEntry, Statistics} from '../types.ts';
 import {andMore, head, location, percent, plural, summarise} from './shared.ts';
 import type {StatsFormatOptions} from './shared.ts';
+import {displayWidth, padEndToWidth, padStartToWidth, truncateToWidth} from '../../util/width.ts';
 
 /** Longer than this and a step is a paragraph; the report shows the start. */
 const TEXT_WIDTH = 90;
 
 function truncate(text: string, width = TEXT_WIDTH): string {
-  return text.length <= width ? text : `${text.slice(0, width - 1)}…`;
+  return truncateToWidth(text, width);
 }
 
 /** One line of a label-and-number block. */
@@ -31,15 +32,15 @@ interface Row {
 
 /** Lays out a block so the numbers line up under each other. */
 function block(entries: readonly Row[]): string[] {
-  const labelWidth = entries.reduce((widest, row) => Math.max(widest, row.label.length), 0);
+  const labelWidth = entries.reduce((widest, row) => Math.max(widest, displayWidth(row.label)), 0);
   const valueWidth = entries.reduce(
-    (widest, row) => (row.wide === true ? widest : Math.max(widest, row.value.length)),
+    (widest, row) => (row.wide === true ? widest : Math.max(widest, displayWidth(row.value))),
     0,
   );
 
   return entries.map((row) => {
-    const value = row.wide === true ? row.value : row.value.padStart(valueWidth);
-    const line = `  ${row.label.padEnd(labelWidth)}   ${value}`;
+    const value = row.wide === true ? row.value : padStartToWidth(row.value, valueWidth);
+    const line = `  ${padEndToWidth(row.label, labelWidth)}   ${value}`;
     return row.note === undefined ? line : `${line}   ${style.gray(row.note)}`;
   });
 }
@@ -60,7 +61,7 @@ function listing(entries: readonly Entry[], indent = '    '): string[] {
   );
   const prefix = countWidth === 0 ? indent : `${indent}${' '.repeat(countWidth + 2)}`;
   const textWidth = entries.reduce(
-    (widest, entry) => Math.max(widest, truncate(entry.text).length),
+    (widest, entry) => Math.max(widest, displayWidth(truncate(entry.text))),
     0,
   );
 
@@ -72,7 +73,7 @@ function listing(entries: readonly Entry[], indent = '    '): string[] {
     if (entry.where === undefined) {
       return counted;
     }
-    return `${counted.padEnd(prefix.length + textWidth)}  ${style.gray(entry.where)}`;
+    return `${padEndToWidth(counted, prefix.length + textWidth)}  ${style.gray(entry.where)}`;
   });
 }
 
