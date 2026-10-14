@@ -118,3 +118,17 @@ test('something that is not a finding is reported in its place, and the rest are
     ],
   );
 });
+
+test('a message that cannot be made into text is said to be one, and the run goes on', async () => {
+  const errors = await findingsOf([
+    {message: Object.create(null), line: 1},
+    {message: {toString: () => { throw new Error('no'); }}, line: 2},
+  ]);
+  assert.deepEqual(
+    errors.map((error) => error.message),
+    [
+      'Rule "custom" reported a message that cannot be shown as text',
+      'Rule "custom" reported a message that cannot be shown as text',
+    ],
+  );
+});

@@ -231,6 +231,19 @@ function lineOf(finding: {line?: unknown}): number {
  * said to be missing, and a finding is put down to the rule that reported
  * it.
  */
+/**
+ * A message that is not a string, as text. An object with no prototype, or
+ * one whose toString throws, cannot be turned into one, and trying threw out
+ * of the run with every other finding in it.
+ */
+function asText(message: unknown, ruleName: string): string {
+  try {
+    return String(message);
+  } catch {
+    return `Rule "${ruleName}" reported a message that cannot be shown as text`;
+  }
+}
+
 function normalise<T extends RuleError | RunFinding>(
   finding: T,
   ruleName: string,
@@ -260,7 +273,7 @@ function normalise<T extends RuleError | RunFinding>(
         ? message
         : message === undefined || message === null
           ? `Rule "${ruleName}" reported a finding with no message`
-          : String(message),
+          : asText(message, ruleName),
     // Always the rule that reported it: a finding claiming another rule's name
     // could not be switched off under its own, and SARIF would link it to the
     // other rule's documentation.
