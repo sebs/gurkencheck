@@ -137,6 +137,35 @@ test('a message that cannot be made into text is said to be one, and the run goe
   );
 });
 
+test('a finding that throws when read costs its rule only, and the run goes on', async () => {
+  const throwing = {
+    line: 1,
+    get message(): string {
+      throw new Error('getter boom');
+    },
+  };
+  const list = new Proxy([{message: 'x', line: 1}], {
+    get(target, key, receiver) {
+      if (key === 'length') throw new Error('proxy boom');
+      return Reflect.get(target, key, receiver) as unknown;
+    },
+  });
+  for (const [found, reason] of [[[{message: 'lost', line: 1}, throwing], 'getter boom'], [list, 'proxy boom']] as const) {
+    const rules = new Map<string, LintRule>([
+      ['custom', {name: 'custom', run: () => found} as unknown as LintRule],
+      ['other', {name: 'other', run: () => [{message: 'kept', line: 1}]} as unknown as LintRule],
+    ]);
+    const results = await lint([FILE], {custom: 'on', other: 'on'}, rules);
+    assert.deepEqual(
+      results[0]!.errors.map(({message, rule}) => [message, rule]),
+      [
+        [`Rule "custom" failed: ${reason}`, 'unexpected-error'],
+        ['kept', 'other'],
+      ],
+    );
+  }
+});
+
 test('a rule set to warn that crashes only warns', async () => {
   const rule = {name: 'custom', run: () => { throw new Error('boom'); }} as unknown as LintRule;
   const results = await lint([FILE], {custom: 'warn'}, new Map([['custom', rule]]));

@@ -357,6 +357,21 @@ function notAList(ruleName: string, found: unknown, severity: Severity): RuleErr
 }
 
 /**
+ * What a rule handed back, as findings: each one normalised, or the one
+ * saying it was not a list. May throw, as reading it runs the rule's code.
+ */
+function collect<T extends RuleError | RunFinding>(found: unknown, ruleName: string, severity: Severity): T[] {
+  if (!Array.isArray(found)) {
+    return [notAList(ruleName, found, severity) as T];
+  }
+  const findings: T[] = [];
+  for (const finding of found as T[]) {
+    findings.push(normalise(finding, ruleName, severity));
+  }
+  return findings;
+}
+
+/**
  * Ends a run, collecting what could only be worked out once every file had
  * been seen.
  *
@@ -382,12 +397,11 @@ export async function finishRun(
         `the rule "${rule.name}" at the end of the run`,
         rule.onRunEnd(getRuleSettings(config), run.contextFor(rule.name)),
       );
-      if (!Array.isArray(found)) {
-        findings.push(notAList(rule.name, found, severity));
-        continue;
-      }
-      for (const finding of found as RunFinding[]) {
-        findings.push(normalise(finding, rule.name, severity));
+      // Taken apart before any is kept: a finding whose properties throw
+      // when read costs the rule all of its findings, as a throw does.
+      // One at a time: spread, a list of a million findings overflows the stack.
+      for (const finding of collect<RunFinding>(found, rule.name, severity)) {
+        findings.push(finding);
       }
     } catch (thrown) {
       // No file to blame: what failed was the look back over all of them.
@@ -433,13 +447,17 @@ export async function runEnabledRules(
     }
     const severity = getRuleSeverity(config);
 
-    // Typed as what a custom rule could really hand back, not what it should.
-    let found: unknown;
     try {
-      found = await waitFor(
+      // Typed as what a custom rule could really hand back, not what it should.
+      const found: unknown = await waitFor(
         `the rule "${rule.name}"`,
         rule.run(feature, file, getRuleSettings(config), run.contextFor(rule.name)),
       );
+      // Reading what came back runs the rule's code too - a getter, a list
+      // that is a proxy - and that failing is the rule failing, not the run.
+      for (const error of collect<RuleError>(found, rule.name, severity)) {
+        errors.push(error);
+      }
     } catch (thrown) {
       // A rule that throws - one of your own from --rulesdir, or a built-in
       // one meeting a file it did not expect - costs you that rule's findings
@@ -453,16 +471,6 @@ export async function runEnabledRules(
         line: 0,
         severity,
       });
-      continue;
-    }
-
-    if (!Array.isArray(found)) {
-      errors.push(notAList(rule.name, found, severity));
-      continue;
-    }
-
-    for (const error of found as RuleError[]) {
-      errors.push(normalise(error, rule.name, severity));
     }
   }
 
