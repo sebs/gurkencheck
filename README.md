@@ -239,6 +239,28 @@ than reading them again.
 Directories are watched rather than the files found at startup, so a feature file
 created after it started is picked up too. `node_modules` and `.git` are skipped.
 
+## Machine-readable output
+
+`--format json` writes eslint's shape, so tools built around eslint's JSON read it as they
+are: one entry per file, with the findings under `messages`, and a severity of `2` for an
+error and `1` for a warning.
+
+```json
+[
+  {
+    "filePath": "/work/features/login.feature",
+    "messages": [
+      {"ruleId": "no-unnamed-scenarios", "severity": 2, "message": "Missing Scenario name", "line": 4, "column": 3}
+    ],
+    "errorCount": 1,
+    "warningCount": 0
+  }
+]
+```
+
+`column` is left out of a finding that has none, and a finding about the whole file has
+`line` 0. `--format junit`, `sarif` and `tap` write those formats as their tools expect.
+
 ## Reporting to GitHub code scanning
 
 `--format sarif` writes a SARIF 2.1.0 log, which GitHub reads directly:
@@ -368,8 +390,10 @@ npx gurkencheck --format ./count.mjs
 ```
 
 Each result is `{filePath, errors}`, and each error is
-`{message, rule, line, column, severity}`. A default export, a `printResults` export, or a
-module that is itself the function all work.
+`{message, rule, line, column, severity}` - gurkencheck's own shape, not the eslint one that
+`--format json` writes. A second argument, `{rules}`, holds the rules the run had, custom
+ones included. A default export, a `printResults` export, or a module that is itself the
+function all work.
 
 A formatter like that is handed the whole run once it is over. One that should write as
 the files are checked, as `stylish` and `tap` do, also exports `startRun`. It is called
