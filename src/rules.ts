@@ -4,7 +4,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {PARSER_RULES} from './gherkin/parse.ts';
 import {BUILT_IN_RULES} from './rules/index.ts';
+import {UNKNOWN_RULE_IN_DIRECTIVE} from './suppressions.ts';
 import type {
   Configuration,
   FeatureFile,
@@ -18,6 +20,9 @@ import type {
 } from './types.ts';
 import type {Feature} from '@cucumber/messages';
 import {globSync} from './util/glob.ts';
+
+/** Names no custom rule may take: those gurkencheck reports under itself. */
+const RESERVED_RULE_NAMES = [...PARSER_RULES, UNKNOWN_RULE_IN_DIRECTIVE];
 
 /** File extensions a custom rule may be written in. */
 const RULE_EXTENSIONS = '{js,mjs,cjs,ts,mts,cts}';
@@ -106,6 +111,14 @@ export async function loadRules(
   const loadedFrom = new Map<string, string>();
   for (const directory of additionalRulesDirs) {
     for (const {rule, file} of await loadRulesFrom(directory)) {
+      // Names gurkencheck reports under itself. Taken by a custom rule, its
+      // ordinary findings would read as a crash or a parse error - and could
+      // not be switched off, as those cannot.
+      if ((RESERVED_RULE_NAMES as readonly string[]).includes(rule.name)) {
+        throw new Error(
+          `The rule in ${file} is called "${rule.name}", a name gurkencheck uses for its own findings. Give it another name.`,
+        );
+      }
       const earlier = loadedFrom.get(rule.name);
       if (earlier === file) {
         continue;

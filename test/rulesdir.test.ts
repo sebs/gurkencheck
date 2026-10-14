@@ -196,3 +196,10 @@ test('an empty rules directory name is refused before anything is loaded', async
     await assert.rejects(loadRules([name]), /--rulesdir needs a directory, but was given an empty name/u);
   }
 });
+
+test('a custom rule may not take a name gurkencheck reports under itself', async () => {
+  await assert.rejects(
+    loadRules(['test/rulesdir/reserved_rules']),
+    /is called "unexpected-error", a name gurkencheck uses for its own findings/u,
+  );
+});

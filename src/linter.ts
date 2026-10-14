@@ -4,7 +4,7 @@
 import path from 'node:path';
 import {PARSER_RULES, readAndParseFiles} from './gherkin/parse.ts';
 import {beginRun, finishRun, isRuleEnabled, runEnabledRules} from './rules.ts';
-import {readSuppressions} from './suppressions.ts';
+import {UNKNOWN_RULE_IN_DIRECTIVE, readSuppressions} from './suppressions.ts';
 import type {Suppressions} from './suppressions.ts';
 import type {Configuration, FileResult, RuleError, RuleRegistry} from './types.ts';
 import {sortBy} from './util/collections.ts';
@@ -68,7 +68,7 @@ function unknownRulesNamed(suppressions: Suppressions, rules: RuleRegistry): Rul
     .filter(({rule}) => !rules.has(rule) && !(PARSER_RULES as readonly string[]).includes(rule))
     .map(({rule, line}) => ({
       message: `A directive names "${rule}", which is not a rule, so it switches nothing off`,
-      rule: 'unknown-rule-in-directive',
+      rule: UNKNOWN_RULE_IN_DIRECTIVE,
       line,
       severity: 'warning' as const,
     }));

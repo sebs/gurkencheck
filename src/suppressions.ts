@@ -35,6 +35,9 @@ import {markDocStrings} from './util/lines.ts';
  */
 const DIRECTIVE = /^\s*#\s*gurkencheck-(disable-next-line|disable-file|disable|enable)(?=\s|$)(.*)$/;
 
+/** The warning given for a directive naming a rule that does not exist. */
+export const UNKNOWN_RULE_IN_DIRECTIVE = 'unknown-rule-in-directive';
+
 /** Stands in for "every rule" when a directive names none. */
 const ALL_RULES = '*';
 
