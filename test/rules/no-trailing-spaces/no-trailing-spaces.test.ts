@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import rule from '../../../src/rules/no-trailing-spaces.ts';
 import {checkRule} from '../../helpers.ts';
@@ -37,4 +38,13 @@ test('reports trailing whitespace of any kind, as trim sees it', async () => {
     {message: 'Trailing spaces are not allowed', line: 4},
     {message: 'Trailing spaces are not allowed', line: 5},
   ]);
+});
+
+test('takes time in proportion to the line, however many spaces are in it', async () => {
+  const {parseFeature} = await import('../../../src/gherkin/parse.ts');
+  const {newRunContext} = await import('../../../src/rules.ts');
+  const {feature, file} = parseFeature('a.feature', `Feature: A\n  Scenario: B\n    Given a${' '.repeat(200000)}b\n`);
+  const started = Date.now();
+  assert.deepEqual(await rule.run(feature, file, undefined, newRunContext()), []);
+  assert.ok(Date.now() - started < 1000, `took ${Date.now() - started} ms`);
 });
