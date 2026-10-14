@@ -15,8 +15,15 @@ const rule: LintRule = {
 
     const errors: RuleError[] = [];
     // The file's own word for And: Und, Et, Y. `*` is listed among them in
-    // every dialect, and is not what anyone means by it.
-    const and = getDialect(feature.language).and.find((keyword) => keyword.trim() !== '*')?.trim() ?? 'And';
+    // every dialect, and is not what anyone means by it. Where a dialect has
+    // several - French lists Et que and Et qu' before Et - the plain word is
+    // the shortest.
+    const and =
+      getDialect(feature.language)
+        .and.map((keyword) => keyword.trim())
+        .filter((keyword) => keyword !== '*')
+        .reduce<string | undefined>((shortest, keyword) => (shortest === undefined || [...keyword].length < [...shortest].length ? keyword : shortest), undefined) ??
+      'And';
 
     for (const {node} of stepContainersOf(feature)) {
       let previousKeyword: string | undefined;

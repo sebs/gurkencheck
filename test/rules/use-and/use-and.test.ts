@@ -43,3 +43,9 @@ test('suggests the word for And in the file s own language', async () => {
     ['Step "Angenommen y" should use Und instead of Angenommen'],
   );
 });
+
+test('suggests the plain word for And where a dialect has several', async () => {
+  const {feature, file} = parseFeature('fr.feature', '# language: fr\nFonctionnalité: A\n  Scénario: B\n    Soit x\n    Soit y\n');
+  const errors = await rule.run(feature, file, undefined, newRunContext());
+  assert.deepEqual(errors.map((error) => error.message), ['Step "Soit y" should use Et instead of Soit']);
+});
