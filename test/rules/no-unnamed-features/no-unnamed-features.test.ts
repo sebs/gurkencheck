@@ -8,8 +8,8 @@ test('accepts a named feature', async () => {
   await checkRule(rule, 'no-unnamed-features/NoViolations.feature', {}, []);
 });
 
-test('reports an empty file', async () => {
-  await checkRule(rule, 'no-unnamed-features/EmptyFeature.feature', {}, [{message, line: 0}]);
+test('leaves a file with no Feature to no-empty-file', async () => {
+  await checkRule(rule, 'no-unnamed-features/EmptyFeature.feature', {}, []);
 });
 
 test('reports a feature with no name', async () => {

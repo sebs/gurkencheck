@@ -6,16 +6,13 @@ const name = 'no-unnamed-features';
 const rule: LintRule = {
   name,
   run(feature) {
-    if (feature !== undefined && feature.name !== '') {
+    // A file with no Feature at all has nothing to name: that is
+    // no-empty-file's finding, and reporting it here as well counted one
+    // empty file as two errors.
+    if (feature === undefined || feature.name.trim() !== '') {
       return [];
     }
-    return [
-      {
-        message: 'Missing Feature name',
-        rule: name,
-        ...(feature === undefined ? {line: 0} : at(feature.location)),
-      },
-    ];
+    return [{message: 'Missing Feature name', rule: name, ...at(feature.location)}];
   },
 };
 

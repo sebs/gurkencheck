@@ -448,7 +448,7 @@ export const RULE_DOCS: RuleDoc[] = [
     summary: 'Every Feature needs a name.',
     explanation:
       'The Feature name is the title of the file and the heading in your test report. ' +
-      'Without one, a failure is hard to place.',
+      'Without one, a failure is hard to place. A file with no Feature at all is left to no-empty-file.',
     config: '{\n  "no-unnamed-features": "on"\n}',
     good: 'Feature: Logging in\n\n  Scenario: A known user logs in\n    Given I am a known user',
     bad: 'Feature:\n\n  Scenario: A known user logs in\n    Given I am a known user',
