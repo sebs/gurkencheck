@@ -47,8 +47,9 @@ export function statsUsage(): string {
     '  -h, --help              show this message',
     '',
     'With no files given, the working directory is searched recursively.',
-    'The report goes to stdout, and always exits 0: it describes the files',
-    'rather than judging them. Use the linter itself to fail a build.',
+    'The report goes to stdout. It exits 0 whatever the numbers say, since it',
+    'describes the files rather than judging them - use the linter itself to',
+    'fail a build - and 2 only when it could not run, such as for a bad option.',
   ].join('\n');
 }
 
