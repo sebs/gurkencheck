@@ -17,9 +17,11 @@ import type {FileResult, RuleError} from '../types.ts';
 
 /**
  * Characters a single-quoted YAML scalar cannot hold as they are: anything
- * YAML does not count as printable, and line breaks, which it would fold.
+ * YAML does not count as printable, and line breaks, which it would fold -
+ * among them NEL, U+2028 and U+2029, which YAML 1.1 parsers take for line
+ * breaks too and turn into spaces.
  */
-const NEEDS_ESCAPING = /[^\t\u0020-\u007E\u0085\u00A0-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/u;
+const NEEDS_ESCAPING = /[^\t\u0020-\u007E\u00A0-\u2027\u202A-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/u;
 
 /**
  * Quotes a scalar for YAML. Single quotes, in which the only character needing

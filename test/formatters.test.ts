@@ -296,6 +296,13 @@ test('tap keeps a path with a line break on its test point line', () => {
   assert.equal(lines.filter((line) => /^(not )?ok /u.test(line)).length, 1);
 });
 
+test('tap escapes the characters YAML 1.1 takes for line breaks', () => {
+  const output = capture(getFormatter('tap')!, [
+    {filePath: '/a.feature', errors: [{line: 1, message: 'a\u0085b\u2028c\u2029d', rule: 'r'}]},
+  ]);
+  assert.match(output, /message: "a\\x85b\\u2028c\\u2029d"/u);
+});
+
 test('tap emits an empty plan when there is nothing to report', () => {
   assert.equal(capture(getFormatter('tap')!, []), 'TAP version 13\n1..0');
 });
