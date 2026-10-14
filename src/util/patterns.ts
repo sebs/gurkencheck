@@ -51,7 +51,20 @@ export function compilePattern(pattern: string, flags = ''): RegExp {
  * allows nothing.
  */
 export function invalidTagNames(setting: string, tags: unknown): string[] {
-  return (Array.isArray(tags) ? tags : [])
-    .filter((tag) => typeof tag === 'string' && !tag.startsWith('@'))
-    .map((tag) => `"${setting}" holds "${String(tag)}", which is not a tag: write it as "@${String(tag)}"`);
+  const problems: string[] = [];
+  for (const tag of Array.isArray(tags) ? tags : []) {
+    if (typeof tag !== 'string' || /^@\S+$/u.test(tag)) {
+      continue;
+    }
+    // A tag is @ and a name, with no space anywhere: Gherkin splits a tag
+    // line on whitespace, so nothing else can ever be matched.
+    const name = tag.trim().replace(/^@+/u, '');
+    const meant = name === '' || /\s/u.test(name) ? undefined : `@${name}`;
+    problems.push(
+      meant === undefined
+        ? `"${setting}" holds "${tag}", which is not a tag: a tag is @ followed by a name with no spaces`
+        : `"${setting}" holds "${tag}", which is not a tag: write it as "${meant}"`,
+    );
+  }
+  return problems;
 }

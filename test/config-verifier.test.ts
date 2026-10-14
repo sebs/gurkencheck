@@ -192,3 +192,12 @@ test('a misspelt rule name gets the one meant', () => {
     'Rule "no-trailing-space" does not exist. Did you mean "no-trailing-spaces"?',
   ]);
 });
+
+test('a tag with spaces, or with no name, is said to be no tag', () => {
+  const prefix = 'Invalid rule configuration for "no-restricted-tags" - "tags" holds';
+  assert.deepEqual(verify({'no-restricted-tags': ['on', {tags: [' @wip', '@a b', '@']}]}), [
+    `${prefix} " @wip", which is not a tag: write it as "@wip"`,
+    `${prefix} "@a b", which is not a tag: a tag is @ followed by a name with no spaces`,
+    `${prefix} "@", which is not a tag: a tag is @ followed by a name with no spaces`,
+  ]);
+});
