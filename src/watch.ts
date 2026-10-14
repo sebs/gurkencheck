@@ -358,7 +358,21 @@ export async function watch(
         );
         schedule();
       });
-      watcher.on('error', (thrown: Error) => {
+      watcher.on('error', (thrown: NodeJS.ErrnoException) => {
+        // A directory below the root made unreadable: on Linux the recursive
+        // watch says so with an error rather than an event, and goes on
+        // watching. It is a change - a pass would say it cannot read the
+        // directory - not the watch giving up, which ended it altogether.
+        const resolvedRoot = path.resolve(root);
+        if (
+          (thrown.code === 'EACCES' || thrown.code === 'EPERM') &&
+          typeof thrown.path === 'string' &&
+          thrown.path.startsWith(`${resolvedRoot}${path.sep}`)
+        ) {
+          changed.add(`${shown(thrown.path)}${path.sep}`);
+          schedule();
+          return;
+        }
         // One watch giving up should not take the others with it - but if
         // they all give up there is nothing left to wait for, and waiting
         // anyway would be a process that never returns.
