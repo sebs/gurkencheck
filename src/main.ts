@@ -324,6 +324,11 @@ export async function run(
       {
         diagnostics,
         ignore: DEFAULT_IGNORED_NAMES,
+        // Given only feature files, a change to another one beside them is
+        // none of this run's business.
+        ...(positionals.length > 0 && positionals.every((given) => given.endsWith('.feature') && isFile(given))
+          ? {only: new Set(positionals.map((given) => path.resolve(given)))}
+          : {}),
         // The configuration is watched even when it does not exist yet, so
         // writing one is noticed; the ignore file only when --ignore is not
         // there to overrule it.
@@ -346,6 +351,14 @@ export async function run(
   }
 
   return await checkOnce();
+}
+
+function isFile(given: string): boolean {
+  try {
+    return fs.statSync(given).isFile();
+  } catch {
+    return false;
+  }
 }
 
 /**

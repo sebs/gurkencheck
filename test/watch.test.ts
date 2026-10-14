@@ -392,3 +392,39 @@ test('checks again when a folder of feature files is moved in or renamed', async
     fs.rmSync(elsewhere, {recursive: true, force: true});
   }
 });
+
+test('given only some feature files, a change to another one beside them is passed over', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-watch-only-'));
+  const watched = path.join(directory, 'a.feature');
+  fs.writeFileSync(watched, 'Feature: A\n');
+  const controller = new AbortController();
+  const diagnostics = collectDiagnostics();
+  let passes = 0;
+  const stopped = watch(
+    [directory],
+    CONFIG,
+    {diagnostics, settleMs: 10, signal: controller.signal, only: new Set([watched])},
+    async () => {
+      passes += 1;
+    },
+  );
+  try {
+    await waitFor('the watch to settle', () =>
+      diagnostics.reported.some((entry) => entry.message.includes('Watching for changes')),
+    );
+    fs.writeFileSync(path.join(directory, 'b.feature'), 'Feature: B\n');
+    // Long enough for a change to b.feature to have been taken up on its own.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    // Then the file itself, so there is a pass to look at. macOS may deliver
+    // the event for writing a.feature before the watch late, which is why
+    // what is checked is what the notices name, not how many passes ran.
+    const before = passes;
+    await waitFor('a pass for the file itself', () => passes > before, () => fs.writeFileSync(watched, 'Feature: A2\n'));
+    const named = diagnostics.reported.map((entry) => entry.message).filter((message) => message.includes('changed'));
+    assert.ok(named.every((message) => !message.includes('b.feature')), JSON.stringify(named));
+  } finally {
+    controller.abort();
+    await stopped;
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});

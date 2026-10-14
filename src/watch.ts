@@ -47,6 +47,12 @@ export interface WatchOptions {
    */
   files?: readonly string[] | (() => readonly string[]);
   /**
+   * The feature files the run checks, as absolute paths, when it is given
+   * them one by one. A file is watched through its directory, and without
+   * this every other feature file beside it would start a pass of its own.
+   */
+  only?: ReadonlySet<string>;
+  /**
    * Stops the watch when it aborts.
    *
    * Ctrl-C stops it too. This is for a caller that is not a terminal - a test,
@@ -197,6 +203,9 @@ export async function watch(
         const relativePath = filename.toString();
         const absolutePath = path.resolve(root, relativePath);
         const listed = files().has(absolutePath);
+        if (options.only !== undefined && !listed && relativePath.endsWith('.feature') && !options.only.has(absolutePath)) {
+          return;
+        }
         if (
           !listed &&
           (ignored(relativePath) ||
