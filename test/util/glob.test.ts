@@ -198,3 +198,9 @@ test('ignore patterns apply to paths outside the working directory too', () => {
     process.chdir(root);
   }
 });
+
+test('** takes a line break or separator in a name like any other character', () => {
+  for (const name of ['old\ntwo.feature', 'old three.feature', 'x .feature', 'a\rb.feature']) {
+    assert.ok(globToRegExp('legacy/**').test(`legacy/${name}`), JSON.stringify(name));
+  }
+});

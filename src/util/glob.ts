@@ -87,7 +87,11 @@ export function globToRegExp(pattern: string, flags = '', dot = true): RegExp {
     }
   }
 
-  return new RegExp(`^${source}$`, flags);
+  // The s flag, so that ** - written as .* - takes a line break or a line
+  // separator in a name as it takes any other character, as [^/] does: a
+  // file called login\u2028.feature slipped past legacy/** and was left
+  // out by a negation !features/**.
+  return new RegExp(`^${source}$`, flags.includes('s') ? flags : `${flags}s`);
 }
 
 function escapeLiteral(character: string): string {
