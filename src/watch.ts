@@ -184,6 +184,10 @@ export async function watch(
     running = true;
     try {
       do {
+        // Said as the pass that takes the changes in starts, not when they
+        // arrive: announced during a pass, the result after the notice was
+        // that of the pass before them, and read as the answer to them.
+        announce();
         againAfterThis = false;
         try {
           await check();
@@ -202,16 +206,22 @@ export async function watch(
     }
   };
 
+  /** Says what has changed since the last pass started, if anything. */
+  const announce = (): void => {
+    if (changed.size === 0) {
+      return;
+    }
+    const what = changed.size === 1 ? (([...changed][0] ?? 'a file') as string) : countChanges([...changed]);
+    changed.clear();
+    diagnostics.report({level: 'notice', message: `\n${what} changed - checking again`});
+  };
+
   const schedule = (): void => {
     if (timer !== undefined) {
       clearTimeout(timer);
     }
     timer = setTimeout(() => {
       timer = undefined;
-      const what =
-        changed.size === 1 ? (([...changed][0] ?? 'a file') as string) : countChanges([...changed]);
-      changed.clear();
-      diagnostics.report({level: 'notice', message: `\n${what} changed - checking again`});
       void runCheck();
     }, settleMs);
     // A watch should not be the reason a process stays alive once the thing
@@ -246,6 +256,7 @@ export async function watch(
         // Some platforms hand over no name; there is nothing to filter on, so
         // check rather than risk missing a change.
         if (filename === null) {
+          changed.add('a file');
           schedule();
           return;
         }

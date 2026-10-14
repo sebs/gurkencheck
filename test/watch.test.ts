@@ -448,3 +448,39 @@ test('a new empty directory starts no pass, and a directory is not counted as a 
     assert.ok(counts.every((message) => !/2 files changed/u.test(message)), JSON.stringify(counts));
   });
 });
+
+test('a change during a pass is announced when the pass that takes it in starts', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-watch-mid-'));
+  const controller = new AbortController();
+  const log: string[] = [];
+  const diagnostics = {report: ({message}: {message: string}) => log.push(message)};
+  let passes = 0;
+  let release: (() => void) | undefined;
+  const stopped = watch([directory], CONFIG, {diagnostics, settleMs: 10, signal: controller.signal}, async () => {
+    passes += 1;
+    log.push(`start ${passes}`);
+    if (passes === 2) {
+      await new Promise<void>((resolve) => (release = resolve));
+    }
+    log.push(`end ${passes}`);
+  });
+  try {
+    await waitFor('the watch to settle', () => log.some((message) => message.includes('Watching for changes')));
+    await waitFor('a slow pass', () => passes >= 2, () => fs.writeFileSync(path.join(directory, 'a.feature'), 'Feature: A\n'));
+    await waitFor('the pass to be held', () => release !== undefined);
+    fs.writeFileSync(path.join(directory, 'b.feature'), 'Feature: B\n');
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    release!();
+    await waitFor('the pass after it', () => passes >= 3);
+    // macOS may deliver a late event for a.feature too, so the notice may
+    // count two files; what matters is where it comes.
+    const during = log.slice(log.indexOf('start 2'), log.indexOf('end 2'));
+    const after = log.slice(log.indexOf('end 2'), log.indexOf('start 3'));
+    assert.ok(!during.some((message) => message.includes('changed')), JSON.stringify(log));
+    assert.ok(after.some((message) => message.includes('changed')), JSON.stringify(log));
+  } finally {
+    controller.abort();
+    await stopped;
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});
