@@ -344,7 +344,7 @@ export function readIgnorePatterns(
 ): string[] {
   const given = ignoreArgument?.filter((pattern) => pattern.trim() !== '') ?? [];
   if (given.length > 0) {
-    return [...DEFAULT_IGNORED_PATTERNS, ...given];
+    return withDefaults(given);
   }
 
   let contents: string;
@@ -363,7 +363,19 @@ export function readIgnorePatterns(
     .split(/\r\n|\r|\n/)
     .map((line) => line.trim())
     .filter((line) => line !== '' && !line.startsWith('#'));
-  return [...DEFAULT_IGNORED_PATTERNS, ...patterns];
+  return withDefaults(patterns);
+}
+
+/**
+ * The patterns with node_modules skipped as well. Put after them, where the
+ * last pattern to match decides, so that a negation meant for something
+ * else - the !*\/ of a list that skips everything but feature files - does
+ * not bring node_modules back; put before them only when one of them names
+ * node_modules to bring it back.
+ */
+function withDefaults(patterns: readonly string[]): string[] {
+  const bringsBack = patterns.some((pattern) => /^!(?:\*\*\/|\/)?node_modules\/?$/u.test(pattern.trim()));
+  return bringsBack ? [...DEFAULT_IGNORED_PATTERNS, ...patterns] : [...patterns, ...DEFAULT_IGNORED_PATTERNS];
 }
 
 /**

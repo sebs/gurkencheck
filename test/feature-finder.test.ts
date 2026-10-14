@@ -109,12 +109,12 @@ test('ignores node_modules by default', () => {
 
 test('reads ignore patterns from a file, skipping blanks and comments', () => {
   fs.writeFileSync(DEFAULT_IGNORE_FILE_NAME, '# a comment\n\nbuild/**\n  vendor/**  \n');
-  assert.deepEqual(readIgnorePatterns(undefined), ['node_modules', 'build/**', 'vendor/**']);
+  assert.deepEqual(readIgnorePatterns(undefined), ['build/**', 'vendor/**', 'node_modules']);
 });
 
 test('the --ignore argument wins over the ignore file', () => {
   fs.writeFileSync(DEFAULT_IGNORE_FILE_NAME, 'build/**\n');
-  assert.deepEqual(readIgnorePatterns(['other/**']), ['node_modules', 'other/**']);
+  assert.deepEqual(readIgnorePatterns(['other/**']), ['other/**', 'node_modules']);
 });
 
 // https://github.com/gherkin-lint/gherkin-lint/issues/172
@@ -235,7 +235,7 @@ test('node_modules is skipped by default at any depth', () => {
 
 test('an ignore file starting with a byte order mark still reads its first pattern', () => {
   fs.writeFileSync(DEFAULT_IGNORE_FILE_NAME, '﻿build\n');
-  assert.deepEqual(readIgnorePatterns(undefined), ['node_modules', 'build']);
+  assert.deepEqual(readIgnorePatterns(undefined), ['build', 'node_modules']);
 });
 
 test('names a feature file asked for outright that the ignore patterns skip', () => {
@@ -261,7 +261,7 @@ test('an ignore list that comes to nothing still skips node_modules', () => {
   assert.deepEqual(readIgnorePatterns(undefined), DEFAULT_IGNORED_PATTERNS);
   fs.rmSync(DEFAULT_IGNORE_FILE_NAME);
   assert.deepEqual(readIgnorePatterns(['']), DEFAULT_IGNORED_PATTERNS);
-  assert.deepEqual(readIgnorePatterns(['  ', 'build']), ['node_modules', 'build']);
+  assert.deepEqual(readIgnorePatterns(['  ', 'build']), ['build', 'node_modules']);
 });
 
 test('takes any glob, and the directories it matches, keeping only feature files', () => {
@@ -431,4 +431,12 @@ test('a brace alternative spelling out a dot directory reaches it', () => {
   fs.writeFileSync('specs/b.feature', '');
   assert.deepEqual(findFeatureFiles(['{specs,.github/specs}/*.feature']).files.sort(), ['.github/specs/a.feature', 'specs/b.feature']);
   assert.deepEqual(findFeatureFiles(['{.github,specs}/specs/*.feature']).files, ['.github/specs/a.feature']);
+});
+
+test('a negation meant for something else does not bring node_modules back', () => {
+  fs.mkdirSync('node_modules/pkg', {recursive: true});
+  fs.writeFileSync('node_modules/pkg/x.feature', '');
+  fs.writeFileSync(DEFAULT_IGNORE_FILE_NAME, '*\n!*/\n!*.feature\n');
+  assert.deepEqual(findFeatureFiles(['.']).files.filter((file) => file.startsWith('node_modules')), []);
+  assert.ok(findFeatureFiles(['.']).files.includes(`${FOUND}/a.feature`));
 });
