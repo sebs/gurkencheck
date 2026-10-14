@@ -11,18 +11,27 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {ALWAYS_ON_RULES} from '../gherkin/parse.ts';
 import {BUILT_IN_RULES} from '../rules/index.ts';
-import type {FileResult, RuleError} from '../types.ts';
+import type {FormatterContext} from './index.ts';
+import type {FileResult, RuleError, RuleRegistry} from '../types.ts';
 import {version} from '../version.ts';
 
 const SCHEMA = 'https://json.schemastore.org/sarif-2.1.0.json';
 const SARIF_VERSION = '2.1.0';
 const DOCUMENTATION = 'https://sebs.github.io/gurkencheck/';
 
-/** The rules with a page on the documentation site. */
-const DOCUMENTED_RULES = new Set<string>([
-  ...BUILT_IN_RULES.map((rule) => rule.name),
-  ...ALWAYS_ON_RULES,
-]);
+/**
+ * True when the rule behind an id has a page on the documentation site: an
+ * always-on rule, or a built-in one - not a custom rule that took a built-in
+ * one's name to replace it, whose findings the built-in page does not
+ * describe.
+ */
+function isDocumented(id: string, rules: RuleRegistry | undefined): boolean {
+  if ((ALWAYS_ON_RULES as readonly string[]).includes(id)) {
+    return true;
+  }
+  const rule = rules === undefined ? BUILT_IN_RULES.find((builtIn) => builtIn.name === id) : rules.get(id);
+  return rule !== undefined && BUILT_IN_RULES.includes(rule);
+}
 
 /** SARIF's levels, which happen to line up with ours. */
 const LEVEL = {error: 'error', warning: 'warning'} as const;
@@ -75,7 +84,11 @@ function toResult(result: FileResult, error: RuleError, cwd: string): unknown {
 }
 
 /** Builds the SARIF log for a set of results. */
-export function toSarif(results: readonly FileResult[], cwd: string = process.cwd()): unknown {
+export function toSarif(
+  results: readonly FileResult[],
+  cwd: string = process.cwd(),
+  rules?: RuleRegistry,
+): unknown {
   const findings = results.flatMap((result) =>
     result.errors.map((error) => toResult(result, error, cwd)),
   );
@@ -97,7 +110,7 @@ export function toSarif(results: readonly FileResult[], cwd: string = process.cw
             // Only the rules documented on the site get a link: one to a
             // custom rule's page, or to unexpected-error's, would be a 404.
             rules: ruleIds.map((id) =>
-              DOCUMENTED_RULES.has(id) ? {id, helpUri: `${DOCUMENTATION}rules/${id}.html`} : {id},
+              isDocumented(id, rules) ? {id, helpUri: `${DOCUMENTATION}rules/${id}.html`} : {id},
             ),
           },
         },
@@ -111,6 +124,6 @@ export function toSarif(results: readonly FileResult[], cwd: string = process.cw
 }
 
 /** Writes the SARIF log to stdout. */
-export function printResults(results: readonly FileResult[]): void {
-  console.log(JSON.stringify(toSarif(results), null, 2));
+export function printResults(results: readonly FileResult[], context?: FormatterContext): void {
+  console.log(JSON.stringify(toSarif(results, process.cwd(), context?.rules), null, 2));
 }

@@ -35,7 +35,13 @@ export {
   loadFormatter,
   loadStreamingFormatter,
 } from './formatters/index.ts';
-export type {Formatter, FormatterRun, StreamingFormatter, SyncFormatterRun} from './formatters/index.ts';
+export type {
+  Formatter,
+  FormatterContext,
+  FormatterRun,
+  StreamingFormatter,
+  SyncFormatterRun,
+} from './formatters/index.ts';
 export {toJson} from './formatters/json.ts';
 export {toSarif} from './formatters/sarif.ts';
 export {version} from './version.ts';

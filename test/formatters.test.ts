@@ -11,7 +11,7 @@ import {
 import type {StreamingFormatter, SyncFormatterRun} from '../src/formatters/index.ts';
 import {format as formatJunit} from '../src/formatters/junit.ts';
 import {toSarif} from '../src/formatters/sarif.ts';
-import type {FileResult, Formatter} from '../src/index.ts';
+import type {FileResult, Formatter, LintRule} from '../src/index.ts';
 
 const RESULTS: FileResult[] = [
   {
@@ -548,4 +548,16 @@ test('a custom formatter exporting startRun is used as a streaming one', async (
 
 test('a custom formatter without startRun is left as a batch one', async () => {
   assert.equal(await loadStreamingFormatter('./test/formatters/batch.mjs'), undefined);
+});
+
+test('sarif does not link a custom rule that replaced a built-in one to its page', () => {
+  const custom: LintRule = {name: 'use-and', run: () => []};
+  const rules = new Map<string, LintRule>([['use-and', custom]]);
+  const results = [{filePath: '/a.feature', errors: [{line: 1, message: 'm', rule: 'use-and'}]}];
+
+  const replaced = toSarif(results, '/', rules) as {runs: {tool: {driver: {rules: unknown[]}}}[]};
+  assert.deepEqual(replaced.runs[0]!.tool.driver.rules, [{id: 'use-and'}]);
+
+  const builtIn = toSarif(results, '/') as {runs: {tool: {driver: {rules: {helpUri?: string}[]}}}[]};
+  assert.match(builtIn.runs[0]!.tool.driver.rules[0]!.helpUri!, /rules\/use-and\.html$/u);
 });

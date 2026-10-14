@@ -3,7 +3,7 @@
  */
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
-import type {FileResult} from '../types.ts';
+import type {FileResult, RuleRegistry} from '../types.ts';
 import {printResults as json} from './json.ts';
 import {printResults as junit} from './junit.ts';
 import {printResults as sarif} from './sarif.ts';
@@ -19,7 +19,14 @@ import {resolvePackage, resolvePath} from '../util/resolve.ts';
  */
 export type Formatter = (
   results: readonly FileResult[],
+  context?: FormatterContext,
 ) => void | string | Promise<void | string>;
+
+/** What a formatter may want to know about the run besides its results. */
+export interface FormatterContext {
+  /** The rules the run had, custom ones from --rulesdir included. */
+  rules: RuleRegistry;
+}
 
 /** The formats accepted by `--format` without having to be loaded. */
 export const FORMATTERS: Record<string, Formatter> = {

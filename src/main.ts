@@ -270,7 +270,7 @@ export async function run(
     // A formatter may print the output itself or hand it back as a string.
     let output;
     try {
-      output = await formatter!(results);
+      output = await formatter!(results, {rules});
     } catch (thrown) {
       diagnostics.report({
         level: 'error',
