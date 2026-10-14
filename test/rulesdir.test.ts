@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import {test} from 'node:test';
 import {readConfiguration} from '../src/config-parser.ts';
@@ -202,4 +204,15 @@ test('a custom rule may not take a name gurkencheck reports under itself', async
     loadRules(['test/rulesdir/reserved_rules']),
     /is called "unexpected-error", a name gurkencheck uses for its own findings/u,
   );
+});
+
+test('a rules directory reached through a symlink is not a second copy of its rules', async () => {
+  const link = path.join(os.tmpdir(), `gurkencheck-rules-link-${process.pid}`);
+  fs.symlinkSync(path.resolve('test/rulesdir/rules'), link);
+  try {
+    const rules = await loadRules(['test/rulesdir/rules', link]);
+    assert.ok(rules.has('custom'));
+  } finally {
+    fs.rmSync(link, {force: true});
+  }
 });

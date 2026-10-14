@@ -21,6 +21,15 @@ import type {
 import type {Feature} from '@cucumber/messages';
 import {globSync} from './util/glob.ts';
 
+/** Where a file really is, in the case the disk has it in. */
+function realPath(file: string): string {
+  try {
+    return fs.realpathSync.native(file);
+  } catch {
+    return path.resolve(file);
+  }
+}
+
 /** Names no custom rule may take: those gurkencheck reports under itself. */
 const RESERVED_RULE_NAMES = [...PARSER_RULES, UNKNOWN_RULE_IN_DIRECTIVE];
 
@@ -120,7 +129,9 @@ export async function loadRules(
         );
       }
       const earlier = loadedFrom.get(rule.name);
-      if (earlier === file) {
+      // The same file reached another way - through a symlink, or in another
+      // case on a file system that ignores it - is not a second rule.
+      if (earlier !== undefined && realPath(earlier) === realPath(file)) {
         continue;
       }
       if (earlier !== undefined) {
