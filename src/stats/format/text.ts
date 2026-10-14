@@ -98,8 +98,12 @@ function stepLines(entries: readonly StepEntry[], counted = true): string[] {
   );
 }
 
-function similarLines(groups: readonly SimilarGroup[]): string[] {
-  return groups.flatMap((group, index) => [...(index === 0 ? [] : ['']), ...stepLines(group.members)]);
+/** Each group cut to `top` members too: one of hundreds ran on for pages. */
+function similarLines(groups: readonly SimilarGroup[], top: number): string[] {
+  return groups.flatMap((group, index) => {
+    const members = head(group.members, top);
+    return [...(index === 0 ? [] : ['']), ...stepLines(members.shown), ...more(members.hidden, 'step')];
+  });
 }
 
 /** The report, as a block of text. */
@@ -221,7 +225,7 @@ export function toText(statistics: Statistics, options: StatsFormatOptions): str
     lines.push(
       '',
       `  Nearly the same (${plural(steps.similar.length, 'group')})`,
-      ...similarLines(similar.shown),
+      ...similarLines(similar.shown, options.top),
       ...more(similar.hidden, 'group'),
     );
   }

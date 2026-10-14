@@ -178,3 +178,18 @@ test('the text report writes out control characters from the feature files', () 
   assert.doesNotMatch(report, /[\u0000-\u0008\u000B-\u001F]/u);
   assert.match(report, /Clear \\u001b\[2J screen/u);
 });
+
+test('--top cuts the members of a group of nearly the same steps too', () => {
+  const letters = 'abcdefghijkl'.split('');
+  const source = `Feature: A\n  Scenario: B\n${letters.map((letter) => `    Given I open the page ${letter}\n`).join('')}`;
+  const grouped = collectStatistics([parseFeature('top.feature', source)]);
+  assert.equal(grouped.steps.similar[0]?.members.length, 12);
+  const text = toText(grouped, {top: 2});
+  const nearly = text.slice(text.indexOf('Nearly the same'));
+  assert.equal(nearly.match(/i open the page/gu)?.length, 2, text);
+  assert.match(nearly, /… and 10 more steps/u);
+  const markdown = toMarkdown(grouped, {top: 2});
+  const table = markdown.slice(markdown.indexOf('### Nearly the same'));
+  assert.equal(table.slice(0, table.indexOf('\n#')).match(/i open the page/gu)?.length, 2, markdown);
+  assert.match(table, /_… and 10 more steps_/u);
+});

@@ -55,15 +55,20 @@ function stepRows(entries: readonly StepEntry[], counted = true): string[][] {
   ]);
 }
 
-function similarRows(groups: readonly SimilarGroup[]): string[][] {
-  return groups.flatMap((group, index) =>
-    group.members.map((member, position) => [
-      position === 0 ? String(index + 1) : '',
-      code(member.text),
-      String(member.count),
-      cell(location(member.file, member.line)),
-    ]),
-  );
+/** Each group cut to `top` members too: one of hundreds ran on for pages. */
+function similarRows(groups: readonly SimilarGroup[], top: number): string[][] {
+  return groups.flatMap((group, index) => {
+    const members = head(group.members, top);
+    return [
+      ...members.shown.map((member, position) => [
+        position === 0 ? String(index + 1) : '',
+        code(member.text),
+        String(member.count),
+        cell(location(member.file, member.line)),
+      ]),
+      ...(members.hidden === 0 ? [] : [['', `_${andMore(members.hidden, 'step')}_`, '', '']]),
+    ];
+  });
 }
 
 /** The report, as Markdown. */
@@ -176,7 +181,7 @@ export function toMarkdown(statistics: Statistics, options: StatsFormatOptions):
       ...table(
         ['Group', 'Step', 'Uses', 'Where'],
         ['right', 'left', 'right', 'left'],
-        similarRows(similar.shown),
+        similarRows(similar.shown, options.top),
       ),
       ...more(similar.hidden, 'group'),
     );
