@@ -16,8 +16,14 @@ test('reports tags repeated from a parent node', async () => {
     duplicated('Scenario', 'Feature', '@superfluoustag1', 7),
     duplicated('Scenario Outline', 'Feature', '@superfluoustag1', 11),
     duplicated('Scenario Outline', 'Feature', '@superfluoustag2', 11),
-    duplicated('Examples', 'Feature', '@superfluoustag2', 14),
     duplicated('Examples', 'Scenario Outline', '@superfluoustag2', 14),
     duplicated('Examples', 'Scenario Outline', '@scenariotag3', 14),
+  ]);
+});
+
+test('reports a tag once, against the nearest node already carrying it', async () => {
+  await checkRule(rule, 'no-superfluous-tags/InheritedTwice.feature', {}, [
+    duplicated('Scenario Outline', 'Feature', '@ok', 3),
+    duplicated('Examples', 'Scenario Outline', '@ok', 6),
   ]);
 });
