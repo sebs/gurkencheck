@@ -767,3 +767,12 @@ test('a failure outside the run, in plugin code, is a failure to run, not a find
     assert.match(stderr, /Something failed outside the run, most likely in a custom rule or formatter: nobody was waiting/u);
   });
 });
+
+test('a formatter emptying the results it prints does not change the verdict', async () => {
+  const formatter = path.resolve('test/formatters/emptying.mjs');
+  await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
+    const {code, stdout} = await cli(['-f', formatter, '.'], cwd);
+    assert.match(stdout, /1 findings/u);
+    assert.equal(code, 1);
+  });
+});

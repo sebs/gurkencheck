@@ -315,6 +315,12 @@ export async function run(
       return EXIT_USAGE;
     }
 
+    // The verdict is taken before a formatter sees the results: it is handed
+    // the same objects, and one emptying result.errors as it printed them
+    // turned a run with errors into one that passed.
+    const failed = hasErrors(results);
+    warningsThisPass = countBySeverity(results).warnings;
+
     // A formatter may print the output itself or hand it back as a string.
     let output;
     try {
@@ -339,8 +345,7 @@ export async function run(
       console.log(output);
     }
 
-    warningsThisPass = countBySeverity(results).warnings;
-    return hasErrors(results) ? EXIT_LINT_ERRORS : EXIT_OK;
+    return failed ? EXIT_LINT_ERRORS : EXIT_OK;
   };
 
   if (values.watch === true) {
