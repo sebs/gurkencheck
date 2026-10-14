@@ -559,3 +559,33 @@ test('a formatter returning something other than text is a failure, not silence'
     assert.match(stderr, /The formatter failed: it returned number instead of a string/u);
   });
 });
+
+test('--watch carries on over a configuration it cannot read at the start', async () => {
+  await withProject(DIRTY_FEATURE, '{bad', async (cwd) => {
+    const child = spawn(process.execPath, [CLI, '--watch', '.'], {cwd});
+    let output = '';
+    child.stdout.on('data', (chunk) => (output += String(chunk)));
+    child.stderr.on('data', (chunk) => (output += String(chunk)));
+    const waitFor = async (pattern: RegExp, retry?: () => void): Promise<void> => {
+      const deadline = Date.now() + 10000;
+      let nextRetry = 0;
+      while (!pattern.test(output)) {
+        if (Date.now() > deadline) assert.fail(`timed out waiting for ${String(pattern)} in:\n${output}`);
+        if (retry !== undefined && Date.now() >= nextRetry) {
+          retry();
+          nextRetry = Date.now() + 250;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+    };
+    try {
+      await waitFor(/Could not read config file/u);
+      await waitFor(/Watching for changes/u);
+      await waitFor(/error +Missing Scenario name/u, () =>
+        fs.writeFileSync(path.join(cwd, '.gurkencheckrc'), CONFIG),
+      );
+    } finally {
+      await stop(child);
+    }
+  });
+});

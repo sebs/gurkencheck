@@ -160,14 +160,16 @@ export async function run(
   };
 
   let settings = await readSettings();
-  if (settings === undefined) {
+  // A watch carries on over a configuration it cannot use, as it does once
+  // running: the point is to be told when it has been fixed.
+  if (settings === undefined && values.watch !== true) {
     return EXIT_USAGE;
   }
   // A configuration switches on only what it names, so a rule brought in with
   // --rulesdir and left out of it is loaded and then never run - and a run
   // without it looks the same as one in which it found nothing.
-  for (const [name, rule] of rules) {
-    if (!BUILT_IN_RULES.includes(rule) && !isRuleEnabled(settings.configuration[name])) {
+  for (const [name, rule] of settings === undefined ? [] : rules) {
+    if (!BUILT_IN_RULES.includes(rule) && !isRuleEnabled(settings!.configuration[name])) {
       diagnostics.report({
         level: 'notice',
         message: `The rule "${name}" from --rulesdir is not switched on in the configuration, so it does not run.`,
@@ -237,11 +239,11 @@ export async function run(
   const checkOnce = async (): Promise<number> => {
     if (passes++ > 0) {
       settings = await readSettings();
-      if (settings === undefined) {
-        return EXIT_USAGE;
-      }
     }
-    const {configuration, language} = settings!;
+    if (settings === undefined) {
+      return EXIT_USAGE;
+    }
+    const {configuration, language} = settings;
 
     if (streaming !== undefined) {
       return await runStreaming(
