@@ -63,3 +63,9 @@ test('a word may start with digits', () => {
   assert.equal(snakeCase('render_3d_model'), 'render_3d_model');
   assert.equal(kebabCase('4k-video'), '4k-video');
 });
+
+test('an emoji in a name is part of a word, not dropped', () => {
+  assert.equal(kebabCase('🚀-launch'), '🚀-launch');
+  assert.equal(kebabCase('👨‍👩‍👧-family'), '👨‍👩‍👧-family');
+  assert.equal(kebabCase('___'), '');
+});

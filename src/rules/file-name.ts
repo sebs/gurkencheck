@@ -48,9 +48,14 @@ const rule: LintRule = {
     if (fileName === expected) {
       return [];
     }
+    // A name with nothing in it to write in a style - ___ - has no example to
+    // offer; ".feature" would be a file with no name at all.
     return [
       {
-        message: `File names should be written in ${style} e.g. "${expected}.feature"`,
+        message:
+          expected === ''
+            ? `File names should be written in ${style}, but "${fileName}" holds no letters or digits to write that way`
+            : `File names should be written in ${style} e.g. "${expected}.feature"`,
         rule: name,
         line: 0,
       },

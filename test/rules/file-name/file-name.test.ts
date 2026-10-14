@@ -70,3 +70,14 @@ test('rejects a style it does not know', async () => {
     /style "SHOUTING" is not supported by the file-name rule/u,
   );
 });
+
+test('a name with no letters or digits gets no example of an empty name', async () => {
+  const {parseFeature} = await import('../../../src/gherkin/parse.ts');
+  const {newRunContext} = await import('../../../src/rules.ts');
+  const {feature, file} = parseFeature('features/___.feature', 'Feature: A\n');
+  const errors = await rule.run(feature, file, {style: 'kebab-case'}, newRunContext());
+  assert.deepEqual(
+    errors.map((error) => error.message),
+    ['File names should be written in kebab-case, but "___" holds no letters or digits to write that way'],
+  );
+});

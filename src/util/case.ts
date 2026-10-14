@@ -7,12 +7,13 @@
 const UPPER = String.raw`\p{Lu}\p{Lt}`;
 /**
  * Small letters, letters with no case at all - Japanese, Chinese, Arabic -
- * and combining marks, all of which carry on a word the way small letters
- * do. Without the marks, a Devanagari vowel sign, or the accent of an é
- * stored as e and a combining acute (as macOS stores file names), ended the
- * word in the middle.
+ * combining marks, and symbols such as emoji with what joins them, all of
+ * which carry on a word the way small letters do. Without the marks, a
+ * Devanagari vowel sign, or the accent of an é stored as e and a combining
+ * acute (as macOS stores file names), ended the word in the middle; without
+ * the symbols, an emoji in a name was dropped from the suggested one.
  */
-const LOWER = String.raw`\p{Ll}\p{Lm}\p{Lo}\p{M}`;
+const LOWER = String.raw`\p{Ll}\p{Lm}\p{Lo}\p{M}\p{So}\p{Sk}\u200D`;
 const DIGIT = String.raw`\p{Nd}`;
 
 const WORD = new RegExp(
