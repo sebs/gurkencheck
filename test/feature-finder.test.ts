@@ -455,3 +455,20 @@ test('a string where a list of paths belongs is refused, not searched letter by 
     assert.throws(() => find(['features'], 'build' as unknown as string[]), /Expected a list of ignore patterns/u);
   }
 });
+
+test('a name typed as a feature file that is not one on disk is not called one', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-case-name-'));
+  try {
+    fs.writeFileSync(path.join(directory, 'c.FEATURE'), 'Feature: C\n');
+    if (!ignoresCase(directory)) return;
+    const typed = path.join(directory, 'c.feature');
+    const search = findFeatureFiles([typed]);
+    assert.deepEqual(search.invalidPatterns, [typed]);
+    assert.equal(
+      describeInvalidPattern(typed),
+      `"${typed}" is "${path.join(directory, 'c.FEATURE')}" on disk, which is not a .feature file.`,
+    );
+  } finally {
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});

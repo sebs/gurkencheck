@@ -284,8 +284,15 @@ export function describeInvalidPattern(pattern: string): string {
     return `"${pattern}" is a directory, which names feature files to check.`;
   }
   if (stats.isFile()) {
+    // Judged by the name on disk, as the search judged it: typed in another
+    // case on a file system that ignores it, c.feature reaches c.FEATURE,
+    // and was refused with a message calling it a feature file.
+    const spelled = onDiskSpelling(pattern);
+    if (isFeatureFile(spelled)) {
+      return `"${pattern}" is a feature file, which names itself to check.`;
+    }
     return isFeatureFile(pattern)
-      ? `"${pattern}" is a feature file, which names itself to check.`
+      ? `"${pattern}" is "${spelled}" on disk, which is not a .feature file.`
       : `"${pattern}" is not a .feature file.`;
   }
   return `"${pattern}" is neither a file nor a directory.`;
