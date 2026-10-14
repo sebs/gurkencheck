@@ -249,6 +249,15 @@ test('a language code in the wrong case, or with a region, is offered the one me
   assert.equal(suggestLanguage('zh-cn'), 'zh-CN');
   assert.equal(suggestLanguage('en-US'), 'en');
   assert.equal(suggestLanguage('de_DE'), 'de');
-  assert.equal(suggestLanguage('klingon'), undefined);
+  assert.equal(suggestLanguage('klingon'), 'tlh');
+  assert.equal(suggestLanguage('elvish'), undefined);
   assert.equal(unknownLanguageMessage('DE'), 'Unknown language "DE". Did you mean "de"?');
+});
+
+test('a language given by name, or by a code Gherkin knows by another, is offered the code', () => {
+  assert.equal(suggestLanguage('english'), 'en');
+  assert.equal(suggestLanguage('French'), 'fr');
+  assert.equal(suggestLanguage('Deutsch'), 'de');
+  assert.equal(suggestLanguage('nb'), 'no');
+  assert.equal(suggestLanguage('constructor'), undefined);
 });

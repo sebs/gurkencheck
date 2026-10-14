@@ -52,9 +52,18 @@ export function suggestLanguage(language: string): string | undefined {
   const wanted = language.toLowerCase().replace(/_/gu, '-');
   return (
     codes.find((code) => code.toLowerCase() === wanted) ??
-    codes.find((code) => code.toLowerCase() === wanted.split('-')[0])
+    codes.find((code) => code.toLowerCase() === wanted.split('-')[0]) ??
+    // The language by name, in English or its own: english, Deutsch.
+    codes.find((code) => {
+      const {name, native} = ALL_DIALECTS[code]!;
+      return name.toLowerCase() === wanted || native.toLowerCase() === wanted;
+    }) ??
+    (Object.hasOwn(CODE_ALIASES, wanted) ? CODE_ALIASES[wanted] : undefined)
   );
 }
+
+/** Codes in common use that Gherkin knows by another. */
+const CODE_ALIASES: Record<string, string> = {nb: 'no', nn: 'no', iw: 'he', in: 'id', 'zh-hans': 'zh-CN', 'zh-hant': 'zh-TW'};
 
 /** `Unknown language "DE". Did you mean "de"?`, or the general hint. */
 export function unknownLanguageMessage(language: string, from = ''): string {
