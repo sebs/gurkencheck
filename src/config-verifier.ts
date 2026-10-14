@@ -5,6 +5,7 @@
 import {ALWAYS_ON_RULES} from './gherkin/parse.ts';
 import {BUILT_IN_RULES} from './rules/index.ts';
 import {DIRECTIVE_CHECKS} from './suppressions.ts';
+import {quoteValue} from './util/json.ts';
 import {closest} from './util/suggest.ts';
 import type {Configuration, LintRule, RuleRegistry} from './types.ts';
 
@@ -81,8 +82,7 @@ function verifyTypes(
       fits = typeof value === typeof fallback;
     }
     if (!fits) {
-      // JSON.stringify writes Infinity and NaN as null.
-      const shown = typeof value === 'number' ? String(value) : JSON.stringify(value);
+      const shown = quoteValue(value);
       errors.push(`${prefix}"${name}" should be ${describeType(fallback)}, not ${shown}`);
     }
   }
@@ -114,8 +114,8 @@ function verifySettings(
       // read as refusing the very value it then listed as allowed.
       errors.push(
         Array.isArray(settings)
-          ? `${prefix}the rule takes a single value, not a list: write ${JSON.stringify(settings[0])} rather than ${JSON.stringify(settings)}`
-          : `${prefix}${JSON.stringify(settings)} is not one of the allowed values: ${describeAllowed(availableConfigs)}`,
+          ? `${prefix}the rule takes a single value, not a list: write ${quoteValue(settings[0])} rather than ${quoteValue(settings)}`
+          : `${prefix}${quoteValue(settings)} is not one of the allowed values: ${describeAllowed(availableConfigs)}`,
       );
     }
     return;

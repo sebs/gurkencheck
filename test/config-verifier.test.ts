@@ -212,3 +212,9 @@ test('the directive checks take a state and nothing else', () => {
   assert.deepEqual(verify({'unknown-directive': 'off', 'unknown-rule-in-directive': ['on']} as unknown as Configuration), []);
   assert.equal(verify({'unknown-directive': ['on', {}]} as unknown as Configuration).length, 1);
 });
+
+test('a long value of the wrong type is quoted short', () => {
+  const [error] = verify({'name-length': ['on', {Step: 'x'.repeat(100000)}]} as unknown as Configuration);
+  assert.ok(error!.length < 300, `message is ${error!.length} long`);
+  assert.match(error!, /…$/u);
+});

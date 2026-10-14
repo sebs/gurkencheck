@@ -2,6 +2,7 @@ import path from 'node:path';
 import type {LintRule} from '../types.ts';
 import {camelCase, kebabCase, pascalCase, snakeCase, titleCase} from '../util/case.ts';
 import {mergeDefaults} from '../util/collections.ts';
+import {quoteValue} from '../util/json.ts';
 
 const name = 'file-name';
 
@@ -30,7 +31,7 @@ const rule: LintRule = {
       : [
           `"style" should be one of ${Object.keys(STYLES)
             .map((known) => `"${known}"`)
-            .join(', ')}, not ${JSON.stringify(style)}`,
+            .join(', ')}, not ${quoteValue(style)}`,
         ];
   },
   run(_feature, file, configuration) {

@@ -164,3 +164,17 @@ export function duplicateKeys(json: string): string[] {
   }
   return duplicates;
 }
+
+/** How much of a value a message quotes before cutting it short. */
+const QUOTED_LENGTH = 80;
+
+/**
+ * A value from a configuration as a message quotes it: as JSON - with
+ * Infinity and NaN as themselves rather than null - cut short past a few dozen
+ * characters, so a long list given where a number belongs does not become a
+ * message hundreds of kilobytes long.
+ */
+export function quoteValue(value: unknown): string {
+  const text = typeof value === 'number' ? String(value) : (JSON.stringify(value) ?? String(value));
+  return [...text].length <= QUOTED_LENGTH ? text : `${[...text].slice(0, QUOTED_LENGTH - 1).join('')}…`;
+}
