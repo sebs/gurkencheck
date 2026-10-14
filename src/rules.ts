@@ -107,9 +107,10 @@ async function loadRulesFrom(directory: string): Promise<{rule: LintRule; file: 
   }
   // Declaration files sit beside TypeScript rules as a matter of course, and
   // hold types, not code; tests sit beside them as often, and importing one
-  // to see whether it is a rule would run it.
+  // to see whether it is a rule would run it - whatever the case of its name:
+  // LoginPage.Spec.ts is a test too.
   const files = globSync(`*.${RULE_EXTENSIONS}`, {cwd: resolved}).filter(
-    (file) => !/\.d\.[mc]?ts$/u.test(file) && !/\.(?:test|spec)\.[mc]?[jt]s$/u.test(file),
+    (file) => !/\.d\.[mc]?ts$/iu.test(file) && !/\.(?:test|spec)\.[mc]?[jt]s$/iu.test(file),
   );
   const loaded: {rule: LintRule; file: string}[] = [];
 
