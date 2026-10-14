@@ -15,3 +15,12 @@ test('pads and cuts by columns', () => {
   assert.equal(truncateToWidth('ログイン', 5), 'ログ…');
   assert.equal(truncateToWidth('ab', 5), 'ab');
 });
+
+test('an emoji is two columns however it is made', () => {
+  assert.equal(displayWidth('✅'), 2);
+  assert.equal(displayWidth('⚡⭐'), 4);
+  assert.equal(displayWidth('👨‍👩‍👧'), 2);
+  assert.equal(displayWidth('👍🏽'), 2);
+  assert.equal(displayWidth('❤️'), 2);
+  assert.equal(truncateToWidth('👨‍👩‍👧👨‍👩‍👧', 3), '👨‍👩‍👧…');
+});

@@ -14,16 +14,34 @@ const WIDE =
 /** Characters that take no column of their own. */
 const ZERO_WIDTH = /[\p{Mn}\p{Me}​-‏︀-️]/u;
 
-function widthOf(character: string): number {
-  if (ZERO_WIDTH.test(character)) return 0;
-  return WIDE.test(character) ? 2 : 1;
+/** An emoji drawn as one: ✅, ⭐, or anything asking for emoji presentation. */
+const EMOJI = /\p{Emoji_Presentation}|\uFE0F/u;
+
+const GRAPHEMES = new Intl.Segmenter(undefined, {granularity: 'grapheme'});
+
+/**
+ * The columns one grapheme cluster takes - what a reader sees as one
+ * character, however many code points make it: a family joined from four
+ * emoji, or a thumbs-up with a skin tone, is drawn once, two columns wide.
+ */
+function widthOf(cluster: string): number {
+  if (EMOJI.test(cluster)) return 2;
+  const first = String.fromCodePoint(cluster.codePointAt(0)!);
+  if (ZERO_WIDTH.test(first) && [...cluster].every((character) => ZERO_WIDTH.test(character))) return 0;
+  return WIDE.test(first) ? 2 : 1;
+}
+
+function* clusters(text: string): Generator<string> {
+  for (const {segment} of GRAPHEMES.segment(text)) {
+    yield segment;
+  }
 }
 
 /** The number of terminal columns `text` takes. */
 export function displayWidth(text: string): number {
   let width = 0;
-  for (const character of text) {
-    width += widthOf(character);
+  for (const cluster of clusters(text)) {
+    width += widthOf(cluster);
   }
   return width;
 }
@@ -43,10 +61,10 @@ export function truncateToWidth(text: string, width: number): string {
   if (displayWidth(text) <= width) return text;
   let kept = '';
   let used = 0;
-  for (const character of text) {
-    const next = widthOf(character);
+  for (const cluster of clusters(text)) {
+    const next = widthOf(cluster);
     if (used + next > width - 1) break;
-    kept += character;
+    kept += cluster;
     used += next;
   }
   return `${kept}…`;
