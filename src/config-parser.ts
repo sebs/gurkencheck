@@ -86,6 +86,15 @@ function lstatOrUndefined(target: string): fs.Stats | undefined {
   }
 }
 
+/**
+ * A path as a message shows it: relative to the working directory, as the
+ * rest of the messages are, where it is absolute - as a file reached through
+ * extends always is.
+ */
+function shown(file: string): string {
+  return path.isAbsolute(file) ? path.relative(process.cwd(), file) || file : file;
+}
+
 /** Why a file could not be read, in words rather than as an errno. */
 function unreadableBecause(thrown: unknown, filePath: string): string {
   const code = (thrown as NodeJS.ErrnoException | undefined)?.code;
@@ -111,15 +120,15 @@ function parseFile(filePath: string, found = false): Record<string, unknown> {
   try {
     text = fs.readFileSync(filePath, 'utf8');
   } catch (thrown) {
-    throw new ConfigurationError(`Could not read "${filePath}": ${unreadableBecause(thrown, filePath)}.`);
+    throw new ConfigurationError(`Could not read "${shown(filePath)}": ${unreadableBecause(thrown, filePath)}.`);
   }
   // JSON.parse refuses a byte order mark, which some editors write.
   const json = stripJsonComments(text.replace(/^\uFEFF/u, ''));
   if (json.trim() === '') {
     throw new ConfigurationError(
       found
-        ? `"${filePath}" is empty. Write {} to switch every rule off, or remove it to use the recommended rules.`
-        : `"${filePath}" is empty. Write {} in it for a configuration with no rules switched on.`,
+        ? `"${shown(filePath)}" is empty. Write {} to switch every rule off, or remove it to use the recommended rules.`
+        : `"${shown(filePath)}" is empty. Write {} in it for a configuration with no rules switched on.`,
     );
   }
   let parsed: unknown;
@@ -127,12 +136,12 @@ function parseFile(filePath: string, found = false): Record<string, unknown> {
     parsed = JSON.parse(stripTrailingCommas(json));
   } catch (thrown) {
     throw new ConfigurationError(
-      `Could not parse "${filePath}": ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+      `Could not parse "${shown(filePath)}": ${thrown instanceof Error ? thrown.message : String(thrown)}`,
     );
   }
   if (!isConfigurationObject(parsed)) {
     throw new ConfigurationError(
-      `"${filePath}" must hold a JSON object mapping rule names to their settings.`,
+      `"${shown(filePath)}" must hold a JSON object mapping rule names to their settings.`,
     );
   }
   return parsed;
@@ -151,7 +160,7 @@ function extendsList(configuration: Record<string, unknown>, source: string): st
     return value;
   }
   throw new ConfigurationError(
-    `"${EXTENDS}" in "${source}" must be a name or a list of names.`,
+    `"${EXTENDS}" in "${shown(source)}" must be a name or a list of names.`,
   );
 }
 
@@ -201,7 +210,7 @@ async function loadExtended(
     const resolved = path.resolve(path.dirname(from), specifier);
     if (lstatOrUndefined(resolved) === undefined) {
       throw new ConfigurationError(
-        `Could not find "${specifier}", extended from "${fromFile}".`,
+        `Could not find "${specifier}", extended from "${shown(fromFile)}".`,
       );
     }
     return {configuration: parseFile(resolved), source: resolved};
@@ -216,8 +225,8 @@ async function loadExtended(
     const meant = presetMeant(specifier);
     throw new ConfigurationError(
       meant === undefined
-        ? `Could not resolve the package "${specifier}", extended from "${fromFile}". Is it installed?`
-        : `Could not resolve the package "${specifier}", extended from "${fromFile}". Did you mean the built-in "${meant}"?`,
+        ? `Could not resolve the package "${specifier}", extended from "${shown(fromFile)}". Is it installed?`
+        : `Could not resolve the package "${specifier}", extended from "${shown(fromFile)}". Did you mean the built-in "${meant}"?`,
     );
   }
 
@@ -230,7 +239,7 @@ async function loadExtended(
     module = (await import(pathToFileURL(resolved).href)) as Record<string, unknown>;
   } catch (thrown) {
     throw new ConfigurationError(
-      `Could not load "${specifier}", extended from "${fromFile}": ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+      `Could not load "${specifier}", extended from "${shown(fromFile)}": ${thrown instanceof Error ? thrown.message : String(thrown)}`,
     );
   }
   const exported = module['default'] ?? module;
@@ -259,7 +268,7 @@ async function flatten(
   origins: Map<string, string> = new Map(),
 ): Promise<Configuration> {
   if (ancestors.has(source)) {
-    throw new ConfigurationError(`"${source}" ends up extending itself.`);
+    throw new ConfigurationError(`"${shown(source)}" ends up extending itself.`);
   }
   ancestors.add(source);
   if (!Object.hasOwn(PRESETS, source)) {
