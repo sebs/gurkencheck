@@ -19,7 +19,7 @@ import {
   splitIgnoreList,
   unmatchedMessages,
 } from './feature-finder.ts';
-import {watch} from './watch.ts';
+import {isWatchAccessError, watch} from './watch.ts';
 import {
   DEFAULT_FORMAT,
   FORMATTERS,
@@ -691,6 +691,9 @@ function couldNotWrite(thrown: NodeJS.ErrnoException): void {
  */
 function failOnStrayErrors(): void {
   const fail = (thrown: unknown): void => {
+    if (isWatchAccessError(thrown)) {
+      return;
+    }
     TO_STDERR.report({
       level: 'error',
       message: `Something failed outside the run, most likely in a custom rule or formatter: ${

@@ -161,6 +161,21 @@ function shown(absolutePath: string): string {
   return path.relative(process.cwd(), absolutePath) || absolutePath;
 }
 
+/**
+ * True for an error node's own recursive watch throws, uncaught, on meeting
+ * a directory it may not read - Node 26 on Linux does, from its handler for
+ * a change to the directory, besides saying so with an error event. The
+ * event is taken for the change it is, so the throw is not a failure.
+ */
+export function isWatchAccessError(thrown: unknown): boolean {
+  const {code, stack} = (thrown ?? {}) as {code?: unknown; stack?: unknown};
+  return (
+    (code === 'EACCES' || code === 'EPERM') &&
+    typeof stack === 'string' &&
+    stack.includes('internal/fs/recursive_watch')
+  );
+}
+
 /** True when a change to this path could change what a run would report. */
 export function isInteresting(relativePath: string, configFileName: string): boolean {
   const name = path.basename(relativePath);

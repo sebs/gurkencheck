@@ -997,6 +997,41 @@ test('a report cut off by a short write is a run that could not run', async () =
   });
 });
 
+test('--watch says so when a directory below it is made unreadable, and goes on watching', async () => {
+  if (process.platform === 'win32' || process.getuid?.() === 0) return;
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    const sub = path.join(cwd, 'features', 'sub');
+    fs.mkdirSync(sub, {recursive: true});
+    fs.writeFileSync(path.join(sub, 's.feature'), CLEAN_FEATURE);
+    const child = spawn(process.execPath, [CLI, '--watch', 'features'], {cwd});
+    let output = '';
+    child.stdout.on('data', (chunk) => (output += String(chunk)));
+    child.stderr.on('data', (chunk) => (output += String(chunk)));
+    const waitFor = async (pattern: RegExp): Promise<void> => {
+      const deadline = Date.now() + 10000;
+      while (!pattern.test(output)) {
+        if (Date.now() > deadline) assert.fail(`timed out waiting for ${String(pattern)} in:\n${output}`);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+    };
+    try {
+      await waitFor(/Watching for changes/u);
+      output = '';
+      fs.chmodSync(sub, 0o000);
+      await waitFor(/Could not read the directory "features\/sub": permission denied/u);
+      // Linux says nothing when it is made readable again, so the watch is
+      // shown to go on by a change to another file.
+      fs.chmodSync(sub, 0o755);
+      fs.writeFileSync(path.join(cwd, 'features', 'new.feature'), DIRTY_FEATURE);
+      await waitFor(/new\.feature[\s\S]*Missing Scenario name|Missing Scenario name[\s\S]*new\.feature/u);
+      assert.doesNotMatch(output, /Something failed outside the run|No longer watching/u);
+    } finally {
+      fs.chmodSync(sub, 0o755);
+      await stop(child);
+    }
+  });
+});
+
 test('a directory named outright and skipped whole is a run that checked nothing', async () => {
   await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
     fs.mkdirSync(path.join(cwd, 'legacy'));

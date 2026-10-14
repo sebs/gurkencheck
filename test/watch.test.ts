@@ -523,25 +523,6 @@ test('checks again when a listed file in a directory listed only after a pass ch
   }
 });
 
-test('checks again when a directory of feature files is made unreadable', async () => {
-  if (process.platform === 'win32' || process.getuid?.() === 0) return;
-  await withWatch(async ({directory, passes}) => {
-    const sub = path.join(directory, 'sub');
-    fs.mkdirSync(sub);
-    fs.writeFileSync(path.join(sub, 's.feature'), 'Feature: S\n');
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    const before = passes();
-    try {
-      await waitFor('a pass for the directory', () => passes() > before, () => {
-        fs.chmodSync(sub, 0o755);
-        fs.chmodSync(sub, 0o000);
-      });
-    } finally {
-      fs.chmodSync(sub, 0o755);
-    }
-  });
-});
-
 test('a file with no extension going is not taken for a directory, and starts no pass', async () => {
   await withWatch(async ({directory, passes, notices}) => {
     fs.writeFileSync(path.join(directory, 'Makefile'), 'all:\n');
