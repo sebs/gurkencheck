@@ -137,7 +137,9 @@ export async function* lintStream(
   options: LintOptions = {},
 ): AsyncGenerator<FileResult> {
   const run = beginRun(rules, configuration);
-  const held = reportsAcrossFiles(rules, configuration);
+  // A rule that failed to start is reported at the end of the run, so the
+  // results wait for it, as for a rule that reports across files.
+  const held = reportsAcrossFiles(rules, configuration) || run.failedToStart.size > 0;
 
   const waiting: FileResult[] = [];
   /** Where to put a finding that names a file, and what may hide it there. */

@@ -235,6 +235,11 @@ export function newRunContext(): RunContext {
 export interface Run {
   /** The context for one rule, made the first time it is asked for. */
   contextFor(ruleName: string): RunContext;
+  /**
+   * Why each rule whose `onRunStart` threw failed, by its name. Such a rule
+   * runs no further, and `finishRun` reports the failure.
+   */
+  readonly failedToStart: ReadonlyMap<string, string>;
 }
 
 /** Starts a run, telling every enabled rule that one is beginning. */
@@ -244,7 +249,9 @@ export function beginRun(rules: RuleRegistry, configuration: Configuration): Run
   resetRules(rules);
 
   const contexts = new Map<string, RunContext>();
+  const failedToStart = new Map<string, string>();
   const run: Run = {
+    failedToStart,
     contextFor(ruleName: string): RunContext {
       let context = contexts.get(ruleName);
       if (context === undefined) {
@@ -257,8 +264,15 @@ export function beginRun(rules: RuleRegistry, configuration: Configuration): Run
 
   for (const rule of rules.values()) {
     const config = configuration[rule.name];
-    if (isRuleEnabled(config)) {
+    if (!isRuleEnabled(config)) {
+      continue;
+    }
+    // As for run and onRunEnd: a rule that throws costs you that rule, not
+    // the run, and is named rather than left for the reader to find.
+    try {
       rule.onRunStart?.(getRuleSettings(config), run.contextFor(rule.name));
+    } catch (thrown) {
+      failedToStart.set(rule.name, reasonOf(thrown));
     }
   }
 
@@ -410,10 +424,18 @@ export async function finishRun(
 
   for (const rule of rules.values()) {
     const config = configuration[rule.name];
-    if (!isRuleEnabled(config) || rule.onRunEnd === undefined) {
+    if (!isRuleEnabled(config)) {
       continue;
     }
     const severity = getRuleSeverity(config);
+    const failed = run.failedToStart.get(rule.name);
+    if (failed !== undefined) {
+      findings.push(failedAtStart(rule.name, failed, severity));
+      continue;
+    }
+    if (rule.onRunEnd === undefined) {
+      continue;
+    }
 
     try {
       const found: unknown = await waitFor(
@@ -440,6 +462,16 @@ export async function finishRun(
   return findings;
 }
 
+/** The finding reported in place of a rule whose onRunStart threw. */
+function failedAtStart(ruleName: string, reason: string, severity: Severity): RuleError {
+  return {
+    message: `Rule "${ruleName}" failed at the start of the run: ${reason}`,
+    rule: 'unexpected-error',
+    line: 0,
+    severity,
+  };
+}
+
 /**
  * Runs every enabled rule against one feature file.
  *
@@ -459,9 +491,10 @@ export async function runEnabledRules(
   file: FeatureFile,
   configuration: Configuration,
   rules: RuleRegistry,
-  run: Run = beginRun(rules, configuration),
+  run?: Run,
 ): Promise<RuleError[]> {
   const errors: RuleError[] = [];
+  const current = run ?? beginRun(rules, configuration);
 
   for (const rule of rules.values()) {
     const config = configuration[rule.name];
@@ -469,12 +502,21 @@ export async function runEnabledRules(
       continue;
     }
     const severity = getRuleSeverity(config);
+    // A rule that could not start does not run. Its failure is reported
+    // once, at the end of the run - or here, in a run of this file alone.
+    const failed = current.failedToStart.get(rule.name);
+    if (failed !== undefined) {
+      if (run === undefined) {
+        errors.push(failedAtStart(rule.name, failed, severity));
+      }
+      continue;
+    }
 
     try {
       // Typed as what a custom rule could really hand back, not what it should.
       const found: unknown = await waitFor(
         `the rule "${rule.name}"`,
-        rule.run(feature, file, getRuleSettings(config), run.contextFor(rule.name)),
+        rule.run(feature, file, getRuleSettings(config), current.contextFor(rule.name)),
       );
       // Reading what came back runs the rule's code too - a getter, a list
       // that is a proxy - and that failing is the rule failing, not the run.

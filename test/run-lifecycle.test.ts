@@ -224,3 +224,33 @@ test('a finding at the end of the run with a file path that is not one is the ru
     ],
   );
 });
+
+test('a rule whose onRunStart throws costs that rule only, and is named', async () => {
+  const rules = new Map<string, LintRule>([
+    [
+      'starting',
+      {
+        name: 'starting',
+        run: () => [{message: 'never reported', rule: 'starting', line: 1}],
+        onRunStart: () => {
+          throw new Error('start boom');
+        },
+      },
+    ],
+    ['other', {name: 'other', run: () => [{message: 'kept', rule: 'other', line: 1}]}],
+  ]);
+  const results = await lint([FILE], {starting: 'on', other: 'on'}, rules);
+  assert.deepEqual(
+    results.flatMap((result) => result.errors.map(({message, rule}) => [message, rule])),
+    [
+      ['Rule "starting" failed at the start of the run: start boom', 'unexpected-error'],
+      ['kept', 'other'],
+    ],
+  );
+
+  const alone = await runEnabledRules(undefined, {relativePath: 'a.feature', lines: []}, {starting: 'warn'}, rules);
+  assert.deepEqual(
+    alone.map(({message, severity}) => [message, severity]),
+    [['Rule "starting" failed at the start of the run: start boom', 'warning']],
+  );
+});
