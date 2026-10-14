@@ -390,6 +390,14 @@ export function isDirectoryIgnored(
   return isIgnored(relativePath, ignore.map((pattern) => toIgnoreRule(pattern, ignoreCase)), true);
 }
 
+/** A relative path with forward slashes, and without the ../ it starts with. */
+function withoutLeadingParents(relativePath: string): string {
+  const segments = relativePath.split(path.sep);
+  let first = 0;
+  while (segments[first] === '..') first++;
+  return segments.slice(first).join('/');
+}
+
 /** Everything a pattern needs in order to judge one path, worked out once. */
 interface Search {
   /** Where the walk starts, so `a/b/**` does not scan the whole tree. */
@@ -440,7 +448,11 @@ function newSearch(pattern: string, options: GlobOptions): Search {
     match(absolutePath: string): string | undefined {
       const relativePath = path.relative(cwd, absolutePath).split(path.sep).join('/');
       if (!matches.test(absolutePath.split(path.sep).join('/'))) return undefined;
-      const fromIgnoreBase = path.relative(ignoreBase, absolutePath).split(path.sep).join('/');
+      // A file outside the ignore file's directory is reached through ../,
+      // and those steps are not part of its name: matched too, a pattern
+      // like .* skipped everything outside, .. being a name starting with a
+      // dot. Only the names below where the two paths part are judged.
+      const fromIgnoreBase = withoutLeadingParents(path.relative(ignoreBase, absolutePath));
       if (isIgnored(fromIgnoreBase, ignores)) {
         options.onIgnored?.(relativePath);
         return undefined;

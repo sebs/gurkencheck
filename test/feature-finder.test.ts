@@ -409,3 +409,16 @@ test('a glob that matches nothing is still taken as the name it is', () => {
   // As a glob, [draft] is one of d, r, a, f, t - none of which is there.
   assert.deepEqual(findFeatureFiles(['wip/[draft].feature']).files, ['wip/[draft].feature']);
 });
+
+test('a dot pattern does not skip what is reached through ../', () => {
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-outside-'));
+  try {
+    fs.writeFileSync(path.join(outside, 'x.feature'), '');
+    fs.writeFileSync(DEFAULT_IGNORE_FILE_NAME, '.*\n');
+    const relative = path.relative(process.cwd(), path.join(outside, 'x.feature'));
+    assert.deepEqual(findFeatureFiles([relative]).files, [relative]);
+    assert.deepEqual(findFeatureFiles([relative]).ignoredFiles, []);
+  } finally {
+    fs.rmSync(outside, {recursive: true, force: true});
+  }
+});
