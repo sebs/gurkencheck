@@ -4,7 +4,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import {escapeGlob, globRoot, globStream, globSync, literalPath} from './util/glob.ts';
+import {escapeGlob, globRoot, globStream, globSync, isDirectoryIgnored, literalPath} from './util/glob.ts';
 
 /** The ignore file looked for when `--ignore` is not given. */
 export const DEFAULT_IGNORE_FILE_NAME = '.gurkencheckignore';
@@ -17,7 +17,7 @@ export interface FeatureSearch {
   files: string[];
   /** Arguments that were neither a feature file, a directory nor a glob. */
   invalidPatterns: string[];
-  /** Feature files named outright that the ignore patterns skip. */
+  /** Feature files, or directories, named outright that the ignore patterns skip. */
   ignoredFiles: string[];
   /** Directories the search could not read, each with why. */
   unreadable: {directory: string; reason: string}[];
@@ -179,8 +179,20 @@ export function describeInvalidPattern(pattern: string): string {
   return `"${pattern}" is neither a file nor a directory.`;
 }
 
-/** True when the argument names a feature file that the ignore patterns skip. */
+/**
+ * True when the argument names a feature file, or a directory, that the
+ * ignore patterns skip.
+ */
 function isIgnoredFile(pattern: string, globs: readonly string[], ignore: IgnoreList): boolean {
+  let stats: fs.Stats | undefined;
+  try {
+    stats = fs.statSync(pattern);
+  } catch {
+    stats = undefined;
+  }
+  if (stats?.isDirectory() === true) {
+    return isDirectoryIgnored(pattern, ignore.patterns, ignore.base);
+  }
   const [featureGlob] = globs;
   if (globs.length !== 1 || !isFeatureFile(pattern) || literalPath(featureGlob!) === undefined) {
     return false;

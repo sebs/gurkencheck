@@ -311,14 +311,14 @@ function toIgnoreRule(pattern: string): IgnoreRule {
  * .gitignore or .eslintignore behave. As there, the last pattern to match a
  * path decides, and nothing inside an ignored directory can be brought back.
  */
-function isIgnored(relativePath: string, rules: readonly IgnoreRule[]): boolean {
+function isIgnored(relativePath: string, rules: readonly IgnoreRule[], lastIsDirectory = false): boolean {
   if (rules.length === 0) {
     return false;
   }
   const segments = relativePath.split('/');
   for (let depth = 1; depth <= segments.length; depth++) {
     const prefix = segments.slice(0, depth).join('/');
-    const isDirectory = depth < segments.length;
+    const isDirectory = depth < segments.length || lastIsDirectory;
     let ignored = false;
     for (const rule of rules) {
       if ((isDirectory || !rule.directoryOnly) && rule.matches.test(prefix)) {
@@ -330,6 +330,22 @@ function isIgnored(relativePath: string, rules: readonly IgnoreRule[]): boolean 
     }
   }
   return false;
+}
+
+/**
+ * True when the ignore patterns skip this whole directory - which they do
+ * when it, or any directory above it, matches - read from `ignoreBase`.
+ */
+export function isDirectoryIgnored(
+  directory: string,
+  ignore: readonly string[],
+  ignoreBase: string = process.cwd(),
+): boolean {
+  const relativePath = path.relative(ignoreBase, path.resolve(directory)).split(path.sep).join('/');
+  if (relativePath === '' || relativePath.startsWith('../') || relativePath === '..') {
+    return false;
+  }
+  return isIgnored(relativePath, ignore.map(toIgnoreRule), true);
 }
 
 /** Everything a pattern needs in order to judge one path, worked out once. */

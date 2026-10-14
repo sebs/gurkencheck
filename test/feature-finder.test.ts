@@ -249,8 +249,8 @@ test('names a feature file asked for outright that the ignore patterns skip', ()
   assert.deepEqual(stream.ignoredFiles, [`${FOUND}/a.feature`]);
 });
 
-test('does not count a directory or a glob as a file asked for outright', () => {
-  assert.deepEqual(findFeatureFiles([FOUND, `${FOUND}/**`], [FOUND]).ignoredFiles, []);
+test('does not count a glob as something asked for outright', () => {
+  assert.deepEqual(findFeatureFiles([`${FOUND}/**`], [FOUND]).ignoredFiles, []);
 });
 
 test('an ignore list that comes to nothing still skips node_modules', () => {
@@ -322,4 +322,11 @@ test('a file named in another case is reported as the disk spells it', () => {
   if (!fs.existsSync(`${FOUND}/A.feature`)) return;
   assert.deepEqual(findFeatureFiles([`${FOUND}/A.feature`]).files, [`${FOUND}/a.feature`]);
   assert.deepEqual(findFeatureFiles([`${FOUND.toUpperCase()}/A.FEATURE`]).files, [`${FOUND}/a.feature`]);
+});
+
+test('names a directory asked for outright that the ignore patterns skip', () => {
+  const search = findFeatureFiles([FOUND], ['with']);
+  assert.deepEqual(search.files, []);
+  assert.deepEqual(search.ignoredFiles, [FOUND]);
+  assert.deepEqual(findFeatureFiles([FOUND], ['other']).ignoredFiles, []);
 });
