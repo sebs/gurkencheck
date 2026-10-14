@@ -279,6 +279,8 @@ export interface GlobOptions {
   ignoreBase?: string;
   /** Told about each directory that could not be read. */
   onUnreadable?: OnUnreadable;
+  /** Told about each path that matched but an ignore pattern skipped. */
+  onIgnored?: (relativePath: string) => void;
 }
 
 /** One line of an ignore list, read the way .gitignore reads it. */
@@ -439,7 +441,10 @@ function newSearch(pattern: string, options: GlobOptions): Search {
       const relativePath = path.relative(cwd, absolutePath).split(path.sep).join('/');
       if (!matches.test(absolutePath.split(path.sep).join('/'))) return undefined;
       const fromIgnoreBase = path.relative(ignoreBase, absolutePath).split(path.sep).join('/');
-      if (isIgnored(fromIgnoreBase, ignores)) return undefined;
+      if (isIgnored(fromIgnoreBase, ignores)) {
+        options.onIgnored?.(relativePath);
+        return undefined;
+      }
       return relativePath;
     },
   };

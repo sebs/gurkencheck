@@ -80,12 +80,13 @@ test('a file the parser refuses does not fail the run', async () => {
   }
 });
 
-test('a directory with no feature files says so', async () => {
+test('a directory with no feature files says so, and cannot pass for a report', async () => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-stats-'));
   try {
-    const {code, stdout} = await cli(['stats', '.'], cwd);
-    assert.equal(code, 0);
+    const {code, stdout, stderr} = await cli(['stats', '.'], cwd);
+    assert.equal(code, 2);
     assert.match(stdout, /No feature files found\./u);
+    assert.match(stderr, /"\." matched no feature files/u);
   } finally {
     fs.rmSync(cwd, {recursive: true, force: true});
   }

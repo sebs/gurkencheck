@@ -44,13 +44,15 @@ the recommended set rather than adding to it, so every rule is off until you swi
 }
 ```
 
-With no paths given it searches the current directory for `.feature` files.
+With no paths given it searches the current directory for `.feature` files. A path, directory
+or glob that matches none - a typo in a glob, or a directory holding no feature files - is an
+error rather than a clean run, as is a working directory with none below it.
 
 | Exit code | Meaning |
 |---|---|
 | `0` | Nothing worse than a warning |
 | `1` | At least one rule set to `"on"` was broken |
-| `2` | The linter could not run: bad arguments, or an invalid config |
+| `2` | The linter could not run: bad arguments, an invalid config, or a path or glob that matches no feature files |
 
 Findings go to **stdout**, so `gurkencheck > report.json` and `gurkencheck | less` work.
 Anything that stops the linter running — a bad option, an invalid config — goes to stderr.
@@ -151,7 +153,8 @@ Steps
 ```
 
 Once it has run it exits `0`, whatever the numbers say; it exits `2` only when it could not
-run at all, such as a format that does not exist or a `--top` that is not a whole number.
+run at all, such as a format that does not exist, a `--top` that is not a whole number, or a
+path that matches no feature files.
 Statistics are for reading, not for failing a build — that is what the rules are for.
 
 ```

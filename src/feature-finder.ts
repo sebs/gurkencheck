@@ -21,6 +21,14 @@ export interface FeatureSearch {
   ignoredFiles: string[];
   /** Directories the search could not read, each with why. */
   unreadable: {directory: string; reason: string}[];
+  /**
+   * Arguments that matched no feature files - a glob with a typo in it, or a
+   * directory holding none - other than ones the ignore patterns skip, which
+   * are in `ignoredFiles`.
+   */
+  unmatched: string[];
+  /** Arguments every feature file of which an ignore pattern skips. */
+  allIgnored: string[];
 }
 
 export interface FeatureFileStream {
@@ -49,6 +57,13 @@ export interface FeatureFileStream {
    * walk meets them, so complete once `files` has been read to the end.
    */
   unreadable: {directory: string; reason: string}[];
+  /**
+   * Arguments that matched no feature files, other than ones the ignore
+   * patterns skip. Known only once `files` has been read to the end.
+   */
+  unmatched: string[];
+  /** Arguments every feature file of which an ignore pattern skips; known at the end too. */
+  allIgnored: string[];
 }
 
 /**
@@ -330,6 +345,8 @@ export function findFeatureFiles(
   const files: string[] = [];
   const invalidPatterns: string[] = [];
   const ignoredFiles: string[] = [];
+  const unmatched: string[] = [];
+  const allIgnored: string[] = [];
   const unreadable: {directory: string; reason: string}[] = [];
   const onUnreadable = (directory: string, reason: string): void => {
     if (!unreadable.some((entry) => entry.directory === directory)) {
@@ -345,17 +362,29 @@ export function findFeatureFiles(
     }
     if (isIgnoredFile(pattern, globs, ignore)) {
       ignoredFiles.push(pattern);
+      continue;
     }
+    let matched = 0;
+    let skipped = 0;
+    const onIgnored = (file: string): void => {
+      if (isFeatureFile(file)) skipped++;
+    };
     for (const featureGlob of globs) {
-      files.push(
-        ...globSync(featureGlob, {ignore: ignore.patterns, ignoreBase: ignore.base, onUnreadable}).filter(
-          isFeatureFile,
-        ),
-      );
+      const found = globSync(featureGlob, {
+        ignore: ignore.patterns,
+        ignoreBase: ignore.base,
+        onUnreadable,
+        onIgnored,
+      }).filter(isFeatureFile);
+      matched += found.length;
+      files.push(...found);
+    }
+    if (matched === 0) {
+      (skipped > 0 ? allIgnored : unmatched).push(pattern);
     }
   }
 
-  return {files: withoutRepeats(files), invalidPatterns, ignoredFiles, unreadable};
+  return {files: withoutRepeats(files), invalidPatterns, ignoredFiles, unreadable, unmatched, allIgnored};
 }
 
 /**
@@ -376,9 +405,12 @@ export function findFeatureFileStream(
   const searched = patterns.length > 0 ? patterns : ['.'];
   const ignore = readIgnoreList(ignoreArgument);
 
-  const globs: string[] = [];
+  /** Each argument still to search, with the globs it stands for. */
+  const searches: {pattern: string; globs: string[]}[] = [];
   const invalidPatterns: string[] = [];
   const ignoredFiles: string[] = [];
+  const unmatched: string[] = [];
+  const allIgnored: string[] = [];
   const unreadable: {directory: string; reason: string}[] = [];
   const onUnreadable = (directory: string, reason: string): void => {
     const shown = path.relative(process.cwd(), directory) || '.';
@@ -394,32 +426,67 @@ export function findFeatureFileStream(
     } else {
       if (isIgnoredFile(pattern, expanded, ignore)) {
         ignoredFiles.push(pattern);
+      } else {
+        searches.push({pattern, globs: expanded});
       }
-      globs.push(...expanded);
     }
   }
 
   async function* files(): AsyncGenerator<string> {
-    const seen = globs.length > 1 ? new Set<string>() : undefined;
+    const globCount = searches.reduce((count, search) => count + search.globs.length, 0);
+    const seen = globCount > 1 ? new Set<string>() : undefined;
 
-    for (const featureGlob of globs) {
-      for await (const file of globStream(featureGlob, {
-        ignore: ignore.patterns,
-        ignoreBase: ignore.base,
-        onUnreadable,
-      })) {
-        if (!isFeatureFile(file)) continue;
-        if (seen !== undefined) {
-          const identity = identityOf(file);
-          if (seen.has(identity)) continue;
-          seen.add(identity);
+    for (const {pattern, globs} of searches) {
+      // Counted before repeats are dropped: a pattern whose files another
+      // one handed over already did match something.
+      let matched = 0;
+      let skipped = 0;
+      for (const featureGlob of globs) {
+        for await (const file of globStream(featureGlob, {
+          ignore: ignore.patterns,
+          ignoreBase: ignore.base,
+          onUnreadable,
+          onIgnored: (ignored) => {
+            if (isFeatureFile(ignored)) skipped++;
+          },
+        })) {
+          if (!isFeatureFile(file)) continue;
+          matched++;
+          if (seen !== undefined) {
+            const identity = identityOf(file);
+            if (seen.has(identity)) continue;
+            seen.add(identity);
+          }
+          yield file;
         }
-        yield file;
+      }
+      if (matched === 0) {
+        (skipped > 0 ? allIgnored : unmatched).push(pattern);
       }
     }
   }
 
-  return {files: files(), invalidPatterns, ignoredFiles, unreadable};
+  return {files: files(), invalidPatterns, ignoredFiles, unreadable, unmatched, allIgnored};
+}
+
+/**
+ * What to say about the arguments that matched no feature files: each by
+ * name, or, given none, the working directory.
+ */
+export function unmatchedMessages(
+  search: {unmatched: readonly string[]; allIgnored: readonly string[]},
+  given: readonly string[],
+): string[] {
+  if (given.length === 0) {
+    if (search.allIgnored.length > 0) {
+      return ['Every feature file in the working directory or below is skipped by an ignore pattern.'];
+    }
+    return search.unmatched.length === 0 ? [] : ['No feature files found in the working directory or below.'];
+  }
+  return [
+    ...search.unmatched.map((pattern) => `"${pattern}" matched no feature files.`),
+    ...search.allIgnored.map((pattern) => `Every feature file "${pattern}" matched is skipped by an ignore pattern.`),
+  ];
 }
 
 /**

@@ -343,7 +343,9 @@ ${codeBlock(`{
 }`)}
 <p>With no paths given, it searches the current directory for <code>.feature</code> files.
 It exits with <code>0</code> when there is nothing worse than a warning, <code>1</code> when
-a rule set to <code>"on"</code> was broken, and <code>2</code> when it could not run at all.</p>
+a rule set to <code>"on"</code> was broken, and <code>2</code> when it could not run at all -
+including when a path, directory or glob it was given matches no feature files, since a run
+that checked nothing is not a clean one.</p>
 
 <h2>Feature files in another language</h2>
 <p>Gherkin is translated into dozens of languages. A file says which one it is written in

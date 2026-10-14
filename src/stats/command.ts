@@ -14,6 +14,7 @@ import {
   DEFAULT_IGNORE_FILE_NAME,
   describeInvalidPattern,
   findFeatureFileStream,
+  unmatchedMessages,
 } from '../feature-finder.ts';
 import {isKnownLanguage, unknownLanguageMessage} from '../gherkin/dialects.ts';
 import {readAndParseFiles} from '../gherkin/parse.ts';
@@ -140,7 +141,8 @@ export async function runStats(
 
   // Given more than once, the lists add up rather than the last one winning.
   const ignore = values.ignore?.flatMap((list) => list.split(',').map((pattern) => pattern.trim()));
-  const {files, invalidPatterns, unreadable, ignoredFiles} = findFeatureFileStream(positionals, ignore);
+  const search = findFeatureFileStream(positionals, ignore);
+  const {files, invalidPatterns, unreadable, ignoredFiles} = search;
 
   if (invalidPatterns.length > 0) {
     for (const pattern of invalidPatterns) {
@@ -172,5 +174,10 @@ export async function runStats(
   for (const {directory, reason} of unreadable) {
     diagnostics.report({level: 'error', message: `Could not read the directory "${directory}": ${reason}.`});
   }
-  return unreadable.length > 0 ? EXIT_USAGE : EXIT_OK;
+  // Nor would a path that counted nothing, as a typo in a glob does.
+  const unmatched = unmatchedMessages(search, positionals);
+  for (const message of unmatched) {
+    diagnostics.report({level: 'error', message});
+  }
+  return unreadable.length > 0 || unmatched.length > 0 ? EXIT_USAGE : EXIT_OK;
 }

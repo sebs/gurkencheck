@@ -142,6 +142,7 @@ test('--format json prints machine readable output', async () => {
 test('--ignore given twice skips what either one matches', async () => {
   await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
     fs.writeFileSync(path.join(cwd, 'Second.feature'), DIRTY_FEATURE);
+    fs.writeFileSync(path.join(cwd, 'Clean.feature'), CLEAN_FEATURE);
     const {code} = await cli(['-i', 'Example.feature', '-i', 'Second.feature', '.'], cwd);
     assert.equal(code, 0);
   });
@@ -149,6 +150,7 @@ test('--ignore given twice skips what either one matches', async () => {
 
 test('--ignore skips the files it matches', async () => {
   await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
+    fs.writeFileSync(path.join(cwd, 'Clean.feature'), CLEAN_FEATURE);
     const {code} = await cli(['--ignore', '**/Example.feature', '.'], cwd);
     assert.equal(code, 0);
   });
@@ -668,4 +670,34 @@ test('--watch counts the warnings into its no-errors notice', async () => {
       await stop(child);
     }
   });
+});
+
+test('a path or glob that matches no feature files is an error, not a clean run', async () => {
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    fs.mkdirSync(path.join(cwd, 'empty'));
+    for (const [args, message] of [
+      [['featurs/*'], /"featurs\/\*" matched no feature files/u],
+      [['nomatch/**'], /"nomatch\/\*\*" matched no feature files/u],
+      [['empty'], /"empty" matched no feature files/u],
+      [['-i', 'Example.feature', '.'], /Every feature file "\." matched is skipped by an ignore pattern/u],
+    ] as const) {
+      const {code, stderr} = await cli([...args], cwd);
+      assert.equal(code, 2, args.join(' '));
+      assert.match(stderr, message, args.join(' '));
+    }
+    // A pattern whose files another one already found did match something.
+    const overlapping = await cli(['.', 'Example.feature'], cwd);
+    assert.equal(overlapping.code, 0, overlapping.stderr);
+  });
+});
+
+test('no feature files anywhere below the working directory is an error', async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-none-'));
+  try {
+    const {code, stderr} = await cli([], cwd);
+    assert.equal(code, 2);
+    assert.match(stderr, /No feature files found in the working directory or below/u);
+  } finally {
+    fs.rmSync(cwd, {recursive: true, force: true});
+  }
 });

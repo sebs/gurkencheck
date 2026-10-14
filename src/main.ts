@@ -15,6 +15,7 @@ import {
   featureRoots,
   findFeatureFileStream,
   findIgnoreFile,
+  unmatchedMessages,
 } from './feature-finder.ts';
 import {watch} from './watch.ts';
 import {
@@ -251,7 +252,13 @@ export async function run(
     for (const {directory, reason} of unreadable) {
       diagnostics.report({level: 'error', message: `Could not read the directory "${directory}": ${reason}.`});
     }
-    return unreadable.length > 0 ? EXIT_USAGE : code;
+    // A glob with a typo in it, or a directory holding no feature files,
+    // checked nothing - and a run that checked nothing is not a clean one.
+    const unmatched = unmatchedMessages(search ?? {unmatched: [], allIgnored: []}, positionals);
+    for (const message of unmatched) {
+      diagnostics.report({level: 'error', message});
+    }
+    return unreadable.length > 0 || unmatched.length > 0 ? EXIT_USAGE : code;
   };
 
   let passes = 0;
