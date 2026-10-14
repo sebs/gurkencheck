@@ -159,3 +159,24 @@ export function resolvePath(target: string): string | undefined {
       .find((candidate) => fs.existsSync(candidate));
   }
 }
+
+/**
+ * The directory a package is installed in, looking up from `fromFile` as
+ * node does, or undefined when it is not installed anywhere there - whether
+ * or not it can be loaded.
+ */
+export function installedPackageDirectory(specifier: string, fromFile: string): string | undefined {
+  const {name} = splitSpecifier(specifier);
+  let directory = path.dirname(path.resolve(fromFile));
+  for (;;) {
+    const candidate = path.join(directory, 'node_modules', name);
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+    const parent = path.dirname(directory);
+    if (parent === directory) {
+      return undefined;
+    }
+    directory = parent;
+  }
+}

@@ -398,3 +398,18 @@ test('a configuration in a directory that may not be searched is said to be out 
     fs.rmSync(directory, {recursive: true, force: true});
   }
 });
+
+test('a package that is installed but cannot be loaded is not asked whether it is installed', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-broken-package-'));
+  try {
+    fs.mkdirSync(path.join(directory, 'node_modules', 'team-config'), {recursive: true});
+    fs.writeFileSync(path.join(directory, 'node_modules', 'team-config', 'package.json'), '{"main": "gone.json", "exports": {"./x": "./x.json"}}');
+    fs.writeFileSync(path.join(directory, 'rc.json'), '{"extends": "team-config"}');
+    const result = await readConfiguration(path.join(directory, 'rc.json'), rules);
+    assert.ok(!result.ok);
+    assert.match(result.details[0]!, /is installed in ".*team-config" but could not be loaded/u);
+    assert.doesNotMatch(result.details[0]!, /Is it installed\?/u);
+  } finally {
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});

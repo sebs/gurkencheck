@@ -8,7 +8,7 @@ import {verifyConfiguration} from './config-verifier.ts';
 import {PRESETS, RECOMMENDED} from './presets.ts';
 import type {Configuration, RuleRegistry} from './types.ts';
 import {duplicateKeys, stripJsonComments, stripTrailingCommas} from './util/json.ts';
-import {resolvePackage} from './util/resolve.ts';
+import {installedPackageDirectory, resolvePackage} from './util/resolve.ts';
 import {closest} from './util/suggest.ts';
 
 /** The configuration file looked for when none is given on the command line. */
@@ -258,7 +258,18 @@ async function loadExtended(
   let resolved: string;
   try {
     resolved = resolvePackage(specifier, from);
-  } catch {
+  } catch (thrown) {
+    // Installed, but broken - a manifest that does not parse, no entry point
+    // for import - is not a package somebody forgot to install, and asking
+    // whether it is sent you to install it again.
+    const installed = installedPackageDirectory(specifier, from);
+    if (installed !== undefined) {
+      throw new ConfigurationError(
+        `The package "${specifier}", extended from "${shown(fromFile)}", is installed in "${shown(installed)}" but could not be loaded: ${
+          thrown instanceof Error ? thrown.message.split('\n')[0] : String(thrown)
+        }`,
+      );
+    }
     // A preset named without its prefix - "recommended" - or misspelt is not
     // a package anybody forgot to install.
     const meant = presetMeant(specifier);
