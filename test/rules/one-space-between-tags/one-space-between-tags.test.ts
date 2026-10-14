@@ -26,3 +26,11 @@ test('measures a tag in characters, as Gherkin counts its columns', async () => 
     {message: 'There is more than one space between the tags @🚀🚀 and @b', line: 1},
   ]);
 });
+
+test('reports a tab, or no space at all, between tags', async () => {
+  await checkRule(rule, 'one-space-between-tags/OtherSeparators.feature', {}, [
+    {message: 'The tags @a and @b should be separated by one space, not "\\t"', line: 3},
+    {message: 'There is no space between the tags @c and @d', line: 3},
+    tooWide('@e', '@f', 3),
+  ]);
+});
