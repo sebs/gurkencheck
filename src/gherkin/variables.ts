@@ -7,7 +7,7 @@
  * done once here.
  */
 import type {Scenario} from '@cucumber/messages';
-import {at} from '../util/location.ts';
+import {cellAt} from '../util/location.ts';
 
 /**
  * `<name>` placeholders, as used in Scenario Outlines.
@@ -121,7 +121,7 @@ export function variablesOf(scenario: Scenario, lines?: readonly string[]): Scen
     const columns = new Set<string>();
     for (const cell of examples.tableHeader.cells) {
       if (cell.value !== '') {
-        note(cell.value, at(cell.location), declared);
+        note(cell.value, cellAt(cell.location, lines), declared);
         columns.add(cell.value);
       }
     }
@@ -151,7 +151,7 @@ export function variablesOf(scenario: Scenario, lines?: readonly string[]): Scen
     // variables. See https://cucumber.io/docs/gherkin/reference/
     for (const row of step.dataTable?.rows ?? []) {
       for (const cell of row.cells) {
-        collect(cell.value, {...at(cell.location), in: 'step'}, used, unusual);
+        collect(cell.value, {...cellAt(cell.location, lines), in: 'step'}, used, unusual);
       }
     }
     // A doc string's content starts on the line below its opening delimiter,

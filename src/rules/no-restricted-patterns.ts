@@ -3,7 +3,7 @@ import {getNeutralKeyword, getNodeType} from '../gherkin/keywords.ts';
 import {rulesOf, stepContainersOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
 import {mergeDefaults} from '../util/collections.ts';
-import {at, columnOf} from '../util/location.ts';
+import {at, cellAt, columnOf} from '../util/location.ts';
 import {compilePattern, invalidPatterns} from '../util/patterns.ts';
 
 const name = 'no-restricted-patterns';
@@ -159,7 +159,7 @@ const rule: LintRule = {
         for (const row of step.dataTable?.rows ?? []) {
           for (const cell of row.cells) {
             if (cell.value.trim() !== '') {
-              report('Step', 'data table', cell.value.trim(), applicable, at(cell.location));
+              report('Step', 'data table', cell.value.trim(), applicable, cellAt(cell.location, file.lines));
             }
           }
         }
@@ -192,7 +192,7 @@ const rule: LintRule = {
         for (const row of rows) {
           for (const cell of row.cells) {
             if (cell.value.trim() !== '') {
-              report('Examples', 'table', cell.value.trim(), applicable, at(cell.location));
+              report('Examples', 'table', cell.value.trim(), applicable, cellAt(cell.location, file.lines));
             }
           }
         }

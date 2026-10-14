@@ -6,7 +6,7 @@ const name = 'no-unused-variables';
 
 const rule: LintRule = {
   name,
-  run(feature) {
+  run(feature, file) {
     if (feature === undefined) {
       return [];
     }
@@ -19,7 +19,7 @@ const rule: LintRule = {
         continue;
       }
 
-      const {declared, used} = variablesOf(scenario);
+      const {declared, used} = variablesOf(scenario, file.lines);
 
       // Every place a problem appears is reported, not just the last one, so
       // that fixing the file does not turn into a game of whack-a-mole.

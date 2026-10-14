@@ -1,6 +1,7 @@
+import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import rule from '../../../src/rules/no-unused-variables.ts';
-import {checkRule} from '../../helpers.ts';
+import {checkRule, runRule} from '../../helpers.ts';
 
 const unused = (variable: string, line: number) => ({
   message: `Examples table variable "${variable}" is not used in any step`,
@@ -36,4 +37,11 @@ test('says nothing about a step variable missing from the table', async () => {
 
 test('a column whose name holds a quote or = is used where its <name> is', async () => {
   await checkRule(rule, 'no-unused-variables/UnusualColumns.feature', {}, []);
+});
+
+test('places a cell after an emoji at its column in characters', async () => {
+  const errors = await runRule(rule, 'no-unused-variables/EmojiCells.feature');
+  const columns = Object.fromEntries(errors.map((error) => [error.message, error.column]));
+  // | 🚀 | x | unused |: unused starts at the 17th character.
+  assert.equal(columns['Examples table variable "unused" is not used in any step'], 17);
 });
