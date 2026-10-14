@@ -427,6 +427,18 @@ function withDefaults(patterns: readonly string[]): string[] {
 }
 
 /**
+ * Refuses a string where a list belongs, for a caller in plain JavaScript,
+ * whom the type does not stop. findFeatureFiles('features') searched for
+ * each of its letters, found none of them, and handed back no files - and
+ * lint over no files passed.
+ */
+function refuseString(given: unknown, what: string): void {
+  if (typeof given === 'string') {
+    throw new TypeError(`Expected a list of ${what}, not the string "${given}". Put it in an array.`);
+  }
+}
+
+/**
  * Finds the feature files named by the given patterns. With no patterns, the
  * working directory is searched recursively.
  */
@@ -434,6 +446,8 @@ export function findFeatureFiles(
   patterns: readonly string[],
   ignoreArgument?: readonly string[],
 ): FeatureSearch {
+  refuseString(patterns, 'paths');
+  refuseString(ignoreArgument, 'ignore patterns');
   const searched = patterns.length > 0 ? patterns : ['.'];
   const ignore = readIgnoreList(ignoreArgument);
 
@@ -503,6 +517,8 @@ export function findFeatureFileStream(
   patterns: readonly string[],
   ignoreArgument?: readonly string[],
 ): FeatureFileStream {
+  refuseString(patterns, 'paths');
+  refuseString(ignoreArgument, 'ignore patterns');
   const searched = patterns.length > 0 ? patterns : ['.'];
   const ignore = readIgnoreList(ignoreArgument);
 

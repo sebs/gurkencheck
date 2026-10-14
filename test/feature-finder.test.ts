@@ -445,3 +445,13 @@ test('a glob whose directories are typed in another case reports them as the dis
   if (!fs.existsSync(FOUND.toUpperCase())) return;
   assert.deepEqual(findFeatureFiles([`${FOUND.toUpperCase()}/*.feature`]).files, [`${FOUND}/a.feature`]);
 });
+
+test('a string where a list of paths belongs is refused, not searched letter by letter', () => {
+  for (const find of [findFeatureFiles, findFeatureFileStream]) {
+    assert.throws(() => find('features' as unknown as string[]), {
+      name: 'TypeError',
+      message: 'Expected a list of paths, not the string "features". Put it in an array.',
+    });
+    assert.throws(() => find(['features'], 'build' as unknown as string[]), /Expected a list of ignore patterns/u);
+  }
+});
