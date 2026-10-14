@@ -169,3 +169,13 @@ test('a tag listed without its @ is said to be no tag', () => {
     ]);
   }
 });
+
+test('an always-on rule takes no settings, and an empty list is said to be one', () => {
+  assert.deepEqual(verify({'one-feature-per-file': ['on', {x: 1}]} as unknown as Configuration), [
+    'Invalid rule configuration for "one-feature-per-file" - the rule has no settings, so the config should be "on", "warn" or "off"',
+  ]);
+  assert.deepEqual(verify({'one-feature-per-file': []} as unknown as Configuration), [
+    `Invalid rule configuration for "one-feature-per-file" - the config should be a state, or a list of a state and the rule's settings`,
+  ]);
+  assert.deepEqual(verify({'one-feature-per-file': ['on']} as unknown as Configuration), []);
+});

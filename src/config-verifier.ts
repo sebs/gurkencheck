@@ -142,6 +142,16 @@ export function verifyConfiguration(configuration: Configuration, rules: RuleReg
       // people reasonably list them. Naming one is harmless; asking for it to
       // be off is the only thing worth saying something about.
       if ((ALWAYS_ON_RULES as readonly string[]).includes(ruleName)) {
+        // Listed the way any rule is, and checked the same way: such a rule
+        // has no settings, so a list holding some is a mistake too.
+        if (Array.isArray(ruleConfig) && (ruleConfig.length === 0 || ruleConfig.length > 2)) {
+          errors.push(`${prefix}the config should be a state, or a list of a state and the rule's settings`);
+          continue;
+        }
+        if (Array.isArray(ruleConfig) && ruleConfig.length === 2) {
+          errors.push(`${prefix}the rule has no settings, so the config should be "on", "warn" or "off"`);
+          continue;
+        }
         const state = Array.isArray(ruleConfig) ? ruleConfig[0] : ruleConfig;
         if (state === 'off') {
           errors.push(
