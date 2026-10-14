@@ -16,6 +16,7 @@ import {
   findFeatureFileStream,
   findFeatureFiles,
   findIgnoreFile,
+  splitIgnoreList,
   unmatchedMessages,
 } from './feature-finder.ts';
 import {watch} from './watch.ts';
@@ -202,7 +203,7 @@ export async function run(
   }
 
   // Given more than once, the lists add up rather than the last one winning.
-  const ignore = values.ignore?.flatMap((list) => list.split(',').map((pattern) => pattern.trim()));
+  const ignore = values.ignore?.flatMap(splitIgnoreList);
   // Files are handed over as the walk finds them, so reading and checking
   // start on the first one rather than after the last. Only the patterns are
   // checked here; the walk itself happens once per pass.

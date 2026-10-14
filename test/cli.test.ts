@@ -950,6 +950,17 @@ test('--watch notices a closer configuration being written', async () => {
   });
 });
 
+test('--ignore takes a brace pattern whole, commas and all', async () => {
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    for (const directory of ['wip', 'legacy']) {
+      fs.mkdirSync(path.join(cwd, directory));
+      fs.writeFileSync(path.join(cwd, directory, 'x.feature'), DIRTY_FEATURE);
+    }
+    const {code, stdout} = await cli(['-i', '{wip,legacy}', '.'], cwd);
+    assert.equal(code, 0, stdout);
+  });
+});
+
 test('a directory named outright and skipped whole is a run that checked nothing', async () => {
   await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
     fs.mkdirSync(path.join(cwd, 'legacy'));

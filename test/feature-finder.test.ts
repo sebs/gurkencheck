@@ -12,6 +12,7 @@ import {
   findFeatureFileStream,
   findFeatureFiles,
   readIgnorePatterns,
+  splitIgnoreList,
 } from '../src/feature-finder.ts';
 import {ignoresCase} from '../src/util/glob.ts';
 
@@ -471,4 +472,11 @@ test('a name typed as a feature file that is not one on disk is not called one',
   } finally {
     fs.rmSync(directory, {recursive: true, force: true});
   }
+});
+
+test('an --ignore list is split at its commas, but not at those inside braces or brackets', () => {
+  assert.deepEqual(splitIgnoreList('wip, legacy'), ['wip', 'legacy']);
+  assert.deepEqual(splitIgnoreList('{wip,features/*.draft.feature}'), ['{wip,features/*.draft.feature}']);
+  assert.deepEqual(splitIgnoreList('*.{wip,draft}.feature,build'), ['*.{wip,draft}.feature', 'build']);
+  assert.deepEqual(splitIgnoreList('a\\,b,c'), ['a\\,b', 'c']);
 });

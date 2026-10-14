@@ -434,6 +434,34 @@ function withDefaults(patterns: readonly string[]): string[] {
 }
 
 /**
+ * The patterns of a comma separated --ignore list. A comma inside braces or
+ * brackets belongs to the glob - {legacy,drafts} - and split there, neither
+ * was skipped and a directory called {legacy was instead.
+ */
+export function splitIgnoreList(list: string): string[] {
+  const patterns: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (let index = 0; index < list.length; index++) {
+    const character = list[index]!;
+    if (character === '\\' && index + 1 < list.length) {
+      current += character + list[++index]!;
+      continue;
+    }
+    if (character === '{' || character === '[') depth++;
+    else if ((character === '}' || character === ']') && depth > 0) depth--;
+    if (character === ',' && depth === 0) {
+      patterns.push(current.trim());
+      current = '';
+    } else {
+      current += character;
+    }
+  }
+  patterns.push(current.trim());
+  return patterns;
+}
+
+/**
  * Refuses a string where a list belongs, for a caller in plain JavaScript,
  * whom the type does not stop. findFeatureFiles('features') searched for
  * each of its letters, found none of them, and handed back no files - and

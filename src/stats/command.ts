@@ -14,6 +14,7 @@ import {
   DEFAULT_IGNORE_FILE_NAME,
   describeInvalidPattern,
   findFeatureFileStream,
+  splitIgnoreList,
   unmatchedMessages,
 } from '../feature-finder.ts';
 import {isKnownLanguage, unknownLanguageMessage} from '../gherkin/dialects.ts';
@@ -155,7 +156,7 @@ export async function runStats(
   }
 
   // Given more than once, the lists add up rather than the last one winning.
-  const ignore = values.ignore?.flatMap((list) => list.split(',').map((pattern) => pattern.trim()));
+  const ignore = values.ignore?.flatMap(splitIgnoreList);
   let search;
   try {
     search = findFeatureFileStream(positionals, ignore);
