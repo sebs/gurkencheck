@@ -13,10 +13,11 @@ function inCell(text: string): string {
 /**
  * Text written into a table cell as it is: Markdown's own characters escaped,
  * so a scenario called `*important*` is not shown in italics, and a line
- * break, which would end the row, made a space.
+ * break, which would end the row, made a space. An ampersand too, or
+ * `Tom &copy; Jerry` would be shown as `Tom © Jerry`.
  */
 function cell(text: string): string {
-  return inCell(text.replace(/[\\`*_{}[\]<>#!~]/gu, '\\$&').replace(/\r?\n/gu, ' '));
+  return inCell(text.replace(/[\\`*_{}[\]<>#!~&]/gu, '\\$&').replace(/\r?\n/gu, ' '));
 }
 
 /**

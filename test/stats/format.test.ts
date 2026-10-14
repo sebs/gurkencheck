@@ -193,3 +193,13 @@ test('--top cuts the members of a group of nearly the same steps too', () => {
   assert.equal(table.slice(0, table.indexOf('\n#')).match(/i open the page/gu)?.length, 2, markdown);
   assert.match(table, /_… and 10 more steps_/u);
 });
+
+test('markdown escapes an ampersand in a name, so an entity in it is shown as written', () => {
+  const markdown = toMarkdown(
+    collectStatistics([
+      parseFeature('e.feature', 'Feature: A\n  Scenario: Tom &copy; Jerry &#x41;\n    Given a\n    Given b\n    Given c\n'),
+    ]),
+    options,
+  );
+  assert.match(markdown, /Tom \\&copy; Jerry \\&\\#x41;/u);
+});
