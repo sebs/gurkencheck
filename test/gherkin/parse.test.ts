@@ -261,3 +261,12 @@ test('a language given by name, or by a code Gherkin knows by another, is offere
   assert.equal(suggestLanguage('nb'), 'no');
   assert.equal(suggestLanguage('constructor'), undefined);
 });
+
+test('any language Gherkin does not know is refused in one plain message', () => {
+  assert.deepEqual(parseFeature('a.feature', 'Feature: A\n', 'xx').errors, [
+    {message: 'Language not supported: xx', rule: 'unexpected-error', line: 0},
+  ]);
+  assert.deepEqual(parseFeature('a.feature', '# language: xx\nFeature: A\n').errors, [
+    {message: 'Language not supported: xx', rule: 'unexpected-error', line: 1, column: 1},
+  ]);
+});

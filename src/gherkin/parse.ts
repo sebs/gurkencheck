@@ -271,13 +271,14 @@ export function parseFeature(
   const file: FeatureFile = {relativePath, lines};
   const dialect = getDialect(detectLanguage(lines, defaultLanguage));
 
-  // Gherkin looks a header's language up on a plain object, so `constructor`
-  // or `toString` is found there and breaks it somewhere deep inside. Such a
-  // name is refused here, as Gherkin refuses any other it does not know.
-  // The same goes for the default language a caller of the library passes.
+  // A language Gherkin does not know - in the header, or the default a caller
+  // of the library passes - is refused here rather than left to the parser.
+  // Gherkin looks a language up on a plain object, so `constructor` breaks it
+  // somewhere deep inside, and any other comes back with its own place in
+  // front of the message - (1:1), or (-1:-1) for a default - and a column 0.
   const header = languageHeader(lines);
   const asked = header ?? {language: defaultLanguage, line: 0};
-  if (!isKnownLanguage(asked.language) && asked.language in Object.prototype) {
+  if (!isKnownLanguage(asked.language)) {
     return {
       file,
       feature: undefined,
