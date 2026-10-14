@@ -632,3 +632,13 @@ test('an empty configuration found by looking may be removed; one given with -c 
     assert.match(given.stderr, /"given\.json" is empty/u);
   });
 });
+
+test('a streaming hook handing back null writes nothing, from any hook', async () => {
+  const formatter = path.resolve('test/formatters/null-hooks.mjs');
+  await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
+    const {code, stdout, stderr} = await cli(['-f', formatter, '.'], cwd);
+    assert.equal(stderr, '');
+    assert.equal(stdout, 'x\n');
+    assert.equal(code, 1);
+  });
+});

@@ -374,13 +374,14 @@ async function runStreaming(
   let formatting = false;
   const format = async (hook: string, step: () => unknown): Promise<string | undefined> => {
     formatting = true;
-    // A hook may be async; what it hands back has to be text to write.
+    // A hook may be async; what it hands back has to be text to write, or
+    // nothing - undefined or null alike, from any hook.
     const written = await step();
-    if (written !== undefined && typeof written !== 'string') {
-      throw new Error(`${hook}() returned ${written === null ? 'null' : typeof written} instead of a string`);
+    if (written !== undefined && written !== null && typeof written !== 'string') {
+      throw new Error(`${hook}() returned ${typeof written} instead of a string`);
     }
     formatting = false;
-    return written;
+    return written ?? undefined;
   };
 
   let failed = false;
