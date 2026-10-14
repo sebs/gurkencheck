@@ -650,3 +650,22 @@ test('a streaming formatter is handed the run s rules as well', async () => {
     assert.match(stdout, /^rules: \d+\n$/u);
   });
 });
+
+test('--watch counts the warnings into its no-errors notice', async () => {
+  await withProject(DIRTY_FEATURE, '{"no-unnamed-scenarios": "warn"}', async (cwd) => {
+    const child = spawn(process.execPath, [CLI, '--watch', '.'], {cwd});
+    let output = '';
+    child.stdout.on('data', (chunk) => (output += String(chunk)));
+    child.stderr.on('data', (chunk) => (output += String(chunk)));
+    try {
+      const deadline = Date.now() + 10000;
+      while (!/Watching for changes/u.test(output)) {
+        if (Date.now() > deadline) assert.fail(`timed out, saw:\n${output}`);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      assert.match(output, /No errors found, 1 warning\./u);
+    } finally {
+      await stop(child);
+    }
+  });
+});

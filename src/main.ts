@@ -24,7 +24,7 @@ import {
   loadStreamingFormatter,
 } from './formatters/index.ts';
 import {isKnownLanguage, unknownLanguageMessage} from './gherkin/dialects.ts';
-import {hasErrors, lint, lintStream} from './linter.ts';
+import {countBySeverity, hasErrors, lint, lintStream} from './linter.ts';
 import {SILENT, TO_STDERR} from './diagnostics.ts';
 import type {Diagnostics} from './diagnostics.ts';
 import {loadRules} from './rules.ts';
@@ -255,7 +255,10 @@ export async function run(
   };
 
   let passes = 0;
+  /** How many warnings the last pass reported, for the notice after it. */
+  let warningsThisPass = 0;
   const checkFiles = async (): Promise<number> => {
+    warningsThisPass = 0;
     if (passes++ > 0) {
       settings = await readSettings();
     }
@@ -272,6 +275,9 @@ export async function run(
         rules,
         language,
         diagnostics,
+        (count) => {
+          warningsThisPass = count;
+        },
       );
     }
 
@@ -310,6 +316,7 @@ export async function run(
       console.log(output);
     }
 
+    warningsThisPass = countBySeverity(results).warnings;
     return hasErrors(results) ? EXIT_LINT_ERRORS : EXIT_OK;
   };
 
@@ -343,7 +350,16 @@ export async function run(
         // A pass that finds nothing writes nothing, and on a screen still
         // showing the last pass's errors that reads as no change at all.
         if (code === EXIT_OK) {
-          diagnostics.report({level: 'notice', message: 'No errors found.'});
+          // Said under a pass that may have just listed warnings, so they are
+          // counted in: "No errors found." alone read as nothing found.
+          const warnings = warningsThisPass;
+          diagnostics.report({
+            level: 'notice',
+            message:
+              warnings === 0
+                ? 'No errors found.'
+                : `No errors found, ${warnings} ${warnings === 1 ? 'warning' : 'warnings'}.`,
+          });
         }
         return code;
       },
@@ -374,6 +390,7 @@ async function runStreaming(
   rules: RuleRegistry,
   language: string | undefined,
   diagnostics: Diagnostics,
+  onWarnings: (count: number) => void = () => undefined,
 ): Promise<number> {
   const write = (text: string | undefined): void => {
     if (text !== undefined && text !== '') {
@@ -398,6 +415,7 @@ async function runStreaming(
   };
 
   let failed = false;
+  let warnings = 0;
   try {
     formatting = true;
     const run = streaming({rules});
@@ -405,6 +423,7 @@ async function runStreaming(
     write(await format('start', () => run.start?.()));
     for await (const result of lintStream(files, configuration, rules, {language})) {
       failed ||= result.errors.some((error) => (error.severity ?? 'error') === 'error');
+      warnings += result.errors.filter((error) => error.severity === 'warning').length;
       write(await format('file', () => run.file(result)));
     }
     write(await format('end', () => run.end?.()));
@@ -417,6 +436,7 @@ async function runStreaming(
     return EXIT_USAGE;
   }
 
+  onWarnings(warnings);
   return failed ? EXIT_LINT_ERRORS : EXIT_OK;
 }
 
