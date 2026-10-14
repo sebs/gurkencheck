@@ -205,3 +205,22 @@ test('a finding at the end of the run goes to the file it names, however it spel
   assert.ok(byFile[other]!.includes('absolute'));
   assert.deepEqual(byFile['test/linter/NotInThisRun.feature'], ['elsewhere']);
 });
+
+test('a finding at the end of the run with a file path that is not one is the rule s mistake', async () => {
+  const rule = {
+    name: 'ending',
+    run: () => [],
+    onRunEnd: () => [
+      {message: 'numbered', line: 1, filePath: 42},
+      {message: 'about the run', line: 0, filePath: null},
+    ],
+  } as unknown as LintRule;
+  const results = await lint([FILE], {ending: 'on'}, new Map([['ending', rule]]));
+  assert.deepEqual(
+    results.flatMap((result) => result.errors.map(({message, rule: name}) => [message, name])),
+    [
+      ['Rule "ending" reported a finding whose filePath is number, not a path', 'unexpected-error'],
+      ['about the run', 'ending'],
+    ],
+  );
+});

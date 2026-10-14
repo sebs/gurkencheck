@@ -372,6 +372,29 @@ function collect<T extends RuleError | RunFinding>(found: unknown, ruleName: str
 }
 
 /**
+ * A finding from the end of a run with a file to name or none. `filePath`
+ * is taken for a path, and anything but text threw where it was resolved,
+ * losing every finding of the run; null is taken to mean no file, and
+ * anything else is reported as the rule's mistake.
+ */
+function withFilePath(finding: RunFinding, ruleName: string, severity: Severity): RunFinding {
+  const {filePath} = finding as {filePath?: unknown};
+  if (filePath === undefined || (typeof filePath === 'string' && filePath !== '')) {
+    return finding;
+  }
+  if (filePath === null) {
+    const {filePath: _none, ...rest} = finding;
+    return rest;
+  }
+  return {
+    message: `Rule "${ruleName}" reported a finding whose filePath is ${filePath === '' ? 'empty' : typeof filePath}, not a path`,
+    rule: 'unexpected-error',
+    line: 0,
+    severity,
+  };
+}
+
+/**
  * Ends a run, collecting what could only be worked out once every file had
  * been seen.
  *
@@ -401,7 +424,7 @@ export async function finishRun(
       // when read costs the rule all of its findings, as a throw does.
       // One at a time: spread, a list of a million findings overflows the stack.
       for (const finding of collect<RunFinding>(found, rule.name, severity)) {
-        findings.push(finding);
+        findings.push(withFilePath(finding, rule.name, severity));
       }
     } catch (thrown) {
       // No file to blame: what failed was the look back over all of them.
