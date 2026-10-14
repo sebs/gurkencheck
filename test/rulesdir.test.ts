@@ -194,6 +194,11 @@ test('rules written as .mts and .cts are loaded too', async () => {
   assert.ok(rules.has('cjs-typed'));
 });
 
+test('a rule compiled to CommonJS by tsc, as exports.default, is loaded', async () => {
+  const rules = await loadRules(['test/rulesdir/compiled_rules']);
+  assert.ok(rules.has('compiled'));
+});
+
 test('an empty rules directory name is refused before anything is loaded', async () => {
   for (const name of ['', '  ']) {
     await assert.rejects(loadRules([name]), /--rulesdir needs a directory, but was given an empty name/u);

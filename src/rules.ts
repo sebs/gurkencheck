@@ -58,9 +58,14 @@ function isRule(candidate: unknown): candidate is LintRule {
 /**
  * Finds the rule in a loaded module. A rule may be the default export, a
  * named `rule` export, or - for CommonJS custom rules - the module itself.
+ * TypeScript compiled to CommonJS writes `exports.default = ...`, which
+ * `import` hands over as the default export's own `default`.
  */
 function extractRule(loaded: Record<string, unknown>, source: string): LintRule {
-  for (const candidate of [loaded['default'], loaded['rule'], loaded]) {
+  const byDefault = loaded['default'];
+  const compiled =
+    typeof byDefault === 'object' && byDefault !== null ? (byDefault as Record<string, unknown>)['default'] : undefined;
+  for (const candidate of [byDefault, loaded['rule'], compiled, loaded]) {
     if (isRule(candidate)) {
       return candidate;
     }
