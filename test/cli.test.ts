@@ -860,3 +860,21 @@ test('a directory named outright and skipped whole is a run that checked nothing
     assert.match(stderr, /Every feature file "legacy" matched is skipped by an ignore pattern/u);
   });
 });
+
+test('an ignore file that cannot be read is an error, not passed over', async () => {
+  if (process.platform === 'win32' || process.getuid?.() === 0) return;
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    const ignoreFile = path.join(cwd, '.gurkencheckignore');
+    fs.writeFileSync(ignoreFile, 'legacy\n');
+    fs.chmodSync(ignoreFile, 0o000);
+    try {
+      for (const args of [['.'], ['stats', '.']]) {
+        const {code, stderr} = await cli(args, cwd);
+        assert.equal(code, 2, args.join(' '));
+        assert.match(stderr, /Could not read the ignore file "\.gurkencheckignore": permission denied/u, args.join(' '));
+      }
+    } finally {
+      fs.chmodSync(ignoreFile, 0o644);
+    }
+  });
+});

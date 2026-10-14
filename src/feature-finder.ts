@@ -350,12 +350,21 @@ export function readIgnorePatterns(
   let contents: string;
   try {
     contents = fs.readFileSync(ignoreFileName, 'utf8');
-  } catch {
-    // No ignore file, or one that cannot be read: the defaults alone, rather
-    // than stopping the run. Reading it outright rather than checking that it
-    // exists first also closes the gap between the two, in which it can be
-    // moved or removed.
-    return [...DEFAULT_IGNORED_PATTERNS];
+  } catch (thrown) {
+    // No ignore file: the defaults alone. Reading it outright rather than
+    // checking that it exists first closes the gap between the two, in which
+    // it can be moved or removed. One that is there and cannot be read is an
+    // error, as an unreadable configuration is: passed over, the files it
+    // skips were linted without a word.
+    const code = (thrown as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT') {
+      return [...DEFAULT_IGNORED_PATTERNS];
+    }
+    throw new Error(
+      `Could not read the ignore file "${path.relative(process.cwd(), ignoreFileName) || ignoreFileName}": ${
+        code === 'EACCES' || code === 'EPERM' ? 'permission denied' : code === 'EISDIR' ? 'it is a directory' : String(code)
+      }.`,
+    );
   }
 
   const patterns = contents

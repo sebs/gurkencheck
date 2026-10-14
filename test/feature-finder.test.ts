@@ -128,7 +128,7 @@ test('a wildcard directory pattern in the ignore file skips the whole directory'
   assert.deepEqual(findFeatureFiles([]).files, []);
 });
 
-test('an ignore file that cannot be read falls back to the defaults', () => {
+test('an ignore file that cannot be read is an error, not passed over', () => {
   fs.writeFileSync(DEFAULT_IGNORE_FILE_NAME, 'build\n');
   fs.chmodSync(DEFAULT_IGNORE_FILE_NAME, 0o000);
   try {
@@ -139,7 +139,7 @@ test('an ignore file that cannot be read falls back to the defaults', () => {
     } catch {
       // Good: it really is unreadable.
     }
-    assert.deepEqual(readIgnorePatterns(undefined), DEFAULT_IGNORED_PATTERNS);
+    assert.throws(() => readIgnorePatterns(undefined), /Could not read the ignore file ".*": permission denied/u);
   } finally {
     fs.chmodSync(DEFAULT_IGNORE_FILE_NAME, 0o644);
     fs.rmSync(DEFAULT_IGNORE_FILE_NAME, {force: true});

@@ -149,7 +149,13 @@ export async function runStats(
 
   // Given more than once, the lists add up rather than the last one winning.
   const ignore = values.ignore?.flatMap((list) => list.split(',').map((pattern) => pattern.trim()));
-  const search = findFeatureFileStream(positionals, ignore);
+  let search;
+  try {
+    search = findFeatureFileStream(positionals, ignore);
+  } catch (thrown) {
+    diagnostics.report({level: 'error', message: thrown instanceof Error ? thrown.message : String(thrown)});
+    return EXIT_USAGE;
+  }
   const {files, invalidPatterns, unreadable, ignoredFiles} = search;
 
   if (invalidPatterns.length > 0) {

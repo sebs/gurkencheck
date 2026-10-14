@@ -201,7 +201,14 @@ export async function run(
   // Files are handed over as the walk finds them, so reading and checking
   // start on the first one rather than after the last. Only the patterns are
   // checked here; the walk itself happens once per pass.
-  const {invalidPatterns, ignoredFiles} = findFeatureFileStream(positionals, ignore);
+  let initialSearch;
+  try {
+    initialSearch = findFeatureFileStream(positionals, ignore);
+  } catch (thrown) {
+    diagnostics.report({level: 'error', message: thrown instanceof Error ? thrown.message : String(thrown)});
+    return EXIT_USAGE;
+  }
+  const {invalidPatterns, ignoredFiles} = initialSearch;
 
   if (invalidPatterns.length > 0) {
     for (const pattern of invalidPatterns) {
