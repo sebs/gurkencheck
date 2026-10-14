@@ -6,7 +6,6 @@
  * ever be the reason a build goes red. Only being unable to run at all -
  * an option that makes no sense, a path that names nothing - fails.
  */
-import fs from 'node:fs';
 import {parseArgs} from 'node:util';
 import {describeArgumentError} from '../util/args.ts';
 import {DEFAULT_CONFIG_FILE_NAME, readConfiguredLanguage} from '../config-parser.ts';
@@ -117,24 +116,19 @@ export async function runStats(
     }
   }
 
-  if (values.config !== undefined && !fs.existsSync(values.config)) {
-    diagnostics.report({
-      level: 'error',
-      message: `Could not find specified config file "${values.config}"`,
-    });
-    return EXIT_USAGE;
-  }
-
   // The same dialect the linter would read the files in: --language, or else
-  // the configuration's. Nothing else in the configuration matters here.
+  // the configuration's. Nothing else in the configuration matters here - but
+  // a configuration named with -c is read even beside --language, so one
+  // that is missing, or a symlink to nothing, is said to be, as the linter
+  // says it.
   let language = values.language;
-  if (language === undefined) {
+  if (language === undefined || values.config !== undefined) {
     const configured = await readConfiguredLanguage(values.config);
     if (!configured.ok) {
       diagnostics.report({level: 'error', message: configured.message, details: configured.details});
       return EXIT_USAGE;
     }
-    language = configured.language;
+    language ??= configured.language;
   }
   if (language !== undefined && !isKnownLanguage(language)) {
     diagnostics.report({

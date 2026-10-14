@@ -192,3 +192,18 @@ test('stats says so when a file named outright is skipped by an ignore pattern',
   const {stderr} = await cli(['stats', `${FIXTURES}/Shop.feature`, '--ignore', 'Shop.feature']);
   assert.match(stderr, /Skipped ".*Shop\.feature": it matches an ignore pattern/u);
 });
+
+test('stats -c on a symlink to nothing says what it is, as the linter does', async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-stats-dangling-'));
+  try {
+    fs.writeFileSync(path.join(cwd, 'a.feature'), 'Feature: A\n');
+    fs.symlinkSync('gone.json', path.join(cwd, 'team.json'));
+    for (const args of [['stats', '-c', 'team.json', '.'], ['stats', '-c', 'team.json', '-l', 'en', '.']]) {
+      const {code, stderr} = await cli(args, cwd);
+      assert.equal(code, 2, args.join(' '));
+      assert.match(stderr, /it is a symlink to gone\.json, which does not exist/u, args.join(' '));
+    }
+  } finally {
+    fs.rmSync(cwd, {recursive: true, force: true});
+  }
+});
