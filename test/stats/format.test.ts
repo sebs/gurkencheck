@@ -151,3 +151,10 @@ test('the text report lines up locations after steps in wide characters', async 
   const columns = new Set(lines.map((line) => displayWidth(line.slice(0, line.indexOf('j.feature:')))));
   assert.equal(columns.size, 1, lines.join('\n'));
 });
+
+test('the formatters refuse a top that is not a whole number of at least 1', () => {
+  for (const top of [0, -1, 1.5, Number.NaN]) {
+    assert.throws(() => toText(statistics, {top}), /top has to be a whole number of at least 1/u, String(top));
+    assert.throws(() => toMarkdown(statistics, {top}), /top has to be a whole number of at least 1/u, String(top));
+  }
+});

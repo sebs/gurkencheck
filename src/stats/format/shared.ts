@@ -51,5 +51,11 @@ export function andMore(hidden: number, singular: string, many = `${singular}s`)
  * told that draws conclusions from a list they think is complete.
  */
 export function head<T>(values: readonly T[], top: number): {shown: T[]; hidden: number} {
+  // The command line refuses anything else; a caller of the library gets the
+  // same answer rather than slice's: top -1 showed all but the last entry
+  // and called the rest "and 4 more", and 0 dropped sections without a word.
+  if (!Number.isSafeInteger(top) || top < 1) {
+    throw new RangeError(`top has to be a whole number of at least 1, not ${top}.`);
+  }
   return {shown: values.slice(0, top), hidden: Math.max(0, values.length - top)};
 }
