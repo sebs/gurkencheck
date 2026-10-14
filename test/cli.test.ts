@@ -484,7 +484,8 @@ test('stops quietly when whoever reads the output goes away', async () => {
     const code = await new Promise<number | null>((resolve) => child.on('exit', resolve));
 
     assert.equal(stderr, '');
-    assert.notEqual(code, 2);
+    // The run goes on to its end, so the code says what it found.
+    assert.equal(code, 1);
   } finally {
     fs.rmSync(cwd, {recursive: true, force: true});
   }
@@ -700,4 +701,15 @@ test('no feature files anywhere below the working directory is an error', async 
   } finally {
     fs.rmSync(cwd, {recursive: true, force: true});
   }
+});
+
+test('a run whose reader goes away at once still exits with what it found', async () => {
+  await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
+    for (const format of ['stylish', 'tap']) {
+      const child = spawn(process.execPath, [CLI, '-f', format, '.'], {cwd});
+      child.stdout.destroy();
+      const code = await new Promise<number | null>((resolve) => child.on('exit', resolve));
+      assert.equal(code, 1, format);
+    }
+  });
 });

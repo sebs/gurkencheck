@@ -491,14 +491,17 @@ async function main(argv: readonly string[]): Promise<number> {
 }
 
 /**
- * Stops quietly once whoever reads the output has gone - `gurkencheck | head`
- * or quitting `less` early. Nothing written after that point can be read, so
- * the run ends there, as a command killed by SIGPIPE would.
+ * Stops writing, quietly, once whoever reads the output has gone - `gurkencheck
+ * | head`, or quitting `less` early. Nothing written after that can be read,
+ * so the rest is dropped, but the run goes on to its end: exiting there, as
+ * this once did, ended it with 0 before the code saying what it found was
+ * set, and under pipefail a run with errors went green.
  */
-function stopWhenOutputCloses(): void {
+function stopWritingWhenOutputCloses(): void {
   process.stdout.on('error', (thrown: NodeJS.ErrnoException) => {
     if (thrown.code === 'EPIPE') {
-      process.exit(process.exitCode ?? EXIT_OK);
+      process.stdout.write = (() => true) as typeof process.stdout.write;
+      return;
     }
     throw thrown;
   });
@@ -506,6 +509,6 @@ function stopWhenOutputCloses(): void {
 
 // Only take over the process when run as a command, not when imported.
 if (isMainModule()) {
-  stopWhenOutputCloses();
+  stopWritingWhenOutputCloses();
   process.exitCode = await main(process.argv.slice(2));
 }
