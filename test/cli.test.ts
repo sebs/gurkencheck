@@ -776,3 +776,11 @@ test('a formatter emptying the results it prints does not change the verdict', a
     assert.equal(code, 1);
   });
 });
+
+test('a streaming formatter pruning the rules it is handed does not stop them running', async () => {
+  const formatter = path.resolve('test/formatters/pruning-streaming.mjs');
+  await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
+    const {code} = await cli(['-f', formatter, '.'], cwd);
+    assert.equal(code, 1);
+  });
+});

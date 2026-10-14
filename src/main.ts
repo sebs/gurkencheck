@@ -324,7 +324,7 @@ export async function run(
     // A formatter may print the output itself or hand it back as a string.
     let output;
     try {
-      output = await formatter!(results, {rules});
+      output = await formatter!(results, {rules: new Map(rules)});
     } catch (thrown) {
       diagnostics.report({
         level: 'error',
@@ -446,7 +446,9 @@ async function runStreaming(
   let warnings = 0;
   try {
     formatting = true;
-    const run = streaming({rules});
+    // A copy: the run's own registry, handed over, could be pruned by the
+    // formatter, and the rules taken out would stop running.
+    const run = streaming({rules: new Map(rules)});
     formatting = false;
     write(await format('start', () => run.start?.()));
     for await (const result of lintStream(files, configuration, rules, {language})) {
