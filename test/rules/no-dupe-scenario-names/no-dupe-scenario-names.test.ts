@@ -99,3 +99,15 @@ test('scenarios with no name are not duplicates of each other', async () => {
   // A missing name is no-unnamed-scenarios' finding, not a clash.
   assert.deepEqual(await runAcrossFiles(rule, [`${DIR}/Unnamed.feature`]), []);
 });
+
+test('an Outline is named as a report names it, once per row', async () => {
+  const findings = await runAcrossFiles(rule, [`${DIR}/OutlineNames.feature`]);
+  // Scenario: Buy 1 at line 3 clashes with the row filling Buy <count> as Buy 1.
+  assert.deepEqual(
+    findings.map((finding) => [finding.line, finding.message]),
+    [
+      [3, `Scenario name is also used in: ${ROOT}/OutlineNames.feature:11`],
+      [11, `Scenario name is also used in: ${ROOT}/OutlineNames.feature:3`],
+    ],
+  );
+});
