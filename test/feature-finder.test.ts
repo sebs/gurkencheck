@@ -325,11 +325,12 @@ test('a file named in another case is reported as the disk spells it', () => {
   assert.deepEqual(findFeatureFiles([`${FOUND.toUpperCase()}/A.FEATURE`]).files, [`${FOUND}/a.feature`]);
 });
 
-test('names a directory asked for outright that the ignore patterns skip', () => {
+test('a directory asked for outright and skipped whole checked nothing', () => {
   const search = findFeatureFiles([FOUND], ['with']);
   assert.deepEqual(search.files, []);
-  assert.deepEqual(search.ignoredFiles, [FOUND]);
-  assert.deepEqual(findFeatureFiles([FOUND], ['other']).ignoredFiles, []);
+  assert.deepEqual(search.ignoredFiles, []);
+  assert.deepEqual(search.allIgnored, [FOUND]);
+  assert.deepEqual(findFeatureFiles([FOUND], ['other']).allIgnored, []);
 });
 
 test('an ignore pattern skips a directory spelled in another case where the disk ignores case', () => {

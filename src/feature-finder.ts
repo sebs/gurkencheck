@@ -20,7 +20,7 @@ export interface FeatureSearch {
   files: string[];
   /** Arguments that were neither a feature file, a directory nor a glob. */
   invalidPatterns: string[];
-  /** Feature files, or directories, named outright that the ignore patterns skip. */
+  /** Feature files named outright that the ignore patterns skip. */
   ignoredFiles: string[];
   /** Directories the search could not read, each with why. */
   unreadable: {directory: string; reason: string}[];
@@ -175,6 +175,14 @@ interface FeatureGlobs {
   globs: string[];
   /** Searched instead when `globs` match no feature file: the argument as a name. */
   fallback?: string[];
+}
+
+function isDirectory(name: string): boolean {
+  try {
+    return fs.statSync(name).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 function isFile(name: string): boolean {
@@ -388,7 +396,7 @@ export function findFeatureFiles(
       continue;
     }
     if (isIgnoredFile(pattern, expanded.globs, ignore)) {
-      ignoredFiles.push(pattern);
+      (isDirectory(pattern) ? allIgnored : ignoredFiles).push(pattern);
       continue;
     }
     let matched = 0;
@@ -458,7 +466,10 @@ export function findFeatureFileStream(
       invalidPatterns.push(pattern);
     } else {
       if (isIgnoredFile(pattern, expanded.globs, ignore)) {
-        ignoredFiles.push(pattern);
+        // A file named and skipped is a notice, so a list of changed files
+        // can hold ignored ones; a directory named and skipped whole checked
+        // nothing, as a glob matching only ignored files does, and says so.
+        (isDirectory(pattern) ? allIgnored : ignoredFiles).push(pattern);
       } else {
         searches.push({pattern, ...expanded});
       }

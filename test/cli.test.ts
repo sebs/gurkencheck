@@ -850,3 +850,13 @@ test('--watch says a watched path is gone, rather than that it has no errors', a
     }
   });
 });
+
+test('a directory named outright and skipped whole is a run that checked nothing', async () => {
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    fs.mkdirSync(path.join(cwd, 'legacy'));
+    fs.writeFileSync(path.join(cwd, 'legacy', 'old.feature'), DIRTY_FEATURE);
+    const {code, stderr} = await cli(['-i', 'legacy', 'legacy'], cwd);
+    assert.equal(code, 2);
+    assert.match(stderr, /Every feature file "legacy" matched is skipped by an ignore pattern/u);
+  });
+});
