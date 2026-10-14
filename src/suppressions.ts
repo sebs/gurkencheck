@@ -124,6 +124,11 @@ export function readSuppressions(lines: readonly string[], feature?: Feature): S
     isEmpty: !found,
     named,
     isSuppressed(error: RuleError): boolean {
+      // A rule that crashed has not checked the file, and hiding that would
+      // read as a file that passed. It is never the file's to switch off.
+      if (error.rule === 'unexpected-error') {
+        return false;
+      }
       for (const candidate of wholeFile) {
         if (covers(error.rule, candidate)) return true;
       }

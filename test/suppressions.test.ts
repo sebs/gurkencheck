@@ -175,3 +175,9 @@ test('a bare directive with a note still covers every rule', () => {
   assert.ok(found.isSuppressed(error('use-and', 2)));
   assert.deepEqual(found.named, []);
 });
+
+test('a rule that crashed is never hidden', () => {
+  const found = suppressions(['# gurkencheck-disable-file', '# gurkencheck-disable unexpected-error', 'Feature: A'].join('\n'));
+  assert.ok(!found.isSuppressed(error('unexpected-error', 3)));
+  assert.ok(!found.isSuppressed(error('unexpected-error', 0)));
+});
