@@ -48,3 +48,11 @@ test('keeps letters outside ASCII', () => {
   assert.equal(kebabCase('日本語'), '日本語');
   assert.equal(snakeCase('ÉTÉ Été'), 'été_été');
 });
+
+test('a combining mark carries on the word it is in', () => {
+  assert.deepEqual(words('हिन्दी-पाठ'), ['हिन्दी', 'पाठ']);
+  assert.equal(kebabCase('हिन्दी-पाठ'), 'हिन्दी-पाठ');
+  const decomposed = 'café-login';
+  assert.equal(kebabCase(decomposed), decomposed);
+  assert.equal(pascalCase('Été plan'), 'ÉtéPlan');
+});

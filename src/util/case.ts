@@ -6,10 +6,13 @@
 /** Capital letters, in any script. */
 const UPPER = String.raw`\p{Lu}\p{Lt}`;
 /**
- * Small letters, and letters with no case at all - Japanese, Chinese, Arabic
- * - which carry on a word the way small letters do.
+ * Small letters, letters with no case at all - Japanese, Chinese, Arabic -
+ * and combining marks, all of which carry on a word the way small letters
+ * do. Without the marks, a Devanagari vowel sign, or the accent of an é
+ * stored as e and a combining acute (as macOS stores file names), ended the
+ * word in the middle.
  */
-const LOWER = String.raw`\p{Ll}\p{Lm}\p{Lo}`;
+const LOWER = String.raw`\p{Ll}\p{Lm}\p{Lo}\p{M}`;
 const DIGIT = String.raw`\p{Nd}`;
 
 const WORD = new RegExp(
