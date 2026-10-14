@@ -41,6 +41,13 @@ export const UNKNOWN_RULE_IN_DIRECTIVE = 'unknown-rule-in-directive';
 /** The warning given for a comment that looks like a directive and is not one. */
 export const UNKNOWN_DIRECTIVE = 'unknown-directive';
 
+/**
+ * The checks on directives themselves. They warn unless the configuration
+ * says otherwise - "off" quiets one, "on" makes it fail the run - and take no
+ * settings.
+ */
+export const DIRECTIVE_CHECKS = [UNKNOWN_RULE_IN_DIRECTIVE, UNKNOWN_DIRECTIVE] as const;
+
 /** The directives there are, for telling a misspelt one what it meant. */
 export const DIRECTIVES = [
   'gurkencheck-disable-next-line',

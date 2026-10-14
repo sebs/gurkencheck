@@ -207,3 +207,8 @@ test('a single value wrapped in a list is said to be a list', () => {
     'Invalid rule configuration for "no-dupe-scenario-names" - the rule takes a single value, not a list: write "anywhere" rather than ["anywhere"]',
   ]);
 });
+
+test('the directive checks take a state and nothing else', () => {
+  assert.deepEqual(verify({'unknown-directive': 'off', 'unknown-rule-in-directive': ['on']} as unknown as Configuration), []);
+  assert.equal(verify({'unknown-directive': ['on', {}]} as unknown as Configuration).length, 1);
+});

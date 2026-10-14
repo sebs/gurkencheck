@@ -11,6 +11,7 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {ALWAYS_ON_RULES} from '../gherkin/parse.ts';
 import {BUILT_IN_RULES} from '../rules/index.ts';
+import {DIRECTIVE_CHECKS} from '../suppressions.ts';
 import type {FormatterContext} from './index.ts';
 import type {FileResult, RuleError, RuleRegistry} from '../types.ts';
 import {version} from '../version.ts';
@@ -26,7 +27,7 @@ const DOCUMENTATION = 'https://sebs.github.io/gurkencheck/';
  * describe.
  */
 function isDocumented(id: string, rules: RuleRegistry | undefined): boolean {
-  if ((ALWAYS_ON_RULES as readonly string[]).includes(id)) {
+  if ((ALWAYS_ON_RULES as readonly string[]).includes(id) || (DIRECTIVE_CHECKS as readonly string[]).includes(id)) {
     return true;
   }
   const rule = rules === undefined ? BUILT_IN_RULES.find((builtIn) => builtIn.name === id) : rules.get(id);

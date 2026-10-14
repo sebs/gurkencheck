@@ -303,8 +303,10 @@ Write a comment in the feature file:
 Name the rules you mean, separated by commas or spaces; a directive naming no rules covers
 all of them. As in eslint, ` -- ` ends the rule names and starts a note saying why:
 `# gurkencheck-disable-file name-length -- generated from the API spec`. A directive naming
-a rule that does not exist gets a warning, `unknown-rule-in-directive`, since it switches
-nothing off. Comments inside a doc string are text and are left alone. The five always-on
+a rule that does not exist, or one that cannot be switched off, gets a warning,
+`unknown-rule-in-directive`, and a comment that looks like a directive but is misspelt gets
+`unknown-directive` - neither switches anything off. Both warn unless the configuration names
+them: `"off"` quiets one, `"on"` makes it fail the run. Comments inside a doc string are text and are left alone. The five always-on
 rules cannot be switched off this way — a file that breaks one of them cannot be read at
 all, so hiding the message would leave nothing in its place.
 

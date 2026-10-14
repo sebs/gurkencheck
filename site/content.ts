@@ -648,4 +648,30 @@ export const RULE_DOCS: RuleDoc[] = [
     bad: 'Feature: Logging in\n\n  Scenario: A known user sees a welcome message\n    Given I am a known user\n    Then I see the message Welcome back, you last\n      signed in three days ago',
     message: 'Steps should begin with "Given", "When", "Then", "And" or "But". Multiline steps are disallowed',
   },
+  {
+    name: 'unknown-rule-in-directive',
+    summary: 'A directive names only rules that exist and can be switched off.',
+    explanation:
+      'A directive naming a rule that does not exist - a typo - switches nothing off, and the ' +
+      'finding it was meant to hide stays with no hint why. The same goes for a rule that cannot ' +
+      'be switched off, such as an always-on one. This check warns unless the configuration ' +
+      'names it: "off" quiets it, "on" makes it fail the run.',
+    config: '{\n  "unknown-rule-in-directive": "on"\n}',
+    good: '# gurkencheck-disable-next-line name-length\nFeature: A name that is long for a good reason\n\n  Scenario: Logging in\n    Given I am a known user',
+    bad: '# gurkencheck-disable-next-line name-lenght\nFeature: A name that is long for a good reason\n\n  Scenario: Logging in\n    Given I am a known user',
+    message: 'A directive names "name-lenght", which is not a rule, so it switches nothing off. Did you mean "name-length"?',
+  },
+  {
+    name: 'unknown-directive',
+    summary: 'A comment that looks like a directive is one.',
+    explanation:
+      'A misspelt directive, such as gurkencheck-disable-nextline, is ignored so that it cannot ' +
+      'switch off something it was not meant to - but the finding it was meant to hide stays. ' +
+      'This check says so, and names the directive it most likely meant. It warns unless the ' +
+      'configuration names it: "off" quiets it, "on" makes it fail the run.',
+    config: '{\n  "unknown-directive": "on"\n}',
+    good: '# gurkencheck-disable-next-line name-length\nFeature: A name that is long for a good reason\n\n  Scenario: Logging in\n    Given I am a known user',
+    bad: '# gurkencheck-disable-nextline name-length\nFeature: A name that is long for a good reason\n\n  Scenario: Logging in\n    Given I am a known user',
+    message: '"gurkencheck-disable-nextline" is not a directive, so it switches nothing off. Did you mean "gurkencheck-disable-next-line"?',
+  },
 ];

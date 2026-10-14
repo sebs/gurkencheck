@@ -5,7 +5,7 @@ import path from 'node:path';
 import {test} from 'node:test';
 import {countBySeverity, hasErrors, lint} from '../src/linter.ts';
 import {loadRules} from '../src/rules.ts';
-import type {RuleError} from '../src/types.ts';
+import type {Configuration, RuleError} from '../src/types.ts';
 
 const rules = await loadRules();
 
@@ -256,7 +256,8 @@ test('a directive naming a rule that does not exist is warned about', async () =
     const [result] = await lint([file], {'no-trailing-spaces': 'on'}, rules);
     assert.deepEqual(result!.errors, [
       {
-        message: 'A directive names "no-trailing-spacs", which is not a rule, so it switches nothing off',
+        message:
+          'A directive names "no-trailing-spacs", which is not a rule, so it switches nothing off. Did you mean "no-trailing-spaces"?',
         rule: 'unknown-rule-in-directive',
         line: 1,
         severity: 'warning',
@@ -329,6 +330,22 @@ test('a comment that looks like a directive and is not one is warned about', asy
         ['unknown-directive', 2, '"GURKENCHECK-DISABLE" is not a directive, so it switches nothing off. Did you mean "gurkencheck-disable"?'],
       ],
     );
+  } finally {
+    fs.rmSync(file, {force: true});
+  }
+});
+
+test('the directive checks warn by default, and the configuration can quiet them or make them fail', async () => {
+  const file = path.join(os.tmpdir(), `gurkencheck-directive-checks-${process.pid}.feature`);
+  fs.writeFileSync(file, '# gurkencheck-disable nope\n# gurkencheck-enabel\nFeature: A\n  Scenario: B\n    Given c\n');
+  try {
+    const rules = await loadRules();
+    const severities = async (configuration: Configuration): Promise<string[]> =>
+      (await lint([file], configuration, rules))[0]!.errors.map((error) => `${error.rule}:${error.severity}`);
+    assert.deepEqual(await severities({}), ['unknown-rule-in-directive:warning', 'unknown-directive:warning']);
+    assert.deepEqual(await severities({'unknown-rule-in-directive': 'on', 'unknown-directive': 'off'}), [
+      'unknown-rule-in-directive:error',
+    ]);
   } finally {
     fs.rmSync(file, {force: true});
   }

@@ -74,10 +74,13 @@ function unknownRulesNamed(suppressions: Suppressions, rules: RuleRegistry): Rul
     if (!unswitchable && rules.has(rule)) {
       continue;
     }
+    const meant = unswitchable ? undefined : closest(rule, rules.keys());
     findings.push({
       message: unswitchable
         ? `A directive names "${rule}", which cannot be switched off, so it switches nothing off`
-        : `A directive names "${rule}", which is not a rule, so it switches nothing off`,
+        : meant === undefined
+          ? `A directive names "${rule}", which is not a rule, so it switches nothing off`
+          : `A directive names "${rule}", which is not a rule, so it switches nothing off. Did you mean "${meant}"?`,
       rule: UNKNOWN_RULE_IN_DIRECTIVE,
       line,
       severity: 'warning',
@@ -86,10 +89,24 @@ function unknownRulesNamed(suppressions: Suppressions, rules: RuleRegistry): Rul
   return findings;
 }
 
+/**
+ * The directive checks' findings as loud as the configuration asks: warnings
+ * unless it names the check, none for "off", errors for "on".
+ */
+function withSeverity(findings: RuleError[], configuration: Configuration): RuleError[] {
+  return findings.flatMap((finding) => {
+    const entry = configuration[finding.rule];
+    const state = Array.isArray(entry) ? entry[0] : entry;
+    if (state === 'off') return [];
+    return [{...finding, severity: state === 'on' ? ('error' as const) : ('warning' as const)}];
+  });
+}
+
 /** A warning for each comment that looks like a directive and is not one. */
 function misspeltDirectives(suppressions: Suppressions): RuleError[] {
   return suppressions.misspelt.map(({directive, line}) => {
-    const meant = closest(directive, DIRECTIVES);
+    // Directive names are long, so a misspelling may be a few letters more.
+    const meant = closest(directive, DIRECTIVES, 6);
     return {
       message:
         meant === undefined
@@ -129,7 +146,10 @@ export async function* lintStream(
       suppressions = readSuppressions(result.file.lines, result.feature);
       if (!suppressions.isEmpty) {
         errors = errors.filter((error) => !suppressions.isSuppressed(error));
-        errors.push(...unknownRulesNamed(suppressions, rules), ...misspeltDirectives(suppressions));
+        errors.push(
+          ...withSeverity(unknownRulesNamed(suppressions, rules), configuration),
+          ...withSeverity(misspeltDirectives(suppressions), configuration),
+        );
       }
     }
 

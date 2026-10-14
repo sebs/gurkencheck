@@ -10,6 +10,7 @@ import {test} from 'node:test';
 import {findRuleNames, renderRegistry} from '../scripts/generate-rules.ts';
 import {PARSER_RULES} from '../src/gherkin/parse.ts';
 import {BUILT_IN_RULES} from '../src/rules/index.ts';
+import {DIRECTIVE_CHECKS} from '../src/suppressions.ts';
 import {build} from '../site/build.ts';
 import {RULE_DOCS} from '../site/content.ts';
 
@@ -30,7 +31,7 @@ test('rule names are unique', () => {
 
 test('every rule is documented, and nothing extra is', () => {
   const parserRules = PARSER_RULES.filter((name) => name !== 'unexpected-error');
-  assert.deepEqual(documented, [...registered, ...parserRules].sort());
+  assert.deepEqual(documented, [...registered, ...parserRules, ...DIRECTIVE_CHECKS].sort());
 });
 
 test('every documented rule has both an example that passes and one that fails', () => {

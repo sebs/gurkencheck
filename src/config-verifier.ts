@@ -4,6 +4,7 @@
  */
 import {ALWAYS_ON_RULES} from './gherkin/parse.ts';
 import {BUILT_IN_RULES} from './rules/index.ts';
+import {DIRECTIVE_CHECKS} from './suppressions.ts';
 import {closest} from './util/suggest.ts';
 import type {Configuration, LintRule, RuleRegistry} from './types.ts';
 
@@ -150,6 +151,15 @@ export function verifyConfiguration(configuration: Configuration, rules: RuleReg
     const rule = rules.get(ruleName);
     const prefix = `Invalid rule configuration for "${ruleName}" - `;
 
+    if (rule === undefined && (DIRECTIVE_CHECKS as readonly string[]).includes(ruleName)) {
+      // The checks on directives take a state, and nothing else.
+      const state = Array.isArray(ruleConfig) && ruleConfig.length === 1 ? ruleConfig[0] : ruleConfig;
+      if (!STATES.includes(state as string)) {
+        errors.push(`${prefix}the config should be "on", "warn" or "off"; the check has no settings`);
+      }
+      continue;
+    }
+
     if (rule === undefined) {
       // The rules the parser enforces are documented alongside the rest, so
       // people reasonably list them. Naming one is harmless; asking for it to
@@ -181,7 +191,7 @@ export function verifyConfiguration(configuration: Configuration, rules: RuleReg
         }
         continue;
       }
-      const suggestion = closest(ruleName, [...rules.keys(), ...ALWAYS_ON_RULES]);
+      const suggestion = closest(ruleName, [...rules.keys(), ...ALWAYS_ON_RULES, ...DIRECTIVE_CHECKS]);
       errors.push(
         suggestion === undefined
           ? `Rule "${ruleName}" does not exist`
