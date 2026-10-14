@@ -3,7 +3,13 @@ import {docStringParts} from '../util/lines.ts';
 import {atLineColumn, columnOf} from '../util/location.ts';
 
 const name = 'no-trailing-spaces';
-const TRAILING_WHITESPACE = /[\t ]+$/;
+/**
+ * Whitespace at the end of a line: any kind, as String.prototype.trim and so
+ * no-multiple-empty-lines see it - a non-breaking space, an ideographic
+ * space - not only tabs and spaces. A line of nothing but a non-breaking
+ * space was empty to one rule and clean to the other.
+ */
+const TRAILING_WHITESPACE = /[^\S\r\n]+$/u;
 
 const rule: LintRule = {
   name,

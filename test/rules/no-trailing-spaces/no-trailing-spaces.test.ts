@@ -30,3 +30,11 @@ test('leaves the content of a doc string alone, but not its delimiters', async (
 test('leaves a content line starting with ``` alone inside a """ doc string', async () => {
   await checkRule(rule, 'no-trailing-spaces/MarkdownDocString.feature', {}, []);
 });
+
+test('reports trailing whitespace of any kind, as trim sees it', async () => {
+  await checkRule(rule, 'no-trailing-spaces/OtherWhitespace.feature', {}, [
+    {message: 'Trailing spaces are not allowed', line: 3},
+    {message: 'Trailing spaces are not allowed', line: 4},
+    {message: 'Trailing spaces are not allowed', line: 5},
+  ]);
+});
