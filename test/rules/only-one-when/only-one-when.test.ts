@@ -54,3 +54,10 @@ test('countAnd on is the default', async () => {
 test('a * step after a When counts as another When, as And does', async () => {
   await checkRule(rule, 'only-one-when/StarSteps.feature', {}, [tooMany('A star after When', 2, 6)]);
 });
+
+test('a But after a When counts as another When, as an And does', async () => {
+  await checkRule(rule, 'only-one-when/WhenBut.feature', {}, [
+    {message: 'Scenario "B" contains 2 When statements (max 1)', line: 6},
+  ]);
+  await checkRule(rule, 'only-one-when/WhenBut.feature', {countAnd: false}, []);
+});

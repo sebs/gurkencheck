@@ -515,7 +515,7 @@ export const RULE_DOCS: RuleDoc[] = [
         name: 'countAnd',
         type: 'true or false',
         fallback: 'true',
-        description: 'Whether an And step following a When counts as another When. Set it to false to count only real When keywords.',
+        description: 'Whether an And, But or * step following a When counts as another When. Set it to false to count only real When keywords.',
       },
     ],
     config: '{\n  "only-one-when": ["on", {"countAnd": true}]\n}',
