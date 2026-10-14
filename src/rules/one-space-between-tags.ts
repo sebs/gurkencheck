@@ -6,6 +6,18 @@ import {at} from '../util/location.ts';
 
 const name = 'one-space-between-tags';
 
+/**
+ * The gap as text a reader can see: JSON escapes a tab, but leaves a
+ * non-breaking or ideographic space as it is, and the message then read
+ * `not " "` - the very character it was about, invisible.
+ */
+function visible(gap: string): string {
+  return JSON.stringify(gap).replace(
+    /[^\x21-\x7E]/gu,
+    (character) => (character === ' ' ? ' ' : `\\u${character.codePointAt(0)!.toString(16).padStart(4, '0')}`),
+  );
+}
+
 /** What should be said about the text between two tags, if anything. */
 function problemWith(gap: string, current: string, next: string): string | undefined {
   if (gap === ' ') {
@@ -17,7 +29,7 @@ function problemWith(gap: string, current: string, next: string): string | undef
   if (/^ +$/u.test(gap)) {
     return `There is more than one space between the tags ${current} and ${next}`;
   }
-  return `The tags ${current} and ${next} should be separated by one space, not ${JSON.stringify(gap)}`;
+  return `The tags ${current} and ${next} should be separated by one space, not ${visible(gap)}`;
 }
 
 function checkTags(tags: readonly Tag[], lines: readonly string[], errors: RuleError[]): void {

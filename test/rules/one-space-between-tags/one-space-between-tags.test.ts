@@ -34,3 +34,9 @@ test('reports a tab, or no space at all, between tags', async () => {
     tooWide('@e', '@f', 3),
   ]);
 });
+
+test('shows a non-breaking space between tags as an escape, not as itself', async () => {
+  await checkRule(rule, 'one-space-between-tags/NonBreakingSpace.feature', {}, [
+    {message: 'The tags @a and @b should be separated by one space, not "\\u00a0"', line: 3},
+  ]);
+});
