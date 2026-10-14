@@ -13,6 +13,7 @@
  * at either end for exactly this reason.
  */
 import type {SyncFormatterRun} from './index.ts';
+import {printable} from '../util/printable.ts';
 import type {FileResult, RuleError} from '../types.ts';
 
 /**
@@ -58,11 +59,10 @@ function quote(value: string): string {
  * are escaped too, so `\n` cannot be mistaken for one.
  */
 function description(text: string): string {
-  return text
-    .replace(/[\\#]/g, '\\$&')
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '\\r')
-    .replace(/[\u0000-\u001F\u007F]/gu, (character) => `\\x${character.charCodeAt(0).toString(16).padStart(2, '0')}`);
+  // Backslashes first, so that the escapes written after them read as ones;
+  // then everything that would act rather than show - line breaks, C1
+  // controls and NEL, bidirectional overrides, U+2028 - as stylish has it.
+  return printable(text.replace(/[\\#]/g, '\\$&'));
 }
 
 function severityOf(error: RuleError): string {

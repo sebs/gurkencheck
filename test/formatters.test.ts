@@ -303,6 +303,11 @@ test('tap escapes the characters YAML 1.1 takes for line breaks', () => {
   assert.match(output, /message: "a\\x85b\\u2028c\\u2029d"/u);
 });
 
+test('tap writes out bidi overrides, C1 controls and line separators in a description', () => {
+  const output = capture(getFormatter('tap')!, [{filePath: '/a\u202Eb\u0085c\u2028d.feature', errors: []}]);
+  assert.match(output, /^ok 1 - \/a\\u202eb\\u0085c\\u2028d\.feature$/mu);
+});
+
 test('tap emits an empty plan when there is nothing to report', () => {
   assert.equal(capture(getFormatter('tap')!, []), 'TAP version 13\n1..0');
 });
