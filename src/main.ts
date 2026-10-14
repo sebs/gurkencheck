@@ -190,7 +190,9 @@ export async function run(
   // without it looks the same as one in which it found nothing. One the
   // configuration names, even as off, is where somebody meant it to be.
   for (const [name, rule] of settings === undefined ? [] : rules) {
-    if (!BUILT_IN_RULES.includes(rule) && settings!.configuration[name] === undefined) {
+    // Its own entries only: a rule called toString found the one every
+    // object has, and was taken for configured.
+    if (!BUILT_IN_RULES.includes(rule) && !Object.hasOwn(settings!.configuration, name)) {
       diagnostics.report({
         level: 'notice',
         message: `The rule "${name}" from --rulesdir is not in the configuration, so it does not run.`,

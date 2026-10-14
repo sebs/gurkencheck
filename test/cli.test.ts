@@ -500,6 +500,13 @@ test('says so when a file named outright is skipped by an ignore pattern', async
   });
 });
 
+test('says so when a rule from --rulesdir named like a property of every object is not switched on', async () => {
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    const {stderr} = await cli(['--rulesdir', path.resolve('test/rulesdir/prototype_rules'), '.'], cwd);
+    assert.match(stderr, /The rule "toString" from --rulesdir is not in the configuration/u);
+  });
+});
+
 test('says so when a rule from --rulesdir is not switched on', async () => {
   const rulesDir = path.resolve('test/rulesdir/rules');
   await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
