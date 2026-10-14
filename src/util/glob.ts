@@ -17,7 +17,10 @@ const REGEXP_SPECIAL_CHARACTERS = new Set('.+^$()|\\[]{}*?'.split(''));
  * Translates a glob pattern into an anchored regular expression matching
  * slash-separated paths.
  */
-export function globToRegExp(pattern: string, flags = ''): RegExp {
+export function globToRegExp(pattern: string, flags = '', dot = true): RegExp {
+  // Without dot, a wildcard does not match a name starting with one, as the
+  // glob package's defaults have it: only a pattern spelling the dot out does.
+  const noDot = dot ? '' : '(?!\\.)';
   let source = '';
   let braceDepth = 0;
   let index = 0;
@@ -36,14 +39,14 @@ export function globToRegExp(pattern: string, flags = ''): RegExp {
       if (isGlobstar && atSegmentStart && atSegmentEnd) {
         if (pattern[index] === '/') {
           // `**/` matches any number of leading path segments, including none.
-          source += '(?:[^/]*/)*';
+          source += `(?:${noDot}[^/]*/)*`;
           index++;
         } else {
-          source += '.*';
+          source += dot ? '.*' : `(?:${noDot}[^/]*(?:/${noDot}[^/]*)*)?`;
         }
       } else {
         // A `*` anywhere else matches within a single path segment.
-        source += '[^/]*';
+        source += `${atSegmentStart ? noDot : ''}[^/]*`;
       }
       continue;
     }
@@ -51,7 +54,7 @@ export function globToRegExp(pattern: string, flags = ''): RegExp {
     index++;
 
     if (character === '?') {
-      source += '[^/]';
+      source += `${index === 1 || pattern[index - 2] === '/' ? noDot : ''}[^/]`;
     } else if (character === '[') {
       const closing = findClosingBracket(pattern, index);
       if (closing === -1) {
@@ -202,14 +205,19 @@ function readEntries(directory: string, onUnreadable?: OnUnreadable): fs.Dirent[
   }
 }
 
-function walk(directory: string, onFile: (absolutePath: string) => void, onUnreadable?: OnUnreadable): void {
+function walk(
+  directory: string,
+  onFile: (absolutePath: string) => void,
+  onUnreadable?: OnUnreadable,
+  hidden = false,
+): void {
   for (const entry of readEntries(directory, onUnreadable)) {
-    if (isHidden(entry.name)) {
+    if (!hidden && isHidden(entry.name)) {
       continue;
     }
     const absolutePath = path.join(directory, entry.name);
     if (entry.isDirectory()) {
-      walk(absolutePath, onFile, onUnreadable);
+      walk(absolutePath, onFile, onUnreadable, hidden);
     } else if (entry.isFile()) {
       onFile(absolutePath);
     }
@@ -227,7 +235,7 @@ function walk(directory: string, onFile: (absolutePath: string) => void, onUnrea
  * it gives way at every file, and the reading and checking downstream happen
  * in the gaps.
  */
-async function* walkStream(root: string, onUnreadable?: OnUnreadable): AsyncGenerator<string> {
+async function* walkStream(root: string, onUnreadable?: OnUnreadable, hidden = false): AsyncGenerator<string> {
   // An explicit stack rather than recursion: a recursive async generator
   // delegates through one `yield*` per level of nesting for every file it
   // hands over, so a deep tree pays for its depth on every single file.
@@ -241,7 +249,7 @@ async function* walkStream(root: string, onUnreadable?: OnUnreadable): AsyncGene
     }
 
     const entry = top.entries[top.index++]!;
-    if (isHidden(entry.name)) {
+    if (!hidden && isHidden(entry.name)) {
       continue;
     }
 
@@ -384,6 +392,8 @@ export function isDirectoryIgnored(
 interface Search {
   /** Where the walk starts, so `a/b/**` does not scan the whole tree. */
   searchRoot: string;
+  /** Whether the walk goes into names starting with a dot. */
+  walksHidden: boolean;
   /** The path to report, or `undefined` when this entry is not a match. */
   match(absolutePath: string): string | undefined;
 }
@@ -407,6 +417,7 @@ function newSearch(pattern: string, options: GlobOptions): Search {
   const literal = literalPath(normalisedPattern);
   let searchRoot: string;
   let matches: RegExp;
+  let walksHidden = false;
   if (literal !== undefined) {
     searchRoot = path.resolve(cwd, literal);
     matches = globToRegExp(escapeGlob(searchRoot.split(path.sep).join('/')));
@@ -414,12 +425,16 @@ function newSearch(pattern: string, options: GlobOptions): Search {
     const {prefix, rest} = splitPattern(normalisedPattern);
     searchRoot = path.resolve(cwd, prefix);
     const root = searchRoot.split(path.sep).join('/').replace(/\/$/, '');
-    matches = globToRegExp(`${escapeGlob(root)}/${rest}`);
+    matches = globToRegExp(`${escapeGlob(root)}/${rest}`, '', false);
+    // A segment spelling out a leading dot - .github/**, .h* - asks for
+    // names a search passes over otherwise.
+    walksHidden = /(?:^|\/)\\?\./u.test(rest);
   }
 
   const ignoreBase = path.resolve(cwd, options.ignoreBase ?? cwd);
   return {
     searchRoot,
+    walksHidden,
     match(absolutePath: string): string | undefined {
       const relativePath = path.relative(cwd, absolutePath).split(path.sep).join('/');
       if (!matches.test(absolutePath.split(path.sep).join('/'))) return undefined;
@@ -452,7 +467,7 @@ export function globSync(pattern: string, options: GlobOptions = {}): string[] {
   if (stats.isFile()) {
     consider(search.searchRoot);
   } else {
-    walk(search.searchRoot, consider, options.onUnreadable);
+    walk(search.searchRoot, consider, options.onUnreadable, search.walksHidden);
   }
 
   return found.sort();
@@ -488,7 +503,7 @@ export async function* globStream(
     return;
   }
 
-  for await (const absolutePath of walkStream(search.searchRoot, options.onUnreadable)) {
+  for await (const absolutePath of walkStream(search.searchRoot, options.onUnreadable, search.walksHidden)) {
     const relativePath = search.match(absolutePath);
     if (relativePath !== undefined) {
       yield relativePath;

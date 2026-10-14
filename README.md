@@ -353,7 +353,8 @@ directory above it is used.
 
 A search of a directory, like a glob's `*` and `**`, also passes over anything whose name
 starts with a dot, such as `.git` or `.hidden.feature`, and does not follow symlinks. Name
-such a file or directory on the command line to check it.
+such a file or directory on the command line to check it, or use a glob that spells the dot
+out, such as `.github/**`.
 
 A feature file named on the command line is still skipped when an ignore pattern matches
 it, so a list of changed files can be passed as it is, but gurkencheck says that it

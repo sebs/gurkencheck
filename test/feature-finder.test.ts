@@ -338,3 +338,14 @@ test('an ignore pattern skips a directory spelled in another case where the disk
   fs.writeFileSync('Build/b.feature', '');
   assert.deepEqual(findFeatureFiles(['.'], ['build']).files.filter((file) => file.startsWith('Build')), []);
 });
+
+test('a glob spelling out a leading dot reaches dot-directories, and * still does not', () => {
+  fs.mkdirSync('.hidden/inner', {recursive: true});
+  fs.writeFileSync('.hidden/a.feature', '');
+  fs.writeFileSync('.hidden/inner/b.feature', '');
+  fs.mkdirSync('.hidden/.deeper', {recursive: true});
+  fs.writeFileSync('.hidden/.deeper/c.feature', '');
+  assert.deepEqual(findFeatureFiles(['.h*']).files.sort(), ['.hidden/a.feature', '.hidden/inner/b.feature']);
+  assert.deepEqual(findFeatureFiles(['.*/**/*.feature']).files.sort(), ['.hidden/a.feature', '.hidden/inner/b.feature']);
+  assert.deepEqual(findFeatureFiles(['*']).files.filter((file) => file.startsWith('.hidden')), []);
+});
