@@ -112,3 +112,55 @@ function closesNext(json: string, from: number): boolean {
 export function parseJsonWithComments(json: string): unknown {
   return JSON.parse(stripTrailingCommas(stripJsonComments(json)));
 }
+
+/**
+ * The keys a JSON document gives twice in one object, in the order the second
+ * of each is met. JSON.parse keeps the last of them without a word - and a
+ * configuration listing extends twice silently dropped the first base.
+ *
+ * A scan of the text, after comments are blanked: strings are read whole, so
+ * a brace or a colon inside one changes nothing, and each object's keys are
+ * kept on a stack of their own.
+ */
+export function duplicateKeys(json: string): string[] {
+  const duplicates: string[] = [];
+  /** For each object or array open: its keys, or undefined for an array. */
+  const open: (Set<string> | undefined)[] = [];
+  let lastString: string | undefined;
+
+  for (let index = 0; index < json.length; index++) {
+    const character = json[index]!;
+    if (character === '"') {
+      let end = index + 1;
+      while (end < json.length && json[end] !== '"') {
+        end += json[end] === '\\' ? 2 : 1;
+      }
+      try {
+        lastString = JSON.parse(json.slice(index, end + 1)) as string;
+      } catch {
+        lastString = json.slice(index + 1, end);
+      }
+      index = end;
+      continue;
+    }
+    if (character === '{') {
+      open.push(new Set());
+    } else if (character === '[') {
+      open.push(undefined);
+    } else if (character === '}' || character === ']') {
+      open.pop();
+    } else if (character === ':') {
+      const keys = open.at(-1);
+      if (keys !== undefined && lastString !== undefined) {
+        if (keys.has(lastString)) {
+          duplicates.push(lastString);
+        }
+        keys.add(lastString);
+      }
+    }
+    if (!/\s/u.test(character) && character !== ':') {
+      lastString = undefined;
+    }
+  }
+  return duplicates;
+}

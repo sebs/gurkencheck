@@ -7,7 +7,7 @@ import {pathToFileURL} from 'node:url';
 import {verifyConfiguration} from './config-verifier.ts';
 import {PRESETS, RECOMMENDED} from './presets.ts';
 import type {Configuration, RuleRegistry} from './types.ts';
-import {stripJsonComments, stripTrailingCommas} from './util/json.ts';
+import {duplicateKeys, stripJsonComments, stripTrailingCommas} from './util/json.ts';
 import {resolvePackage} from './util/resolve.ts';
 import {closest} from './util/suggest.ts';
 
@@ -143,6 +143,14 @@ function parseFile(filePath: string, found = false): Record<string, unknown> {
   } catch (thrown) {
     throw new ConfigurationError(
       `Could not parse "${shown(filePath)}": ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+    );
+  }
+  // JSON.parse keeps the last of a key given twice; a second extends, or a
+  // rule listed twice, would drop the first without a word.
+  const repeated = duplicateKeys(json);
+  if (repeated.length > 0) {
+    throw new ConfigurationError(
+      `"${shown(filePath)}" gives ${repeated.map((key) => `"${key}"`).join(', ')} more than once; only the last would count.`,
     );
   }
   if (!isConfigurationObject(parsed)) {

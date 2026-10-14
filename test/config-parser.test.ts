@@ -370,3 +370,15 @@ test('a name every object carries is no preset', async () => {
     fs.rmSync(directory, {recursive: true, force: true});
   }
 });
+
+test('a key given twice is refused, rather than the first silently dropped', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-duplicate-'));
+  try {
+    fs.writeFileSync(path.join(directory, 'rc.json'), '{"extends": "gurkencheck:recommended", "extends": "./b.json"}');
+    const result = await readConfiguration(path.join(directory, 'rc.json'), rules);
+    assert.ok(!result.ok);
+    assert.match(result.details[0]!, /gives "extends" more than once; only the last would count/u);
+  } finally {
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});
