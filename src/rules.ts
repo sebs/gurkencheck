@@ -31,7 +31,15 @@ function realPath(file: string): string {
 }
 
 /** Names no custom rule may take: those gurkencheck reports under itself. */
-const RESERVED_RULE_NAMES = [...PARSER_RULES, UNKNOWN_RULE_IN_DIRECTIVE, UNKNOWN_DIRECTIVE];
+const RESERVED_RULE_NAMES = [
+  ...PARSER_RULES,
+  UNKNOWN_RULE_IN_DIRECTIVE,
+  UNKNOWN_DIRECTIVE,
+  // The configuration's own keys: a rule called either could be loaded, and
+  // never switched on.
+  'language',
+  'extends',
+];
 
 /** File extensions a custom rule may be written in. */
 const RULE_EXTENSIONS = '{js,mjs,cjs,ts,mts,cts}';
@@ -132,9 +140,9 @@ export async function loadRules(
   const loadedFrom = new Map<string, string>();
   for (const directory of additionalRulesDirs) {
     for (const {rule, file} of await loadRulesFrom(directory)) {
-      // Names gurkencheck reports under itself. Taken by a custom rule, its
-      // ordinary findings would read as a crash or a parse error - and could
-      // not be switched off, as those cannot.
+      // Names gurkencheck reports under itself, or reads as settings. Taken
+      // by a custom rule, its findings would read as a crash or a parse error
+      // and could not be switched off - or the rule could not be switched on.
       // A directive lists rule names separated by commas or spaces, so a name
       // holding either could be switched on and never switched off.
       if (rule.name === '' || /[\s,]/u.test(rule.name)) {
@@ -144,7 +152,7 @@ export async function loadRules(
       }
       if ((RESERVED_RULE_NAMES as readonly string[]).includes(rule.name)) {
         throw new Error(
-          `The rule in ${file} is called "${rule.name}", a name gurkencheck uses for its own findings. Give it another name.`,
+          `The rule in ${file} is called "${rule.name}", a name gurkencheck keeps for its own findings or settings. Give it another name.`,
         );
       }
       const earlier = loadedFrom.get(rule.name);

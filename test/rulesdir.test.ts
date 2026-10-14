@@ -203,7 +203,7 @@ test('an empty rules directory name is refused before anything is loaded', async
 test('a custom rule may not take a name gurkencheck reports under itself', async () => {
   await assert.rejects(
     loadRules(['test/rulesdir/reserved_rules']),
-    /is called "unexpected-error", a name gurkencheck uses for its own findings/u,
+    /is called "unexpected-error", a name gurkencheck keeps for its own findings or settings/u,
   );
 });
 
@@ -235,4 +235,8 @@ test('a rules directory that cannot be read is an error, not an empty set', asyn
     fs.chmodSync(directory, 0o755);
     fs.rmSync(directory, {recursive: true, force: true});
   }
+});
+
+test('a custom rule may not be named like a setting of the configuration', async () => {
+  await assert.rejects(loadRules(['test/rulesdir/setting_rules']), /is called "language", a name gurkencheck keeps/u);
 });
