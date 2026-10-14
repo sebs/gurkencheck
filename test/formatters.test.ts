@@ -209,6 +209,14 @@ test('loadFormatter finds a formatter held on a default export', async () => {
   assert.equal(typeof streaming, 'function');
 });
 
+test('a name every object carries is not a built-in format', async () => {
+  for (const name of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+    assert.equal(getFormatter(name), undefined, name);
+    assert.equal(getStreamingFormatter(name), undefined, name);
+    await assert.rejects(() => loadFormatter(name), /Unsupported format/u, name);
+  }
+});
+
 test('loadFormatter explains an unknown format', async () => {
   await assert.rejects(() => loadFormatter('yaml'), /Unsupported format "yaml"/u);
 });

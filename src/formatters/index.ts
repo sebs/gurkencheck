@@ -85,7 +85,8 @@ export const STREAMING_FORMATTERS: Record<string, StreamingFormatter> = {
 export function getStreamingFormatter(
   format: string | undefined,
 ): StreamingFormatter | undefined {
-  return STREAMING_FORMATTERS[format ?? DEFAULT_FORMAT];
+  const name = format ?? DEFAULT_FORMAT;
+  return Object.hasOwn(STREAMING_FORMATTERS, name) ? STREAMING_FORMATTERS[name] : undefined;
 }
 
 /**
@@ -116,7 +117,10 @@ export async function loadStreamingFormatter(
 
 /** The formatter for a built-in format name, or `undefined` for anything else. */
 export function getFormatter(format: string | undefined): Formatter | undefined {
-  return FORMATTERS[format ?? DEFAULT_FORMAT];
+  // Only the table's own entries: `constructor` or `toString` would be found
+  // on any object, taken for a format, and fail when called.
+  const name = format ?? DEFAULT_FORMAT;
+  return Object.hasOwn(FORMATTERS, name) ? FORMATTERS[name] : undefined;
 }
 
 function asFormatter(candidate: unknown): Formatter | undefined {
