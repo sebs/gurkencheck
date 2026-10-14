@@ -189,10 +189,14 @@ export async function* lintStream(
   // What only the whole run could show: two files sharing a name, and the
   // like. A finding naming no file is about the run itself - a rule that
   // failed looking back over it - and goes against the first file so that it
-  // is seen at all.
+  // is seen at all; in a run of no files, against the directory it ran in,
+  // as dropped it would leave a failure looking like a pass.
   for (const {filePath, ...error} of await finishRun(rules, configuration, run)) {
     if (filePath === undefined) {
-      waiting[0]?.errors.push(error);
+      if (waiting.length === 0) {
+        waiting.push({filePath: process.cwd(), errors: []});
+      }
+      waiting[0]!.errors.push(error);
       continue;
     }
     const target = byPath.get(path.resolve(filePath));

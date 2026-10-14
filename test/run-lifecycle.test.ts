@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {test} from 'node:test';
-import {lint} from '../src/linter.ts';
+import {hasErrors, lint} from '../src/linter.ts';
 import {beginRun, finishRun, newRunContext, runEnabledRules} from '../src/rules.ts';
 import type {LintRule} from '../src/types.ts';
 
@@ -253,4 +253,20 @@ test('a rule whose onRunStart throws costs that rule only, and is named', async 
     alone.map(({message, severity}) => [message, severity]),
     [['Rule "starting" failed at the start of the run: start boom', 'warning']],
   );
+});
+
+test('a finding about the run in a run of no files is still reported', async () => {
+  const rule: LintRule = {
+    name: 'ending',
+    run: () => [],
+    onRunEnd: () => {
+      throw new Error('end boom');
+    },
+  };
+  const results = await lint([], {ending: 'on'}, new Map([['ending', rule]]));
+  assert.deepEqual(
+    results.map((result) => [result.filePath, result.errors.map((error) => error.message)]),
+    [[process.cwd(), ['Rule "ending" failed at the end of the run: end boom']]],
+  );
+  assert.ok(hasErrors(results));
 });
