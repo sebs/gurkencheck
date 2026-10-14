@@ -622,6 +622,47 @@ function stopWritingWhenOutputCloses(): void {
   });
 }
 
+/**
+ * Writes all of each chunk when the output is a file, or fails. Node takes a
+ * short write to a file - a size limit reached part way - for a whole one,
+ * so a report cut off at the limit was left on disk with exit 0 and no word.
+ * Written in a loop, what is left after a short write is tried again, and
+ * fails as it should.
+ */
+function writeFilesWhole(): void {
+  try {
+    if (!fs.fstatSync(1).isFile()) {
+      return;
+    }
+  } catch {
+    return;
+  }
+  process.stdout.write = ((chunk: string | Uint8Array, encoding?: unknown, callback?: unknown): boolean => {
+    const done = typeof encoding === 'function' ? encoding : callback;
+    const bytes =
+      typeof chunk === 'string'
+        ? Buffer.from(chunk, typeof encoding === 'string' ? (encoding as BufferEncoding) : 'utf8')
+        : Buffer.from(chunk);
+    try {
+      let written = 0;
+      while (written < bytes.length) {
+        const wrote = fs.writeSync(1, bytes, written);
+        if (wrote === 0) {
+          throw Object.assign(new Error('nothing more could be written'), {code: 'EIO'});
+        }
+        written += wrote;
+      }
+    } catch (thrown) {
+      process.stdout.write = (() => true) as typeof process.stdout.write;
+      couldNotWrite(thrown as NodeJS.ErrnoException);
+    }
+    if (typeof done === 'function') {
+      (done as () => void)();
+    }
+    return true;
+  }) as typeof process.stdout.write;
+}
+
 /** Set once the output could not be written, which makes the run exit 2. */
 let outputFailed = false;
 
@@ -694,6 +735,7 @@ if (isMainModule()) {
   failOnStrayErrors();
   failWhenNeverFinished();
   stopWritingWhenOutputCloses();
+  writeFilesWhole();
   // Not awaited at the top level: node takes a top-level await that never
   // settles for its own failure, and warns about it before anything here can.
   void main(process.argv.slice(2)).then((code) => {

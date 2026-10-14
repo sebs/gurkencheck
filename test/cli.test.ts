@@ -982,6 +982,21 @@ test('output that cannot be written is a run that could not run, said in a line'
   });
 });
 
+test('a report cut off by a short write is a run that could not run', async () => {
+  if (process.platform === 'win32') return;
+  const scenarios = Array.from({length: 200}, () => '  Scenario: \n    Given something\n').join('\n');
+  await withProject(`Feature: A\n\n${scenarios}`, CONFIG, async (cwd) => {
+    for (const format of ['json', 'sarif', 'junit']) {
+      const child = spawn('/bin/sh', ['-c', `ulimit -f 8; exec "$0" "$1" -f ${format} . > report`, process.execPath, CLI], {cwd});
+      let stderr = '';
+      child.stderr.on('data', (chunk) => (stderr += String(chunk)));
+      const code = await new Promise<number | null>((resolve) => child.on('close', resolve));
+      assert.equal(code, 2, `${format}: ${stderr}`);
+      assert.match(stderr, /Could not write the report: EFBIG/u, format);
+    }
+  });
+});
+
 test('a directory named outright and skipped whole is a run that checked nothing', async () => {
   await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
     fs.mkdirSync(path.join(cwd, 'legacy'));
