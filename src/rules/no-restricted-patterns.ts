@@ -3,7 +3,7 @@ import {getNeutralKeyword, getNodeType} from '../gherkin/keywords.ts';
 import {rulesOf, stepContainersOf} from '../gherkin/traverse.ts';
 import type {LintRule, RuleError} from '../types.ts';
 import {mergeDefaults} from '../util/collections.ts';
-import {at} from '../util/location.ts';
+import {at, columnOf} from '../util/location.ts';
 import {compilePattern, invalidPatterns} from '../util/patterns.ts';
 
 const name = 'no-restricted-patterns';
@@ -167,10 +167,17 @@ const rule: LintRule = {
           const {content, location} = step.docString;
           content.split('\n').forEach((line, index) => {
             if (line.trim() !== '') {
-              // The content keeps whatever it is indented by past the
-              // delimiter, so its first character is that far along.
-              const column = (location.column ?? 1) + [...line].length - [...line.trimStart()].length;
-              report('Step', 'doc string', line.trim(), applicable, {line: location.line + 1 + index, column});
+              // Read from the line in the file: the parser strips the
+              // delimiter's indentation from the content, or as much of it
+              // as a line has, and a tab counts as one character either way.
+              const lineNumber = location.line + 1 + index;
+              const raw = file.lines[lineNumber - 1] ?? '';
+              const start = raw.indexOf(line.trim());
+              const column =
+                start === -1
+                  ? (location.column ?? 1) + [...line].length - [...line.trimStart()].length
+                  : columnOf(raw, start);
+              report('Step', 'doc string', line.trim(), applicable, {line: lineNumber, column});
             }
           });
         }

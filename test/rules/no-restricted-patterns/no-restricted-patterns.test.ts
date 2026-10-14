@@ -118,3 +118,14 @@ test('places doc string and Examples table hits at their column', async () => {
   assert.equal(columns[9], 7);
   assert.equal(columns[16], 9);
 });
+
+test('places a doc string line indented less than its delimiter, or by a tab, where it is', async () => {
+  const errors = await runRule(rule, 'no-restricted-patterns/OutdentedDocString.feature', {Global: ['forbidden']});
+  assert.deepEqual(
+    errors.map(({line, column}) => [line, column]),
+    [
+      [6, 3],
+      [7, 2],
+    ],
+  );
+});
