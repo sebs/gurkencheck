@@ -213,3 +213,18 @@ test('a file that could not be read says where once, and has no line of 0', () =
   assert.match(text, /^ {4}gone\.feature {2}/mu);
   assert.doesNotMatch(text, /gone\.feature:0/u);
 });
+
+test('a file with several parse errors is placed at the first in the file', () => {
+  const stats = collectStatistics([
+    {
+      file: {relativePath: 'many.feature', lines: []},
+      feature: undefined,
+      errors: [
+        {message: 'later', rule: 'unexpected-error', line: 6},
+        {message: 'whole file', rule: 'unexpected-error', line: 0},
+        {message: 'first', rule: 'unexpected-error', line: 5},
+      ],
+    },
+  ]);
+  assert.deepEqual(stats.files.unreadable, [{file: 'many.feature', reason: 'first', line: 5}]);
+});

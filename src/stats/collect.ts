@@ -267,7 +267,12 @@ function absorb(tally: Tally, result: ParseResult): void {
   tally.total += 1;
 
   const file = result.file.relativePath;
-  const failure = result.errors[0];
+  // The parser's complaints do not come in line order; the first one in the
+  // file is the one to start fixing from. One about the whole file, at line
+  // 0, comes after any with a line.
+  const failure = [...result.errors].sort(
+    (a, b) => (a.line === 0 ? Infinity : a.line) - (b.line === 0 ? Infinity : b.line),
+  )[0];
   if (failure !== undefined) {
     // The parser starts its messages with where it is, as (3:1); the report
     // gives the place beside the reason, and saying it twice says nothing.
