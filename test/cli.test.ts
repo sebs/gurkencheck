@@ -402,6 +402,8 @@ test('--watch checks, waits, then checks again when a file changes', async () =>
       output = '';
       fs.writeFileSync(path.join(cwd, 'Example.feature'), CLEAN_FEATURE);
       await waitFor(/Example\.feature changed/u);
+      // A clean pass says so, rather than looking like no pass at all.
+      await waitFor(/No errors found/u);
 
       // A file that appears after the run started is noticed too, which is
       // why the watch is on the directory rather than on what it found.

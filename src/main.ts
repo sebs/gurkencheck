@@ -312,7 +312,15 @@ export async function run(
           ...(ignore === undefined ? [DEFAULT_IGNORE_FILE_NAME] : []),
         ],
       },
-      checkOnce,
+      async () => {
+        const code = await checkOnce();
+        // A pass that finds nothing writes nothing, and on a screen still
+        // showing the last pass's errors that reads as no change at all.
+        if (code === EXIT_OK) {
+          diagnostics.report({level: 'notice', message: 'No errors found.'});
+        }
+        return code;
+      },
     );
   }
 
