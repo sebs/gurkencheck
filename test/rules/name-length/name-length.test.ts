@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import rule from '../../../src/rules/name-length.ts';
 import {checkRule} from '../../helpers.ts';
@@ -58,4 +59,14 @@ test('counts characters, not UTF-16 units', async () => {
   await checkRule(rule, 'name-length/Unicode.feature', {Feature: 5}, [
     {message: 'Feature name is too long. Length of 6 is longer than the maximum allowed: 5', line: 1},
   ]);
+});
+
+test('counts characters as a reader sees them', async () => {
+  const {parseFeature} = await import('../../../src/gherkin/parse.ts');
+  const {newRunContext} = await import('../../../src/rules.ts');
+  const decomposed = 'é'.repeat(3);
+  const family = '👨‍👩‍👧x';
+  const {feature, file} = parseFeature('a.feature', `Feature: ${decomposed}\n  Scenario: ${family}\n    Given a\n`);
+  const errors = await rule.run(feature, file, {Feature: 3, Scenario: 2}, newRunContext());
+  assert.deepEqual(errors, []);
 });

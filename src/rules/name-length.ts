@@ -6,6 +6,17 @@ import {at} from '../util/location.ts';
 
 const name = 'name-length';
 
+const GRAPHEMES = new Intl.Segmenter(undefined, {granularity: 'grapheme'});
+
+/** How many characters a reader sees in `text`. */
+function graphemeCount(text: string): number {
+  let count = 0;
+  for (const _ of GRAPHEMES.segment(text)) {
+    count++;
+  }
+  return count;
+}
+
 /** Maximum number of characters allowed in each kind of name; 0 means no limit. */
 const availableConfigs = {
   Feature: 70,
@@ -29,9 +40,10 @@ const rule: LintRule = {
 
     const test = (text: string, location: Location, type: keyof NameLengthConfig): void => {
       const maximum = config[type];
-      // Characters, not the UTF-16 units .length counts: an emoji is one
-      // character to the person reading the name, not two.
-      const length = [...text].length;
+      // Characters as they are seen, not the UTF-16 units .length counts,
+      // nor code points: é written as e and an accent is one, and so is a
+      // family emoji joined from several.
+      const length = graphemeCount(text);
       // A limit of 0 turns the check off for that kind of name, for teams that
       // want a limit on scenario names but not on step text, or the reverse.
       if (maximum > 0 && text !== '' && length > maximum) {
