@@ -146,7 +146,7 @@ export async function runStats(
 
   // Given more than once, the lists add up rather than the last one winning.
   const ignore = values.ignore?.flatMap((list) => list.split(',').map((pattern) => pattern.trim()));
-  const {files, invalidPatterns, unreadable} = findFeatureFileStream(positionals, ignore);
+  const {files, invalidPatterns, unreadable, ignoredFiles} = findFeatureFileStream(positionals, ignore);
 
   if (invalidPatterns.length > 0) {
     for (const pattern of invalidPatterns) {
@@ -160,6 +160,12 @@ export async function runStats(
       message: 'Name a feature file, a directory or a glob.',
     });
     return EXIT_USAGE;
+  }
+
+  // As the linter says: asked for by name and left out, a file would only
+  // show as one missing from the counts.
+  for (const file of ignoredFiles) {
+    diagnostics.report({level: 'notice', message: `Skipped "${file}": it matches an ignore pattern.`});
   }
 
   // Counted as they arrive, so a suite of any size costs what the report

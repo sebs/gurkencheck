@@ -187,3 +187,8 @@ test('stats refuses a configuration it cannot read, rather than reading in Engli
     fs.rmSync(cwd, {recursive: true, force: true});
   }
 });
+
+test('stats says so when a file named outright is skipped by an ignore pattern', async () => {
+  const {stderr} = await cli(['stats', `${FIXTURES}/Shop.feature`, '--ignore', 'Shop.feature']);
+  assert.match(stderr, /Skipped ".*Shop\.feature": it matches an ignore pattern/u);
+});
