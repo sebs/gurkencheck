@@ -159,6 +159,15 @@ test('the formatters refuse a top that is not a whole number of at least 1', () 
   }
 });
 
+test('the text report writes out control characters in a tag written once', () => {
+  const report = toText(
+    collectStatistics([parseFeature('t.feature', 'Feature: A\n  @once\u001b[2JPWNED\n  Scenario: B\n    Given a\n')]),
+    options,
+  );
+  assert.doesNotMatch(report, /\u001b/u);
+  assert.match(report, /@once\\u001b\[2JPWNED/u);
+});
+
 test('the text report writes out control characters from the feature files', () => {
   const report = toText(
     collectStatistics([

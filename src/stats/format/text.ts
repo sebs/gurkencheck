@@ -254,7 +254,7 @@ export function toText(statistics: Statistics, options: StatsFormatOptions): str
 
   const tagsOnce = head(tags.usedOnce, options.top);
   if (tagsOnce.shown.length > 0) {
-    lines.push('', '  Written once', `    ${tagsOnce.shown.join(', ')}`, ...more(tagsOnce.hidden, 'tag'));
+    lines.push('', '  Written once', `    ${tagsOnce.shown.map(printable).join(', ')}`, ...more(tagsOnce.hidden, 'tag'));
   }
 
   if (languages.length > 1) {
