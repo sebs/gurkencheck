@@ -11,6 +11,11 @@
  */
 const UNPRINTABLE = /(?!\u200D)[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu;
 
+/** True for a single character that acts rather than shows. */
+export function actsRatherThanShows(character: string): boolean {
+  return /(?!\u200D)[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u.test(character);
+}
+
 const NAMED_ESCAPES: Record<string, string> = {'\n': '\\n', '\r': '\\r', '\t': '\\t'};
 
 /**

@@ -309,6 +309,14 @@ test('tap escapes the characters YAML 1.1 takes for line breaks', () => {
   assert.match(output, /message: "a\\x85b\\u2028c\\u2029d"/u);
 });
 
+test('tap writes out bidi controls and other format characters in its YAML too', () => {
+  const output = capture(getFormatter('tap')!, [
+    {filePath: '/a.feature', errors: [{line: 1, message: 'a\u202E"x"\u2066y\u2069\u200Bz\u{E0041}', rule: 'r'}]},
+  ]);
+  assert.match(output, /message: "a\\u202e\\"x\\"\\u2066y\\u2069\\u200bz\\U000e0041"$/mu);
+  assert.doesNotMatch(output, /[\u202E\u2066\u2069\u200B]/u);
+});
+
 test('tap writes out bidi overrides, C1 controls and line separators in a description', () => {
   const output = capture(getFormatter('tap')!, [{filePath: '/a\u202Eb\u0085c\u2028d.feature', errors: []}]);
   assert.match(output, /^ok 1 - \/a\\u202eb\\u0085c\\u2028d\.feature$/mu);

@@ -13,7 +13,7 @@
  * at either end for exactly this reason.
  */
 import type {SyncFormatterRun} from './index.ts';
-import {printable} from '../util/printable.ts';
+import {actsRatherThanShows, printable} from '../util/printable.ts';
 import type {FileResult, RuleError} from '../types.ts';
 
 /**
@@ -25,24 +25,38 @@ import type {FileResult, RuleError} from '../types.ts';
 const NEEDS_ESCAPING = /[^\t\u0020-\u007E\u00A0-\u2027\u202A-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/u;
 
 /**
+ * True for a character to escape: one YAML cannot quote plainly, or one that
+ * acts rather than shows - a bidi override, a zero-width space. YAML holds
+ * those as they are, but the stream is read in a CI log or a terminal, where
+ * a right-to-left override turns the rest of the line around, as stylish and
+ * the test point's description already keep it from doing.
+ */
+function needsEscaping(character: string): boolean {
+  return NEEDS_ESCAPING.test(character) || actsRatherThanShows(character);
+}
+
+/**
  * Quotes a scalar for YAML. Single quotes, in which the only character needing
  * attention is the quote itself, unless the value holds something they cannot
  * carry; then double quotes, which can escape anything.
  */
 function quote(value: string): string {
-  if (!NEEDS_ESCAPING.test(value)) {
+  if (![...value].some(needsEscaping)) {
     return `'${value.split("'").join("''")}'`;
   }
   let escaped = '';
   for (const character of value) {
     if (character === '"' || character === '\\') {
       escaped += `\\${character}`;
-    } else if (NEEDS_ESCAPING.test(character)) {
+    } else if (needsEscaping(character)) {
       const code = character.codePointAt(0)!;
+      // YAML's \u takes four digits exactly; beyond them, \U takes eight.
       escaped +=
         code <= 0xff
           ? `\\x${code.toString(16).padStart(2, '0')}`
-          : `\\u${code.toString(16).padStart(4, '0')}`;
+          : code <= 0xffff
+            ? `\\u${code.toString(16).padStart(4, '0')}`
+            : `\\U${code.toString(16).padStart(8, '0')}`;
     } else {
       escaped += character;
     }
