@@ -36,3 +36,15 @@ export function compilePattern(pattern: string, flags = ''): RegExp {
     return new RegExp(pattern, flags);
   }
 }
+
+/**
+ * What is wrong with a list of tag names, one entry per name that is not a
+ * tag. Gherkin's tags start with `@`, and one listed without it - `wip` - can
+ * never be matched, so a ban on it bans nothing and an allowance for it
+ * allows nothing.
+ */
+export function invalidTagNames(setting: string, tags: unknown): string[] {
+  return (Array.isArray(tags) ? tags : [])
+    .filter((tag) => typeof tag === 'string' && !tag.startsWith('@'))
+    .map((tag) => `"${setting}" holds "${String(tag)}", which is not a tag: write it as "@${String(tag)}"`);
+}

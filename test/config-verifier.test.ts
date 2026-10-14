@@ -152,3 +152,11 @@ test('a count may not be negative or a fraction', () => {
     'Invalid rule configuration for "name-length" - "Feature" should be a whole number, 0 or more, not 2.5',
   ]);
 });
+
+test('a tag listed without its @ is said to be no tag', () => {
+  for (const rule of ['no-restricted-tags', 'allowed-tags']) {
+    assert.deepEqual(verify({[rule]: ['on', {tags: ['@ok', 'wip']}]}), [
+      `Invalid rule configuration for "${rule}" - "tags" holds "wip", which is not a tag: write it as "@wip"`,
+    ]);
+  }
+});
