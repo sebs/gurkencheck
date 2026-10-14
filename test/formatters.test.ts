@@ -200,6 +200,11 @@ test('loadFormatter takes a path without its extension, or to a directory', asyn
   await assert.rejects(() => loadFormatter('./test/formatters/nothing-here'), /Could not find the formatter/u);
 });
 
+test('loadFormatter falls back to the index when a directory s main leads nowhere', async () => {
+  const formatter = await loadFormatter('./test/formatters/bad-main');
+  assert.equal(await formatter(RESULTS), 'index formatter saw 2 files');
+});
+
 test('loadFormatter accepts a CommonJS module exporting printResults', async () => {
   const formatter = await loadFormatter('./test/formatters/legacy.cjs');
   assert.match(capture(formatter as Formatter, RESULTS), /legacy formatter saw 2 files/u);

@@ -136,11 +136,18 @@ export function resolvePath(target: string): string | undefined {
         };
         const entry = exports === undefined ? undefined : exportFor(exports, '.');
         if (entry !== undefined) return path.resolve(absolute, entry);
-        if (typeof main === 'string') return resolvePath(path.resolve(absolute, main));
+        // A main that leads nowhere falls back to the index, as node does.
+        const fromMain = typeof main === 'string' ? resolvePath(path.resolve(absolute, main)) : undefined;
+        if (fromMain !== undefined) return fromMain;
       } catch {
         // An unreadable manifest is left to the index below.
       }
     }
+    // Looked for here rather than left to require, which warns on stderr
+    // about a main that leads nowhere before it falls back.
+    return ['index.js', 'index.mjs', 'index.cjs']
+      .map((index) => path.join(absolute, index))
+      .find((candidate) => fs.existsSync(candidate));
   }
   try {
     return createRequire(pathToFileURL(path.join(process.cwd(), 'noop.js'))).resolve(absolute);
