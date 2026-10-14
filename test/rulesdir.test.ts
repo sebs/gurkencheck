@@ -224,3 +224,15 @@ test('a custom rule name with a space or comma is refused, as no directive could
     /is called "my rule"; a rule name may not be empty or hold spaces or commas/u,
   );
 });
+
+test('a rules directory that cannot be read is an error, not an empty set', async () => {
+  if (process.platform === 'win32' || process.getuid?.() === 0) return;
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-locked-rules-'));
+  fs.chmodSync(directory, 0o000);
+  try {
+    await assert.rejects(loadRules([directory]), /Could not read the rules directory ".*": permission denied/u);
+  } finally {
+    fs.chmodSync(directory, 0o755);
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});

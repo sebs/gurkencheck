@@ -79,6 +79,17 @@ async function loadRulesFrom(directory: string): Promise<{rule: LintRule; file: 
   if (!stats.isDirectory()) {
     throw new Error(`The rules directory "${directory}" is not a directory.`);
   }
+  // Read outright first: the search below takes a directory it cannot read
+  // as an empty one, and the run went on without the rules - or with the
+  // built-in rule one of them replaces - and passed.
+  try {
+    fs.readdirSync(resolved);
+  } catch (thrown) {
+    const code = (thrown as NodeJS.ErrnoException).code;
+    throw new Error(
+      `Could not read the rules directory "${directory}": ${code === 'EACCES' || code === 'EPERM' ? 'permission denied' : String(code)}.`,
+    );
+  }
   // Declaration files sit beside TypeScript rules as a matter of course, and
   // hold types, not code; tests sit beside them as often, and importing one
   // to see whether it is a rule would run it.
