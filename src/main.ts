@@ -277,6 +277,16 @@ export async function run(
     return unreadable.length > 0 || unmatched.length > 0 ? EXIT_USAGE : code;
   };
 
+  /**
+   * True when the search could not do what it was asked - a path matched
+   * nothing, a directory could not be read. Such a run exits 2, and writes no
+   * report: an empty SARIF log or JUnit file reads as a clean result to the
+   * tool it is handed to, and code scanning would close every open alert.
+   */
+  const searchFailed = (): boolean =>
+    (search?.unreadable.length ?? 0) > 0 ||
+    unmatchedMessages(search ?? {unmatched: [], allIgnored: []}, positionals).length > 0;
+
   let passes = 0;
   /** How many warnings the last pass reported, for the notice after it. */
   let warningsThisPass = 0;
@@ -301,6 +311,7 @@ export async function run(
         (count) => {
           warningsThisPass = count;
         },
+        () => !searchFailed(),
       );
     }
 
@@ -312,6 +323,10 @@ export async function run(
         level: 'error',
         message: `The run failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
       });
+      return EXIT_USAGE;
+    }
+
+    if (searchFailed()) {
       return EXIT_USAGE;
     }
 
@@ -419,6 +434,7 @@ async function runStreaming(
   language: string | undefined,
   diagnostics: Diagnostics,
   onWarnings: (count: number) => void = () => undefined,
+  complete: () => boolean = () => true,
 ): Promise<number> {
   const write = (text: string | undefined): void => {
     if (text !== undefined && text !== '') {
@@ -450,13 +466,26 @@ async function runStreaming(
     // formatter, and the rules taken out would stop running.
     const run = streaming({rules: new Map(rules)});
     formatting = false;
-    write(await format('start', () => run.start?.()));
+    // The preamble waits for the first file, and the trailer is left off a
+    // run that could not search what it was asked: such a run is no report,
+    // and a TAP stream without its plan is one a harness knows to be broken.
+    let started = false;
+    const start = async (): Promise<void> => {
+      if (!started) {
+        started = true;
+        write(await format('start', () => run.start?.()));
+      }
+    };
     for await (const result of lintStream(files, configuration, rules, {language})) {
       failed ||= result.errors.some((error) => (error.severity ?? 'error') === 'error');
       warnings += result.errors.filter((error) => error.severity === 'warning').length;
+      await start();
       write(await format('file', () => run.file(result)));
     }
-    write(await format('end', () => run.end?.()));
+    if (complete()) {
+      await start();
+      write(await format('end', () => run.end?.()));
+    }
   } catch (thrown) {
     const reason = thrown instanceof Error ? thrown.message : String(thrown);
     diagnostics.report({

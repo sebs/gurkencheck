@@ -784,3 +784,14 @@ test('a streaming formatter pruning the rules it is handed does not stop them ru
     assert.equal(code, 1);
   });
 });
+
+test('a run that could not search what it was asked writes no report', async () => {
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    for (const format of ['sarif', 'junit', 'json', 'tap', 'stylish']) {
+      const {code, stdout, stderr} = await cli(['-f', format, 'nothing/*'], cwd);
+      assert.equal(code, 2, format);
+      assert.equal(stdout, '', format);
+      assert.match(stderr, /matched no feature files/u, format);
+    }
+  });
+});
