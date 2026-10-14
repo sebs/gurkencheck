@@ -8,7 +8,7 @@
  */
 import {parseArgs} from 'node:util';
 import {describeArgumentError, optionThatIsFileMessage, optionsThatAreFiles} from '../util/args.ts';
-import {DEFAULT_CONFIG_FILE_NAME, readConfiguredLanguage} from '../config-parser.ts';
+import {DEFAULT_CONFIG_FILE_NAME, readConfiguredLanguage, setIn} from '../config-parser.ts';
 import {EXIT_OK, EXIT_USAGE} from '../exit-codes.ts';
 import {
   DEFAULT_IGNORE_FILE_NAME,
@@ -131,18 +131,24 @@ export async function runStats(
   // that is missing, or a symlink to nothing, is said to be, as the linter
   // says it.
   let language = values.language;
+  let languageSource: string | undefined;
   if (language === undefined || values.config !== undefined) {
     const configured = await readConfiguredLanguage(values.config);
     if (!configured.ok) {
       diagnostics.report({level: 'error', message: configured.message, details: configured.details});
       return EXIT_USAGE;
     }
-    language ??= configured.language;
+    if (language === undefined) {
+      language = configured.language;
+      languageSource = configured.languageSource;
+    }
   }
   if (language !== undefined && !isKnownLanguage(language)) {
+    // Said where it came from, as the linter says it: a flag is fixed
+    // differently from a file, and a file may be far down an extends chain.
     diagnostics.report({
       level: 'error',
-      message: unknownLanguageMessage(language),
+      message: unknownLanguageMessage(language, languageSource === undefined ? ' given to --language' : setIn(languageSource)),
     });
     return EXIT_USAGE;
   }

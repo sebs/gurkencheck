@@ -7,7 +7,7 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {parseArgs} from 'node:util';
 import {describeArgumentError, optionThatIsFileMessage, optionsThatAreFiles} from './util/args.ts';
-import {DEFAULT_CONFIG_FILE_NAME, findConfigFile, readConfiguration} from './config-parser.ts';
+import {DEFAULT_CONFIG_FILE_NAME, findConfigFile, readConfiguration, setIn} from './config-parser.ts';
 import {EXIT_LINT_ERRORS, EXIT_OK, EXIT_USAGE} from './exit-codes.ts';
 import {
   DEFAULT_IGNORE_FILE_NAME,
@@ -166,7 +166,7 @@ export async function run(
       // Said where it came from: a flag is fixed differently from a file.
       const from =
         values.language === undefined && read.languageSource !== undefined
-          ? `, set in "${path.relative(process.cwd(), read.languageSource) || read.languageSource}"`
+          ? setIn(read.languageSource)
           : ' given to --language';
       diagnostics.report({
         level: 'error',

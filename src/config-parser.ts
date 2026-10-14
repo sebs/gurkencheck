@@ -394,7 +394,9 @@ function inFile(source: string | undefined, configPath: string): string {
  */
 export async function readConfiguredLanguage(
   configPath: string | undefined,
-): Promise<{ok: true; language: string | undefined} | {ok: false; message: string; details: string[]}> {
+): Promise<
+  {ok: true; language: string | undefined; languageSource?: string} | {ok: false; message: string; details: string[]}
+> {
   const file = configPath ?? findConfigFile();
   if (file === undefined) {
     return {ok: true, language: undefined};
@@ -404,8 +406,9 @@ export async function readConfiguredLanguage(
     return missing;
   }
   let flattened: {[LANGUAGE]?: unknown};
+  const origins = new Map<string, string>();
   try {
-    flattened = await flatten(parseFile(file), file, new Set(), new Set());
+    flattened = await flatten(parseFile(file), file, new Set(), new Set(), origins);
   } catch (thrown) {
     if (thrown instanceof ConfigurationError) {
       return {ok: false, message: `Could not read config file "${file}"`, details: [thrown.message]};
@@ -417,10 +420,17 @@ export async function readConfiguredLanguage(
     return {
       ok: false,
       message: `Could not read config file "${file}"`,
-      details: [`"${LANGUAGE}" must be a language code, such as "fr".`],
+      details: [`"${LANGUAGE}" must be a language code, such as "fr".${inFile(origins.get(LANGUAGE), file)}`],
     };
   }
-  return {ok: true, language};
+  return language === undefined
+    ? {ok: true, language}
+    : {ok: true, language, languageSource: origins.get(LANGUAGE) ?? file};
+}
+
+/** `, set in "ext/team.json"`: where a configured language came from. */
+export function setIn(source: string): string {
+  return `, set in "${shown(source)}"`;
 }
 
 /**

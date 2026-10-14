@@ -119,6 +119,26 @@ test('a language that is not a dialect is reported', async () => {
   assert.match(stderr, /Unknown language "klingon"/u);
 });
 
+test('an unknown language from a configuration says which file set it, as the linter does', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-stats-'));
+  try {
+    fs.mkdirSync(path.join(dir, 'ext'));
+    fs.writeFileSync(path.join(dir, 'ext', 'bad.json'), '{"language": "xx"}');
+    fs.writeFileSync(path.join(dir, 'inh.json'), '{"extends": "./ext/bad.json"}');
+    fs.writeFileSync(path.join(dir, 'a.feature'), 'Feature: A\n');
+    const stats = await cli(['stats', '-c', 'inh.json', 'a.feature'], dir);
+    const lint = await cli(['-c', 'inh.json', 'a.feature'], dir);
+    assert.equal(stats.code, 2);
+    assert.match(stats.stderr, /Unknown language "xx", set in "ext\/bad\.json"/u);
+    assert.match(lint.stderr, /Unknown language "xx", set in "ext\/bad\.json"/u);
+
+    const flag = await cli(['stats', '-l', 'xx', 'a.feature'], dir);
+    assert.match(flag.stderr, /Unknown language "xx" given to --language/u);
+  } finally {
+    fs.rmSync(dir, {recursive: true, force: true});
+  }
+});
+
 test('a path that names nothing is reported', async () => {
   const {code, stderr} = await cli(['stats', 'nowhere-at-all']);
   assert.equal(code, 2);
