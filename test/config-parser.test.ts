@@ -45,7 +45,7 @@ test('says which extended file a mistake is in', async () => {
     assert.ok(!result.ok);
     assert.deepEqual(result.details.sort(), [
       'Rule "also-fake" does not exist',
-      `Rule "fake-rule" does not exist (in "${path.relative(process.cwd(), path.join(directory, 'team.json'))}")`,
+      `Rule "fake-rule" does not exist (in "${path.relative(process.cwd(), path.join(fs.realpathSync(directory), 'team.json'))}")`,
     ]);
   } finally {
     fs.rmSync(directory, {recursive: true, force: true});
@@ -288,6 +288,22 @@ test('a configuration that is a symlink to nothing is reported, not passed over'
     ]);
   } finally {
     process.chdir(originalCwd);
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});
+
+test('a symlinked configuration extends from where it really is', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-linked-'));
+  try {
+    fs.mkdirSync(path.join(directory, 'shared'));
+    fs.mkdirSync(path.join(directory, 'project'));
+    fs.writeFileSync(path.join(directory, 'shared', 'base.json'), '{"no-empty-file": "on"}');
+    fs.writeFileSync(path.join(directory, 'shared', 'team.json'), '{"extends": "./base.json"}');
+    fs.symlinkSync(path.join(directory, 'shared', 'team.json'), path.join(directory, 'project', '.gurkencheckrc'));
+    const result = await readConfiguration(path.join(directory, 'project', '.gurkencheckrc'), rules);
+    assert.ok(result.ok, JSON.stringify(result));
+    assert.deepEqual(result.configuration, {'no-empty-file': 'on'});
+  } finally {
     fs.rmSync(directory, {recursive: true, force: true});
   }
 });

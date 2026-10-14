@@ -162,7 +162,15 @@ async function loadExtended(
     );
   }
 
-  const from = path.resolve(fromFile);
+  // From where the file really is: a shared configuration symlinked into a
+  // project names what it extends relative to itself, not to the link, as
+  // node resolves a symlinked module from its target.
+  let from = path.resolve(fromFile);
+  try {
+    from = fs.realpathSync(from);
+  } catch {
+    // A file that cannot be resolved is reported when it is read.
+  }
 
   if (specifier.startsWith('.') || path.isAbsolute(specifier)) {
     const resolved = path.resolve(path.dirname(from), specifier);
