@@ -8,6 +8,7 @@ import {DIRECTIVE_CHECKS} from './suppressions.ts';
 import {quoteValue} from './util/json.ts';
 import {closest} from './util/suggest.ts';
 import type {Configuration, LintRule, RuleRegistry} from './types.ts';
+import {asText, reasonOf} from './util/thrown.ts';
 
 const STATES = ['on', 'warn', 'off'];
 
@@ -137,8 +138,23 @@ function verifySettings(
   verifyTypes(prefix, availableConfigs as Record<string, unknown>, settings as Record<string, unknown>, '', errors);
   // The rule's own checks assume the types are right, so they run only then.
   if (errors.length === before && rule.verifySettings !== undefined) {
-    for (const problem of rule.verifySettings(settings as Record<string, unknown>)) {
-      errors.push(`${prefix}${problem}`);
+    // A custom rule's own code: one that throws - new RegExp over a pattern
+    // it was given - or hands back something other than a list was taken
+    // for a bug in gurkencheck. Nothing back means nothing wrong.
+    try {
+      const problems: unknown = rule.verifySettings(settings as Record<string, unknown>);
+      if (problems === undefined || problems === null) {
+        return;
+      }
+      if (!Array.isArray(problems)) {
+        errors.push(`${prefix}the rule's settings check returned ${typeof problems} instead of a list of problems`);
+        return;
+      }
+      for (const problem of problems as unknown[]) {
+        errors.push(`${prefix}${typeof problem === 'string' ? problem : asText(problem)}`);
+      }
+    } catch (thrown) {
+      errors.push(`${prefix}the rule's settings check failed: ${reasonOf(thrown)}`);
     }
   }
 }

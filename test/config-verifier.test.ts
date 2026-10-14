@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {verifyConfiguration} from '../src/config-verifier.ts';
 import {loadRules} from '../src/rules.ts';
-import type {Configuration} from '../src/types.ts';
+import type {Configuration, LintRule} from '../src/types.ts';
 
 const rules = await loadRules();
 
@@ -227,5 +227,22 @@ test('a directive check given a nonsense state is not told it has no settings', 
   }
   assert.deepEqual(verify({'unknown-directive': ['on', {}]} as unknown as Configuration), [
     'Invalid rule configuration for "unknown-directive" - the check has no settings, so the config should be "on", "warn" or "off"',
+  ]);
+});
+
+test('a custom rule s settings check that throws or hands back no list is the rule s problem', () => {
+  const custom = (verifySettings: (settings: Record<string, unknown>) => unknown) =>
+    new Map([
+      ...rules,
+      ['custom', {name: 'custom', run: () => [], availableConfigs: {pattern: ''}, verifySettings} as unknown as LintRule],
+    ]);
+  const config = {custom: ['on', {pattern: '(unclosed'}]} as unknown as Configuration;
+  assert.deepEqual(
+    verifyConfiguration(config, custom((settings) => [new RegExp(settings['pattern'] as string)].length && [])),
+    ['Invalid rule configuration for "custom" - the rule\'s settings check failed: Invalid regular expression: /(unclosed/: Unterminated group'],
+  );
+  assert.deepEqual(verifyConfiguration(config, custom(() => undefined)), [], 'nothing back is nothing wrong');
+  assert.deepEqual(verifyConfiguration(config, custom(() => 'bad')), [
+    'Invalid rule configuration for "custom" - the rule\'s settings check returned string instead of a list of problems',
   ]);
 });
