@@ -179,3 +179,10 @@ test('an always-on rule takes no settings, and an empty list is said to be one',
   ]);
   assert.deepEqual(verify({'one-feature-per-file': ['on']} as unknown as Configuration), []);
 });
+
+test('a number too large to read exactly is said to be too large', () => {
+  assert.deepEqual(verify({'name-length': ['on', {Step: JSON.parse('1e400') as number, Feature: 9007199254740993}]}), [
+    'Invalid rule configuration for "name-length" - "Step" is too large: it can be at most 9007199254740991',
+    'Invalid rule configuration for "name-length" - "Feature" is too large: it can be at most 9007199254740991',
+  ]);
+});

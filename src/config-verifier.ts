@@ -55,7 +55,13 @@ function verifyTypes(
       // Every number a rule takes counts something - characters, steps,
       // lines, spaces - so a fraction or a negative one has no meaning, and
       // would only be compared as though it had one.
-      fits = typeof value === 'number' && Number.isInteger(value) && value >= 0;
+      // Safe integers only: 1e400 is read as Infinity, and past 2^53 two
+      // different numbers in the file are one number once read.
+      fits = typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+      if (!fits && typeof value === 'number' && value > Number.MAX_SAFE_INTEGER) {
+        errors.push(`${prefix}"${name}" is too large: it can be at most ${Number.MAX_SAFE_INTEGER}`);
+        continue;
+      }
     } else if (typeof fallback === 'object' && fallback !== null) {
       fits = typeof value === 'object' && value !== null && !Array.isArray(value);
       if (fits) {
@@ -73,7 +79,9 @@ function verifyTypes(
       fits = typeof value === typeof fallback;
     }
     if (!fits) {
-      errors.push(`${prefix}"${name}" should be ${describeType(fallback)}, not ${JSON.stringify(value)}`);
+      // JSON.stringify writes Infinity and NaN as null.
+      const shown = typeof value === 'number' ? String(value) : JSON.stringify(value);
+      errors.push(`${prefix}"${name}" should be ${describeType(fallback)}, not ${shown}`);
     }
   }
 }
