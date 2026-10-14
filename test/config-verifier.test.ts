@@ -201,3 +201,9 @@ test('a tag with spaces, or with no name, is said to be no tag', () => {
     `${prefix} "@", which is not a tag: a tag is @ followed by a name with no spaces`,
   ]);
 });
+
+test('a single value wrapped in a list is said to be a list', () => {
+  assert.deepEqual(verify({'no-dupe-scenario-names': ['on', ['anywhere']]} as unknown as Configuration), [
+    'Invalid rule configuration for "no-dupe-scenario-names" - the rule takes a single value, not a list: write "anywhere" rather than ["anywhere"]',
+  ]);
+});

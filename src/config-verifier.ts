@@ -109,8 +109,12 @@ function verifySettings(
   if (Array.isArray(availableConfigs)) {
     // The rule takes one value out of a fixed list, e.g. "yes" or "no".
     if (!availableConfigs.includes(settings)) {
+      // Shown as written: String(["anywhere"]) is "anywhere", and the message
+      // read as refusing the very value it then listed as allowed.
       errors.push(
-        `${prefix}"${String(settings)}" is not one of the allowed values: ${describeAllowed(availableConfigs)}`,
+        Array.isArray(settings)
+          ? `${prefix}the rule takes a single value, not a list: write ${JSON.stringify(settings[0])} rather than ${JSON.stringify(settings)}`
+          : `${prefix}${JSON.stringify(settings)} is not one of the allowed values: ${describeAllowed(availableConfigs)}`,
       );
     }
     return;
