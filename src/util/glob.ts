@@ -184,23 +184,32 @@ function byPathOrder(a: fs.Dirent, b: fs.Dirent): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-function readEntries(directory: string): fs.Dirent[] {
+/** Told about each directory a walk could not read, and why. */
+export type OnUnreadable = (directory: string, reason: string) => void;
+
+function readEntries(directory: string, onUnreadable?: OnUnreadable): fs.Dirent[] {
   try {
     return fs.readdirSync(directory, {withFileTypes: true}).sort(byPathOrder);
-  } catch {
-    // A missing or unreadable directory simply contributes no matches.
+  } catch (thrown) {
+    // A directory gone since it was listed contributes no matches. One that
+    // is there and cannot be read is said so: passed over in silence, the
+    // files in it were never checked and the run looked clean.
+    const code = (thrown as NodeJS.ErrnoException).code;
+    if (code !== 'ENOENT') {
+      onUnreadable?.(directory, code === 'EACCES' || code === 'EPERM' ? 'permission denied' : String(code));
+    }
     return [];
   }
 }
 
-function walk(directory: string, onFile: (absolutePath: string) => void): void {
-  for (const entry of readEntries(directory)) {
+function walk(directory: string, onFile: (absolutePath: string) => void, onUnreadable?: OnUnreadable): void {
+  for (const entry of readEntries(directory, onUnreadable)) {
     if (isHidden(entry.name)) {
       continue;
     }
     const absolutePath = path.join(directory, entry.name);
     if (entry.isDirectory()) {
-      walk(absolutePath, onFile);
+      walk(absolutePath, onFile, onUnreadable);
     } else if (entry.isFile()) {
       onFile(absolutePath);
     }
@@ -218,11 +227,11 @@ function walk(directory: string, onFile: (absolutePath: string) => void): void {
  * it gives way at every file, and the reading and checking downstream happen
  * in the gaps.
  */
-async function* walkStream(root: string): AsyncGenerator<string> {
+async function* walkStream(root: string, onUnreadable?: OnUnreadable): AsyncGenerator<string> {
   // An explicit stack rather than recursion: a recursive async generator
   // delegates through one `yield*` per level of nesting for every file it
   // hands over, so a deep tree pays for its depth on every single file.
-  const stack = [{directory: root, entries: readEntries(root), index: 0}];
+  const stack = [{directory: root, entries: readEntries(root, onUnreadable), index: 0}];
 
   while (stack.length > 0) {
     const top = stack[stack.length - 1]!;
@@ -240,7 +249,7 @@ async function* walkStream(root: string): AsyncGenerator<string> {
     if (entry.isDirectory()) {
       // Pushed so that its contents come before the entries after it here,
       // which is what a depth-first walk means.
-      stack.push({directory: absolutePath, entries: readEntries(absolutePath), index: 0});
+      stack.push({directory: absolutePath, entries: readEntries(absolutePath, onUnreadable), index: 0});
     } else if (entry.isFile()) {
       yield absolutePath;
     }
@@ -260,6 +269,8 @@ export interface GlobOptions {
    * is, which need not be `cwd`. Left out, `cwd`.
    */
   ignoreBase?: string;
+  /** Told about each directory that could not be read. */
+  onUnreadable?: OnUnreadable;
 }
 
 /** One line of an ignore list, read the way .gitignore reads it. */
@@ -392,7 +403,7 @@ export function globSync(pattern: string, options: GlobOptions = {}): string[] {
   if (stats.isFile()) {
     consider(search.searchRoot);
   } else {
-    walk(search.searchRoot, consider);
+    walk(search.searchRoot, consider, options.onUnreadable);
   }
 
   return found.sort();
@@ -428,7 +439,7 @@ export async function* globStream(
     return;
   }
 
-  for await (const absolutePath of walkStream(search.searchRoot)) {
+  for await (const absolutePath of walkStream(search.searchRoot, options.onUnreadable)) {
     const relativePath = search.match(absolutePath);
     if (relativePath !== undefined) {
       yield relativePath;

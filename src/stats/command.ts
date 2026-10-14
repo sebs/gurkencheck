@@ -146,7 +146,7 @@ export async function runStats(
 
   // Given more than once, the lists add up rather than the last one winning.
   const ignore = values.ignore?.flatMap((list) => list.split(',').map((pattern) => pattern.trim()));
-  const {files, invalidPatterns} = findFeatureFileStream(positionals, ignore);
+  const {files, invalidPatterns, unreadable} = findFeatureFileStream(positionals, ignore);
 
   if (invalidPatterns.length > 0) {
     for (const pattern of invalidPatterns) {
@@ -167,5 +167,10 @@ export async function runStats(
   const statistics = await collectStatisticsFrom(readAndParseFiles(files, {language}));
 
   console.log(formatter(statistics, {top}));
-  return EXIT_OK;
+  // The numbers leave out whatever was in a directory that could not be
+  // read, which the report alone would never show.
+  for (const {directory, reason} of unreadable) {
+    diagnostics.report({level: 'error', message: `Could not read the directory "${directory}": ${reason}.`});
+  }
+  return unreadable.length > 0 ? EXIT_USAGE : EXIT_OK;
 }

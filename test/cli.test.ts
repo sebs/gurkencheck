@@ -600,3 +600,22 @@ test('the README extends example accepts a conventionally laid out file', async 
     assert.equal(code, 0);
   });
 });
+
+test('a directory that cannot be read is reported, not passed over', async () => {
+  if (process.platform === 'win32' || process.getuid?.() === 0) return;
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    const locked = path.join(cwd, 'locked');
+    fs.mkdirSync(locked);
+    fs.writeFileSync(path.join(locked, 'a.feature'), DIRTY_FEATURE);
+    fs.chmodSync(locked, 0o000);
+    try {
+      for (const args of [['locked'], ['.'], ['stats', '.']]) {
+        const {code, stderr} = await cli(args, cwd);
+        assert.equal(code, 2, args.join(' '));
+        assert.match(stderr, /Could not read the directory "locked": permission denied/u, args.join(' '));
+      }
+    } finally {
+      fs.chmodSync(locked, 0o755);
+    }
+  });
+});

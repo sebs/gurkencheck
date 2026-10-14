@@ -19,6 +19,8 @@ export interface FeatureSearch {
   invalidPatterns: string[];
   /** Feature files named outright that the ignore patterns skip. */
   ignoredFiles: string[];
+  /** Directories the search could not read, each with why. */
+  unreadable: {directory: string; reason: string}[];
 }
 
 export interface FeatureFileStream {
@@ -42,6 +44,11 @@ export interface FeatureFileStream {
    * nothing about, it reads as a clean result.
    */
   ignoredFiles: string[];
+  /**
+   * Directories the search could not read, each with why. Filled in as the
+   * walk meets them, so complete once `files` has been read to the end.
+   */
+  unreadable: {directory: string; reason: string}[];
 }
 
 /**
@@ -274,6 +281,12 @@ export function findFeatureFiles(
   const files: string[] = [];
   const invalidPatterns: string[] = [];
   const ignoredFiles: string[] = [];
+  const unreadable: {directory: string; reason: string}[] = [];
+  const onUnreadable = (directory: string, reason: string): void => {
+    if (!unreadable.some((entry) => entry.directory === directory)) {
+      unreadable.push({directory: path.relative(process.cwd(), directory) || '.', reason});
+    }
+  };
 
   for (const pattern of searched) {
     const globs = toFeatureGlobs(pattern);
@@ -286,12 +299,14 @@ export function findFeatureFiles(
     }
     for (const featureGlob of globs) {
       files.push(
-        ...globSync(featureGlob, {ignore: ignore.patterns, ignoreBase: ignore.base}).filter(isFeatureFile),
+        ...globSync(featureGlob, {ignore: ignore.patterns, ignoreBase: ignore.base, onUnreadable}).filter(
+          isFeatureFile,
+        ),
       );
     }
   }
 
-  return {files: withoutRepeats(files), invalidPatterns, ignoredFiles};
+  return {files: withoutRepeats(files), invalidPatterns, ignoredFiles, unreadable};
 }
 
 /**
@@ -315,6 +330,13 @@ export function findFeatureFileStream(
   const globs: string[] = [];
   const invalidPatterns: string[] = [];
   const ignoredFiles: string[] = [];
+  const unreadable: {directory: string; reason: string}[] = [];
+  const onUnreadable = (directory: string, reason: string): void => {
+    const shown = path.relative(process.cwd(), directory) || '.';
+    if (!unreadable.some((entry) => entry.directory === shown)) {
+      unreadable.push({directory: shown, reason});
+    }
+  };
 
   for (const pattern of searched) {
     const expanded = toFeatureGlobs(pattern);
@@ -332,7 +354,11 @@ export function findFeatureFileStream(
     const seen = globs.length > 1 ? new Set<string>() : undefined;
 
     for (const featureGlob of globs) {
-      for await (const file of globStream(featureGlob, {ignore: ignore.patterns, ignoreBase: ignore.base})) {
+      for await (const file of globStream(featureGlob, {
+        ignore: ignore.patterns,
+        ignoreBase: ignore.base,
+        onUnreadable,
+      })) {
         if (!isFeatureFile(file)) continue;
         if (seen !== undefined) {
           const identity = identityOf(file);
@@ -344,7 +370,7 @@ export function findFeatureFileStream(
     }
   }
 
-  return {files: files(), invalidPatterns, ignoredFiles};
+  return {files: files(), invalidPatterns, ignoredFiles, unreadable};
 }
 
 /**

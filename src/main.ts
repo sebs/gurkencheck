@@ -233,11 +233,28 @@ export async function run(
 
   // Discovery is a stream, and a stream can only be read once - so a run that
   // may happen more than once is given a fresh one each time.
-  const discover = (): Sequence<string> =>
-    findFeatureFileStream(positionals, ignore).files;
+  let search: ReturnType<typeof findFeatureFileStream> | undefined;
+  const discover = (): Sequence<string> => {
+    search = findFeatureFileStream(positionals, ignore);
+    return search.files;
+  };
+
+  /**
+   * One pass, then what the walk could not read. A directory passed over
+   * without a word left its files unchecked and the run clean, so it makes
+   * the run one that could not do what it was asked.
+   */
+  const checkOnce = async (): Promise<number> => {
+    const code = await checkFiles();
+    const unreadable = search?.unreadable ?? [];
+    for (const {directory, reason} of unreadable) {
+      diagnostics.report({level: 'error', message: `Could not read the directory "${directory}": ${reason}.`});
+    }
+    return unreadable.length > 0 ? EXIT_USAGE : code;
+  };
 
   let passes = 0;
-  const checkOnce = async (): Promise<number> => {
+  const checkFiles = async (): Promise<number> => {
     if (passes++ > 0) {
       settings = await readSettings();
     }
