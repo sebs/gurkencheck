@@ -372,7 +372,7 @@ module that is itself the function all work.
 
 Point `--rulesdir` at a directory of your own modules. Each exports an object with a
 `name` and a `run` function, and is called once per file. CommonJS, ES modules and
-TypeScript all work.
+TypeScript all work: `.js`, `.mjs`, `.cjs`, `.ts`, `.mts` and `.cts`.
 
 ```js
 // rules/no-lorem.js

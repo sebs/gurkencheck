@@ -20,7 +20,7 @@ import type {Feature} from '@cucumber/messages';
 import {globSync} from './util/glob.ts';
 
 /** File extensions a custom rule may be written in. */
-const RULE_EXTENSIONS = '{js,mjs,cjs,ts}';
+const RULE_EXTENSIONS = '{js,mjs,cjs,ts,mts,cts}';
 
 function isRule(candidate: unknown): candidate is LintRule {
   return (

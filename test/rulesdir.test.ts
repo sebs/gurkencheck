@@ -184,3 +184,9 @@ test('the same rules directory given twice is not a clash with itself', async ()
   const rules = await loadRules(['test/rulesdir/rules', 'test/rulesdir/rules']);
   assert.ok(rules.has('custom'));
 });
+
+test('rules written as .mts and .cts are loaded too', async () => {
+  const rules = await loadRules(['test/rulesdir/module_rules']);
+  assert.ok(rules.has('esm-typed'));
+  assert.ok(rules.has('cjs-typed'));
+});
