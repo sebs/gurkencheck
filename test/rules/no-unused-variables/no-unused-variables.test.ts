@@ -33,3 +33,7 @@ test('says nothing about a step variable missing from the table', async () => {
   // That is no-undeclared-variables' job.
   await checkRule(rule, 'no-undeclared-variables/UnusedStepVariables.feature', {}, []);
 });
+
+test('a column whose name holds a quote or = is used where its <name> is', async () => {
+  await checkRule(rule, 'no-unused-variables/UnusualColumns.feature', {}, []);
+});

@@ -68,14 +68,34 @@ function note(variable: string, position: Position, into: Sightings): void {
  * at the column of the variable itself. Columns count characters, as Gherkin
  * counts them, not UTF-16 units.
  */
-function collect(text: string | undefined, start: Position, into: Sightings): void {
+function collect(
+  text: string | undefined,
+  start: Position,
+  into: Sightings,
+  unusualColumns: readonly string[] = [],
+): void {
   if (text === undefined || text === '') {
     return;
   }
+  const positionAt = (index: number): Position => {
+    const offset = [...text.slice(0, index)].length;
+    return {...start, ...(start.column === undefined ? {} : {column: start.column + offset})};
+  };
   for (const match of text.matchAll(VARIABLE)) {
-    const offset = [...text.slice(0, match.index)].length;
-    note(match[1]!, {...start, ...(start.column === undefined ? {} : {column: start.column + offset})}, into);
+    note(match[1]!, positionAt(match.index), into);
   }
+  // A column whose name holds a quote or = is filled in by Cucumber all the
+  // same, but is not placeholder-shaped, so its <name> is looked for as it is.
+  for (const column of unusualColumns) {
+    for (let index = text.indexOf(`<${column}>`); index !== -1; index = text.indexOf(`<${column}>`, index + 1)) {
+      note(column, positionAt(index), into);
+    }
+  }
+}
+
+/** True when `<name>` reads as a variable to VARIABLE. */
+function isPlaceholderShaped(name: string): boolean {
+  return new RegExp(`^${VARIABLE.source}$`, 'u').test(`<${name}>`);
 }
 
 /** The column `text` starts at on `line`, or `fallback` when it is not there. */
@@ -108,6 +128,8 @@ export function variablesOf(scenario: Scenario, lines?: readonly string[]): Scen
     tables.push({line: examples.location.line, columns});
   }
 
+  const unusual = [...declared.keys()].filter((name) => !isPlaceholderShaped(name));
+
   const nameLine = scenario.location.line;
   collect(
     scenario.name,
@@ -117,18 +139,19 @@ export function variablesOf(scenario: Scenario, lines?: readonly string[]): Scen
       in: `${scenario.keyword} name`,
     },
     used,
+    unusual,
   );
 
   for (const step of scenario.steps) {
     // The keyword holds the space after it, so the text starts right there.
     const textColumn = (step.location.column ?? 1) + [...step.keyword].length;
-    collect(step.text, {line: step.location.line, column: textColumn, in: 'step'}, used);
+    collect(step.text, {line: step.location.line, column: textColumn, in: 'step'}, used, unusual);
 
     // Steps can carry a data table or a doc string, and both may contain
     // variables. See https://cucumber.io/docs/gherkin/reference/
     for (const row of step.dataTable?.rows ?? []) {
       for (const cell of row.cells) {
-        collect(cell.value, {...at(cell.location), in: 'step'}, used);
+        collect(cell.value, {...at(cell.location), in: 'step'}, used, unusual);
       }
     }
     // A doc string's content starts on the line below its opening delimiter,
@@ -140,9 +163,10 @@ export function variablesOf(scenario: Scenario, lines?: readonly string[]): Scen
         mediaType,
         {line: location.line, column: (location.column ?? 1) + delimiter.length, in: 'step'},
         used,
+        unusual,
       );
       content.split('\n').forEach((line, index) => {
-        collect(line, {line: location.line + 1 + index, column: location.column, in: 'step'}, used);
+        collect(line, {line: location.line + 1 + index, column: location.column, in: 'step'}, used, unusual);
       });
     }
   }
