@@ -95,10 +95,19 @@ function lstatOrUndefined(target: string): fs.Stats | undefined {
 /**
  * A path as a message shows it: relative to the working directory, as the
  * rest of the messages are, where it is absolute - as a file reached through
- * extends always is.
+ * extends always is - and below the working directory.
  */
 function shown(file: string): string {
-  return path.isAbsolute(file) ? path.relative(process.cwd(), file) || file : file;
+  if (!path.isAbsolute(file)) {
+    return file;
+  }
+  // Relative only below the working directory: /dev/null shown as
+  // ../../../../dev/null reads as a path nobody wrote.
+  const relative = path.relative(process.cwd(), file);
+  if (relative === '') {
+    return '.';
+  }
+  return relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative) ? file : relative;
 }
 
 /**

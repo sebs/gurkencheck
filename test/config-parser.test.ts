@@ -246,9 +246,8 @@ test('a configuration that is a directory is said to be one, not a parse error',
   try {
     const result = await readConfiguration(directory, rules);
     assert.ok(!result.ok);
-    assert.deepEqual(result.details, [
-      `Could not read "${path.relative(process.cwd(), directory)}": it is a directory, not a file.`,
-    ]);
+    // Outside the working directory, so shown as the absolute path it is.
+    assert.deepEqual(result.details, [`Could not read "${directory}": it is a directory, not a file.`]);
 
     fs.writeFileSync(path.join(directory, 'rc.json'), '{"extends": "./"}');
     const extended = await readConfiguration(path.join(directory, 'rc.json'), rules);
@@ -345,14 +344,14 @@ test('a preset named without its prefix, or misspelt, gets the one meant', async
   }
 });
 
-test('a mistake in an extended file names it relative to the working directory', async () => {
+test('a mistake in an extended file outside the working directory names it by its whole path', async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-shown-'));
   try {
     fs.writeFileSync(path.join(directory, 'base.json'), '{bad');
     fs.writeFileSync(path.join(directory, 'rc.json'), '{"extends": "./base.json"}');
     const result = await readConfiguration(path.join(directory, 'rc.json'), rules);
     assert.ok(!result.ok);
-    assert.match(result.details[0]!, /^Could not parse "\.\.\//u);
+    assert.ok(result.details[0]!.startsWith(`Could not parse "${path.join(fs.realpathSync(directory), 'base.json')}"`), result.details[0]);
   } finally {
     fs.rmSync(directory, {recursive: true, force: true});
   }
