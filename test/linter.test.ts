@@ -313,3 +313,23 @@ test('a directive naming something that cannot be switched off is warned about',
     fs.rmSync(file, {force: true});
   }
 });
+
+test('a comment that looks like a directive and is not one is warned about', async () => {
+  const file = path.join(os.tmpdir(), `gurkencheck-misspelt-${process.pid}.feature`);
+  fs.writeFileSync(
+    file,
+    '# gurkencheck-disable-nextline use-and\n# GURKENCHECK-DISABLE\nFeature: A\n  Scenario: B\n    Given c\n',
+  );
+  try {
+    const [result] = await lint([file], {}, await loadRules());
+    assert.deepEqual(
+      result!.errors.map(({message, rule, line}) => [rule, line, message]),
+      [
+        ['unknown-directive', 1, '"gurkencheck-disable-nextline" is not a directive, so it switches nothing off. Did you mean "gurkencheck-disable-next-line"?'],
+        ['unknown-directive', 2, '"GURKENCHECK-DISABLE" is not a directive, so it switches nothing off. Did you mean "gurkencheck-disable"?'],
+      ],
+    );
+  } finally {
+    fs.rmSync(file, {force: true});
+  }
+});

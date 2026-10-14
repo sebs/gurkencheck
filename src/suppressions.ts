@@ -38,6 +38,20 @@ const DIRECTIVE = /^\s*#\s*gurkencheck-(disable-next-line|disable-file|disable|e
 /** The warning given for a directive naming a rule that does not exist. */
 export const UNKNOWN_RULE_IN_DIRECTIVE = 'unknown-rule-in-directive';
 
+/** The warning given for a comment that looks like a directive and is not one. */
+export const UNKNOWN_DIRECTIVE = 'unknown-directive';
+
+/** The directives there are, for telling a misspelt one what it meant. */
+export const DIRECTIVES = [
+  'gurkencheck-disable-next-line',
+  'gurkencheck-disable-file',
+  'gurkencheck-disable',
+  'gurkencheck-enable',
+] as const;
+
+/** A comment that starts like a directive, in any case. */
+const LOOKS_LIKE_DIRECTIVE = /^\s*#\s*(gurkencheck-[\w-]*)/iu;
+
 /** Stands in for "every rule" when a directive names none. */
 const ALL_RULES = '*';
 
@@ -55,6 +69,8 @@ export interface Suppressions {
   readonly isEmpty: boolean;
   /** Every rule a directive names, with the line of the directive. */
   readonly named: readonly {rule: string; line: number}[];
+  /** Comments that look like a directive and are not one, with their line. */
+  readonly misspelt: readonly {directive: string; line: number}[];
 }
 
 function parseRuleNames(rest: string): string[] {
@@ -81,6 +97,7 @@ export function readSuppressions(lines: readonly string[], feature?: Feature): S
   const nextLine = new Map<number, Set<string>>();
   const switches: Switch[] = [];
   const named: {rule: string; line: number}[] = [];
+  const misspelt: {directive: string; line: number}[] = [];
   let found = false;
   /**
    * The `Feature:` line, or without a parsed feature the first line that is
@@ -99,6 +116,12 @@ export function readSuppressions(lines: readonly string[], feature?: Feature): S
     }
     const directive = DIRECTIVE.exec(text);
     if (directive === null) {
+      // Ignored, as it always was - a misspelt directive must not switch off
+      // something else - but no longer without a word.
+      const lookalike = LOOKS_LIKE_DIRECTIVE.exec(text);
+      if (lookalike !== null) {
+        misspelt.push({directive: lookalike[1]!, line: index + 1});
+      }
       return;
     }
 
@@ -127,8 +150,9 @@ export function readSuppressions(lines: readonly string[], feature?: Feature): S
     candidate === ALL_RULES || candidate === rule;
 
   return {
-    isEmpty: !found,
+    isEmpty: !found && misspelt.length === 0,
     named,
+    misspelt,
     isSuppressed(error: RuleError): boolean {
       // A rule that crashed has not checked the file, and hiding that would
       // read as a file that passed. It is never the file's to switch off.

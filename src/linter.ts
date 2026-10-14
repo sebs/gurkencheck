@@ -4,14 +4,15 @@
 import path from 'node:path';
 import {PARSER_RULES, readAndParseFiles} from './gherkin/parse.ts';
 import {beginRun, finishRun, isRuleEnabled, runEnabledRules} from './rules.ts';
-import {UNKNOWN_RULE_IN_DIRECTIVE, readSuppressions} from './suppressions.ts';
+import {DIRECTIVES, UNKNOWN_DIRECTIVE, UNKNOWN_RULE_IN_DIRECTIVE, readSuppressions} from './suppressions.ts';
+import {closest} from './util/suggest.ts';
 import type {Suppressions} from './suppressions.ts';
 import type {Configuration, FileResult, RuleError, RuleRegistry} from './types.ts';
 import {sortBy} from './util/collections.ts';
 import type {Sequence} from './util/stream.ts';
 
 /** Stands in for a file whose directives were never read, and hides nothing. */
-const EMPTY_SUPPRESSIONS: Suppressions = {isEmpty: true, named: [], isSuppressed: () => false};
+const EMPTY_SUPPRESSIONS: Suppressions = {isEmpty: true, named: [], misspelt: [], isSuppressed: () => false};
 
 export interface LintOptions {
   /**
@@ -69,7 +70,7 @@ function unknownRulesNamed(suppressions: Suppressions, rules: RuleRegistry): Rul
     // The always-on rules, a crash and this warning itself are reported
     // whatever a directive says, so naming one switches nothing off either.
     const unswitchable =
-      (PARSER_RULES as readonly string[]).includes(rule) || rule === UNKNOWN_RULE_IN_DIRECTIVE;
+      (PARSER_RULES as readonly string[]).includes(rule) || rule === UNKNOWN_RULE_IN_DIRECTIVE || rule === UNKNOWN_DIRECTIVE;
     if (!unswitchable && rules.has(rule)) {
       continue;
     }
@@ -83,6 +84,22 @@ function unknownRulesNamed(suppressions: Suppressions, rules: RuleRegistry): Rul
     });
   }
   return findings;
+}
+
+/** A warning for each comment that looks like a directive and is not one. */
+function misspeltDirectives(suppressions: Suppressions): RuleError[] {
+  return suppressions.misspelt.map(({directive, line}) => {
+    const meant = closest(directive, DIRECTIVES);
+    return {
+      message:
+        meant === undefined
+          ? `"${directive}" is not a directive, so it switches nothing off`
+          : `"${directive}" is not a directive, so it switches nothing off. Did you mean "${meant}"?`,
+      rule: UNKNOWN_DIRECTIVE,
+      line,
+      severity: 'warning' as const,
+    };
+  });
 }
 
 export async function* lintStream(
@@ -112,7 +129,7 @@ export async function* lintStream(
       suppressions = readSuppressions(result.file.lines, result.feature);
       if (!suppressions.isEmpty) {
         errors = errors.filter((error) => !suppressions.isSuppressed(error));
-        errors.push(...unknownRulesNamed(suppressions, rules));
+        errors.push(...unknownRulesNamed(suppressions, rules), ...misspeltDirectives(suppressions));
       }
     }
 

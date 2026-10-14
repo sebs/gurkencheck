@@ -6,7 +6,7 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {PARSER_RULES} from './gherkin/parse.ts';
 import {BUILT_IN_RULES} from './rules/index.ts';
-import {UNKNOWN_RULE_IN_DIRECTIVE} from './suppressions.ts';
+import {UNKNOWN_DIRECTIVE, UNKNOWN_RULE_IN_DIRECTIVE} from './suppressions.ts';
 import type {
   Configuration,
   FeatureFile,
@@ -31,7 +31,7 @@ function realPath(file: string): string {
 }
 
 /** Names no custom rule may take: those gurkencheck reports under itself. */
-const RESERVED_RULE_NAMES = [...PARSER_RULES, UNKNOWN_RULE_IN_DIRECTIVE];
+const RESERVED_RULE_NAMES = [...PARSER_RULES, UNKNOWN_RULE_IN_DIRECTIVE, UNKNOWN_DIRECTIVE];
 
 /** File extensions a custom rule may be written in. */
 const RULE_EXTENSIONS = '{js,mjs,cjs,ts,mts,cts}';
