@@ -523,8 +523,38 @@ function stopWritingWhenOutputCloses(): void {
   });
 }
 
+/**
+ * Ends the run as one that could not run when something fails outside it -
+ * a promise a plugin left to reject with nobody waiting, an exception thrown
+ * from a timer. Node would end it with 1, the code for "a rule was broken",
+ * whether or not one was, and often with no report at all.
+ */
+function failOnStrayErrors(): void {
+  const fail = (thrown: unknown): void => {
+    TO_STDERR.report({
+      level: 'error',
+      message: `Something failed outside the run, most likely in a custom rule or formatter: ${
+        thrown instanceof Error ? thrown.message : safeText(thrown)
+      }`,
+    });
+    process.exit(EXIT_USAGE);
+  };
+  process.on('unhandledRejection', fail);
+  process.on('uncaughtException', fail);
+}
+
+/** A thrown value as text, even one that cannot be turned into a string. */
+function safeText(value: unknown): string {
+  try {
+    return String(value);
+  } catch {
+    return 'a value that cannot be shown as text';
+  }
+}
+
 // Only take over the process when run as a command, not when imported.
 if (isMainModule()) {
+  failOnStrayErrors();
   stopWritingWhenOutputCloses();
   process.exitCode = await main(process.argv.slice(2));
 }

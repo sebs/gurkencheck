@@ -759,3 +759,11 @@ test('--watch notices the fix to an extended file it was told is broken', async 
     }
   });
 });
+
+test('a failure outside the run, in plugin code, is a failure to run, not a finding', async () => {
+  await withProject(CLEAN_FEATURE, '{"stray": "on"}', async (cwd) => {
+    const {code, stderr} = await cli(['--rulesdir', path.resolve('test/rulesdir/stray_rules'), '.'], cwd);
+    assert.equal(code, 2);
+    assert.match(stderr, /Something failed outside the run, most likely in a custom rule or formatter: nobody was waiting/u);
+  });
+});
