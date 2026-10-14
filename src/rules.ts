@@ -230,6 +230,17 @@ function normalise<T extends RuleError | RunFinding>(
   ruleName: string,
   severity: Severity,
 ): T {
+  // Something that is not a finding at all - null, a string - could not be
+  // taken apart, and throwing here lost every other finding of the run. It is
+  // reported in its own place, as a rule handing back a non-list is.
+  if (typeof finding !== 'object' || finding === null || Array.isArray(finding)) {
+    const what = finding === null ? 'null' : Array.isArray(finding) ? 'an array' : typeof finding;
+    return {
+      message: `Rule "${ruleName}" returned ${what} among its findings`,
+      rule: 'unexpected-error',
+      line: 0,
+    } as T;
+  }
   const {message, column, ...rest} = finding as T & {message?: unknown};
   const line = lineOf(finding);
   return {

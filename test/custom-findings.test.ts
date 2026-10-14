@@ -106,3 +106,15 @@ test('a column is kept only where it can be one', async () => {
     },
   );
 });
+
+test('something that is not a finding is reported in its place, and the rest are kept', async () => {
+  const errors = await findingsOf([null, 'oops', {message: 'kept', line: 1}]);
+  assert.deepEqual(
+    errors.map(({message, rule}) => [message, rule]),
+    [
+      ['Rule "custom" returned null among its findings', 'unexpected-error'],
+      ['Rule "custom" returned string among its findings', 'unexpected-error'],
+      ['kept', 'custom'],
+    ],
+  );
+});
