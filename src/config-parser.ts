@@ -101,6 +101,24 @@ function shown(file: string): string {
   return path.isAbsolute(file) ? path.relative(process.cwd(), file) || file : file;
 }
 
+/**
+ * Why a configuration named outright cannot be had, or undefined when it is
+ * there to read: missing, or out of reach - which, said to be missing, sent
+ * you looking for a typo in a path that was right.
+ */
+function missingConfiguration(file: string): {ok: false; message: string; details: string[]} | undefined {
+  try {
+    fs.lstatSync(file);
+    return undefined;
+  } catch (thrown) {
+    const code = (thrown as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT' || code === 'ENOTDIR') {
+      return {ok: false, message: `Could not find specified config file "${file}"`, details: []};
+    }
+    return {ok: false, message: `Could not read config file "${file}"`, details: [`Could not reach it: ${unreadableBecause(thrown, file)}.`]};
+  }
+}
+
 /** Why a file could not be read, in words rather than as an errno. */
 function unreadableBecause(thrown: unknown, filePath: string): string {
   const code = (thrown as NodeJS.ErrnoException | undefined)?.code;
@@ -347,8 +365,9 @@ export async function readConfiguredLanguage(
   if (file === undefined) {
     return {ok: true, language: undefined};
   }
-  if (lstatOrUndefined(file) === undefined) {
-    return {ok: false, message: `Could not find specified config file "${file}"`, details: []};
+  const missing = missingConfiguration(file);
+  if (missing !== undefined) {
+    return missing;
   }
   let flattened: {[LANGUAGE]?: unknown};
   try {
@@ -380,12 +399,9 @@ export async function readConfiguration(
   rules: RuleRegistry,
 ): Promise<ConfigurationResult> {
   if (configPath !== undefined) {
-    if (lstatOrUndefined(configPath) === undefined) {
-      return {
-        ok: false,
-        message: `Could not find specified config file "${configPath}"`,
-        details: [],
-      };
+    const missing = missingConfiguration(configPath);
+    if (missing !== undefined) {
+      return missing;
     }
   }
   const foundByLooking = configPath === undefined;

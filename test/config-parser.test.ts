@@ -382,3 +382,19 @@ test('a key given twice is refused, rather than the first silently dropped', asy
     fs.rmSync(directory, {recursive: true, force: true});
   }
 });
+
+test('a configuration in a directory that may not be searched is said to be out of reach', async () => {
+  if (process.platform === 'win32' || process.getuid?.() === 0) return;
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-unsearchable-'));
+  fs.writeFileSync(path.join(directory, 'rc.json'), '{}');
+  fs.chmodSync(directory, 0o000);
+  try {
+    const result = await readConfiguration(path.join(directory, 'rc.json'), rules);
+    assert.ok(!result.ok);
+    assert.match(result.message, /^Could not read config file/u);
+    assert.deepEqual(result.details, ['Could not reach it: permission was denied.']);
+  } finally {
+    fs.chmodSync(directory, 0o755);
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});
