@@ -128,6 +128,7 @@ test('a rule that throws at the end of a run is reported, not swallowed', async 
       line: 0,
       message: 'Rule "exploding" failed at the end of the run: the tally would not add up',
       rule: 'unexpected-error',
+      severity: 'error',
     },
   ]);
 });

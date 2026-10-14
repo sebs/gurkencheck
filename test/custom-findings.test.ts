@@ -132,3 +132,13 @@ test('a message that cannot be made into text is said to be one, and the run goe
     ],
   );
 });
+
+test('a rule set to warn that crashes only warns', async () => {
+  const rule = {name: 'custom', run: () => { throw new Error('boom'); }} as unknown as LintRule;
+  const results = await lint([FILE], {custom: 'warn'}, new Map([['custom', rule]]));
+  assert.deepEqual(
+    results[0]!.errors.map(({rule: name, severity}) => [name, severity]),
+    [['unexpected-error', 'warning']],
+  );
+  assert.equal(hasErrors(results), false);
+});

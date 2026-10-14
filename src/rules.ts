@@ -282,6 +282,7 @@ function normalise<T extends RuleError | RunFinding>(
       message: `Rule "${ruleName}" returned ${what} among its findings`,
       rule: 'unexpected-error',
       line: 0,
+      severity,
     } as T;
   }
   const {message, column, ...rest} = finding as T & {message?: unknown};
@@ -316,12 +317,13 @@ function normalise<T extends RuleError | RunFinding>(
  * other than a list. Iterating it anyway would throw somewhere far from the
  * rule, and the message would name whatever happened to be running there.
  */
-function notAList(ruleName: string, found: unknown): RuleError {
+function notAList(ruleName: string, found: unknown, severity: Severity): RuleError {
   const what = found === null ? 'null' : typeof found;
   return {
     message: `Rule "${ruleName}" returned ${what} instead of an array of findings`,
     rule: 'unexpected-error',
     line: 0,
+    severity,
   };
 }
 
@@ -349,7 +351,7 @@ export async function finishRun(
     try {
       const found: unknown = await rule.onRunEnd(getRuleSettings(config), run.contextFor(rule.name));
       if (!Array.isArray(found)) {
-        findings.push(notAList(rule.name, found));
+        findings.push(notAList(rule.name, found, severity));
         continue;
       }
       for (const finding of found as RunFinding[]) {
@@ -361,6 +363,7 @@ export async function finishRun(
         message: `Rule "${rule.name}" failed at the end of the run: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
         rule: 'unexpected-error',
         line: 0,
+        severity,
       });
     }
   }
@@ -412,16 +415,19 @@ export async function runEnabledRules(
       // one meeting a file it did not expect - costs you that rule's findings
       // for this file, not every other rule's. The failure is reported in
       // their place so that it cannot pass unnoticed.
+      // As loud as the rule is set to be: a rule set to warn does not fail
+      // the run by crashing either.
       errors.push({
         message: `Rule "${rule.name}" failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
         rule: 'unexpected-error',
         line: 0,
+        severity,
       });
       continue;
     }
 
     if (!Array.isArray(found)) {
-      errors.push(notAList(rule.name, found));
+      errors.push(notAList(rule.name, found, severity));
       continue;
     }
 

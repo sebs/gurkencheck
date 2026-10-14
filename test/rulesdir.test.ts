@@ -90,6 +90,7 @@ test('a rule that throws is reported rather than swallowed, and fails the run', 
       line: 0,
       message: 'Rule "exploding" failed: the issue tracker is down',
       rule: 'unexpected-error',
+      severity: 'error',
     },
   ]);
   assert.ok(hasErrors(results), 'a rule that throws should still fail the run');
