@@ -354,3 +354,20 @@ test('a file named with a slash after it is the file', () => {
   assert.deepEqual(findFeatureFiles([`${FOUND}/a.feature/`]).files, [`${FOUND}/a.feature`]);
   assert.deepEqual(findFeatureFiles([`${FOUND}/a.feature/`]).invalidPatterns, []);
 });
+
+test('says what is wrong with a symlink loop, a dangling symlink and an unreachable file', () => {
+  fs.symlinkSync('loop', 'loop');
+  fs.symlinkSync('gone.feature', 'dangling.feature');
+  assert.equal(describeInvalidPattern('loop'), '"loop" is a symlink that leads back to itself.');
+  assert.equal(describeInvalidPattern('dangling.feature'), '"dangling.feature" is a symlink to gone.feature, which does not exist.');
+  if (process.platform !== 'win32' && process.getuid?.() !== 0) {
+    fs.mkdirSync('locked');
+    fs.writeFileSync('locked/a.feature', '');
+    fs.chmodSync('locked', 0o000);
+    try {
+      assert.equal(describeInvalidPattern('locked/a.feature'), '"locked/a.feature" cannot be reached: permission denied.');
+    } finally {
+      fs.chmodSync('locked', 0o755);
+    }
+  }
+});

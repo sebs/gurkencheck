@@ -184,7 +184,23 @@ export function describeInvalidPattern(pattern: string): string {
   let stats: fs.Stats | undefined;
   try {
     stats = fs.statSync(pattern);
-  } catch {
+  } catch (thrown) {
+    // Each of these is there in some sense, and "does not exist" sent you
+    // looking for a typo.
+    const code = (thrown as NodeJS.ErrnoException).code;
+    if (code === 'ELOOP') {
+      return `"${pattern}" is a symlink that leads back to itself.`;
+    }
+    if (code === 'EACCES' || code === 'EPERM') {
+      return `"${pattern}" cannot be reached: permission denied.`;
+    }
+    try {
+      if (fs.lstatSync(pattern).isSymbolicLink()) {
+        return `"${pattern}" is a symlink to ${fs.readlinkSync(pattern)}, which does not exist.`;
+      }
+    } catch {
+      // Not there at all.
+    }
     return `"${pattern}" does not exist.`;
   }
   if (stats.isFile()) {
