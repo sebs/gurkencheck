@@ -26,7 +26,10 @@ export function findConfigFile(cwd: string = process.cwd()): string | undefined 
   let directory = path.resolve(cwd);
   for (;;) {
     const candidate = path.join(directory, DEFAULT_CONFIG_FILE_NAME);
-    if (fs.existsSync(candidate)) {
+    // lstat rather than exists: a symlink to a file that is gone is still a
+    // configuration somebody meant to use, and passing over it would lint
+    // with the recommended rules as if there were none.
+    if (lstatOrUndefined(candidate) !== undefined) {
       return path.relative(cwd, candidate);
     }
     const parent = path.dirname(directory);
@@ -67,12 +70,24 @@ function isConfigurationObject(value: unknown): value is Record<string, unknown>
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function lstatOrUndefined(target: string): fs.Stats | undefined {
+  try {
+    return fs.lstatSync(target);
+  } catch {
+    return undefined;
+  }
+}
+
 /** Why a file could not be read, in words rather than as an errno. */
-function unreadableBecause(thrown: unknown): string {
+function unreadableBecause(thrown: unknown, filePath: string): string {
   const code = (thrown as NodeJS.ErrnoException | undefined)?.code;
   if (code === 'EISDIR') return 'it is a directory, not a file';
   if (code === 'EACCES' || code === 'EPERM') return 'permission was denied';
-  if (code === 'ENOENT') return 'it does not exist';
+  if (code === 'ENOENT') {
+    return lstatOrUndefined(filePath)?.isSymbolicLink() === true
+      ? `it is a symlink to ${fs.readlinkSync(filePath)}, which does not exist`
+      : 'it does not exist';
+  }
   return thrown instanceof Error ? thrown.message : String(thrown);
 }
 
@@ -83,7 +98,7 @@ function parseFile(filePath: string): Record<string, unknown> {
   try {
     text = fs.readFileSync(filePath, 'utf8');
   } catch (thrown) {
-    throw new ConfigurationError(`Could not read "${filePath}": ${unreadableBecause(thrown)}.`);
+    throw new ConfigurationError(`Could not read "${filePath}": ${unreadableBecause(thrown, filePath)}.`);
   }
   // JSON.parse refuses a byte order mark, which some editors write.
   const json = stripJsonComments(text.replace(/^\uFEFF/u, ''));
@@ -151,7 +166,7 @@ async function loadExtended(
 
   if (specifier.startsWith('.') || path.isAbsolute(specifier)) {
     const resolved = path.resolve(path.dirname(from), specifier);
-    if (!fs.existsSync(resolved)) {
+    if (lstatOrUndefined(resolved) === undefined) {
       throw new ConfigurationError(
         `Could not find "${specifier}", extended from "${fromFile}".`,
       );
@@ -261,7 +276,7 @@ export async function readConfiguredLanguage(
   if (file === undefined) {
     return {ok: true, language: undefined};
   }
-  if (!fs.existsSync(file)) {
+  if (lstatOrUndefined(file) === undefined) {
     return {ok: false, message: `Could not find specified config file "${file}"`, details: []};
   }
   let flattened: {[LANGUAGE]?: unknown};
@@ -294,7 +309,7 @@ export async function readConfiguration(
   rules: RuleRegistry,
 ): Promise<ConfigurationResult> {
   if (configPath !== undefined) {
-    if (!fs.existsSync(configPath)) {
+    if (lstatOrUndefined(configPath) === undefined) {
       return {
         ok: false,
         message: `Could not find specified config file "${configPath}"`,

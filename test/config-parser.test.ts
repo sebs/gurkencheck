@@ -274,3 +274,20 @@ test('a trailing comma is fine, and an empty file is said to be empty', async ()
     fs.rmSync(directory, {recursive: true, force: true});
   }
 });
+
+test('a configuration that is a symlink to nothing is reported, not passed over', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-dangling-'));
+  const originalCwd = process.cwd();
+  try {
+    fs.symlinkSync('team/.gurkencheckrc', path.join(directory, '.gurkencheckrc'));
+    process.chdir(directory);
+    const result = await readConfiguration(undefined, rules);
+    assert.ok(!result.ok);
+    assert.deepEqual(result.details, [
+      'Could not read ".gurkencheckrc": it is a symlink to team/.gurkencheckrc, which does not exist.',
+    ]);
+  } finally {
+    process.chdir(originalCwd);
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});
