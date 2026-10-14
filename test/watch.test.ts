@@ -484,3 +484,41 @@ test('a change during a pass is announced when the pass that takes it in starts'
     fs.rmSync(directory, {recursive: true, force: true});
   }
 });
+
+test('checks again when a listed file in a directory listed only after a pass changes', async () => {
+  const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-watch-later-'));
+  const later = path.join(elsewhere, 'team.json');
+  fs.writeFileSync(later, '{}');
+  const watched = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-watch-'));
+  const controller = new AbortController();
+  const diagnostics = collectDiagnostics();
+  let passes = 0;
+  // As a configuration that starts extending a file elsewhere: listed from
+  // the second pass on.
+  const stopped = watch(
+    [watched],
+    CONFIG,
+    {diagnostics, settleMs: 10, signal: controller.signal, files: () => (passes >= 2 ? [later] : [])},
+    async () => {
+      passes += 1;
+    },
+  );
+  try {
+    await waitFor('the watch to settle', () =>
+      diagnostics.reported.some((entry) => entry.message.includes('Watching for changes')),
+    );
+    await waitFor('a second pass', () => passes >= 2, () =>
+      fs.writeFileSync(path.join(watched, 'a.feature'), `Feature: ${Date.now()}\n`),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const before = passes;
+    await waitFor('a pass for the file now listed', () => passes > before, () =>
+      fs.writeFileSync(later, `{"x": ${Date.now()}}`),
+    );
+  } finally {
+    controller.abort();
+    await stopped;
+    fs.rmSync(watched, {recursive: true, force: true});
+    fs.rmSync(elsewhere, {recursive: true, force: true});
+  }
+});

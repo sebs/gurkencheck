@@ -163,6 +163,10 @@ export async function watch(
   let timer: NodeJS.Timeout | undefined;
   let running = false;
   let againAfterThis = false;
+  /** Set once the watch has stopped, so nothing more is watched. */
+  let closed = false;
+  /** Watches the directories of listed files not watched yet. */
+  let watchOutside = (): void => undefined;
 
   const ignored = (relativePath: string): boolean =>
     ignore.some((entry) => relativePath.split(path.sep).includes(entry));
@@ -200,6 +204,7 @@ export async function watch(
             message: `The check failed: ${reasonOf(thrown)}`,
           });
         }
+        watchOutside();
       } while (againAfterThis);
     } finally {
       running = false;
@@ -346,33 +351,40 @@ export async function watch(
   // The directories of listed files the recursive watches do not reach, each
   // watched on its own. Not counted among the living: they are there to say
   // the configuration changed, and with no feature files left to watch there
-  // would be nothing for it to change.
+  // would be nothing for it to change. Looked at again after every pass: a
+  // configuration that has started extending a file elsewhere has a new
+  // directory to watch, and edits to that file were never noticed.
   const outside = new Set<string>();
-  for (const file of files()) {
-    const directory = path.dirname(file);
-    const covered = roots.some((root) => {
-      const resolved = path.resolve(root);
-      return directory === resolved || directory.startsWith(`${resolved}${path.sep}`);
-    });
-    if (!covered) {
-      outside.add(directory);
+  watchOutside = (): void => {
+    if (closed) {
+      return;
     }
-  }
-  for (const directory of outside) {
-    try {
-      const watcher = fs.watch(directory, (_event, filename) => {
-        if (filename === null || files().has(path.join(directory, filename.toString()))) {
-          changed.add(filename === null ? 'a file' : shown(path.join(directory, filename.toString())));
-          schedule();
-        }
+    for (const file of files()) {
+      const directory = path.dirname(file);
+      const covered = roots.some((root) => {
+        const resolved = path.resolve(root);
+        return directory === resolved || directory.startsWith(`${resolved}${path.sep}`);
       });
-      watcher.on('error', () => watcher.close());
-      watchers.push(watcher);
-    } catch {
-      // A configuration that cannot be watched still works; it only means a
-      // change to it is picked up with the next change to a feature file.
+      if (covered || outside.has(directory)) {
+        continue;
+      }
+      outside.add(directory);
+      try {
+        const watcher = fs.watch(directory, (_event, filename) => {
+          if (filename === null || files().has(path.join(directory, filename.toString()))) {
+            changed.add(filename === null ? 'a file' : shown(path.join(directory, filename.toString())));
+            schedule();
+          }
+        });
+        watcher.on('error', () => watcher.close());
+        watchers.push(watcher);
+      } catch {
+        // A configuration that cannot be watched still works; it only means a
+        // change to it is picked up with the next change to a feature file.
+      }
     }
-  }
+  };
+  watchOutside();
 
   await runCheck();
   diagnostics.report({
@@ -387,6 +399,7 @@ export async function watch(
         return;
       }
       stopped = true;
+      closed = true;
       process.off('SIGINT', stop);
       process.off('SIGTERM', stop);
       options.signal?.removeEventListener('abort', stop);
