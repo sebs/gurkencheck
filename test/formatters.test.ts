@@ -383,6 +383,20 @@ test('junit names two findings of one rule at one place apart', () => {
   assert.match(output, /name="r \(1:1\) #2"/u);
 });
 
+test('junit names test cases apart across files whose class names agree', () => {
+  const output = formatJunit(
+    [
+      {filePath: '/w/a/b.feature', errors: [{line: 1, column: 1, message: 'one', rule: 'r'}]},
+      {filePath: '/w/a.b.feature', errors: [{line: 1, column: 1, message: 'two', rule: 'r'}]},
+    ],
+    '/w',
+  );
+  const names = [...output.matchAll(/<testcase name="([^"]*)" classname="([^"]*)"/gu)].map(
+    ([, name, classname]) => `${classname}/${name}`,
+  );
+  assert.equal(new Set(names).size, names.length, names.join(', '));
+});
+
 test('junit output is well formed XML', () => {
   // A crude well-formedness check: every opened tag is closed in order.
   const output = capture(getFormatter('junit')!, RESULTS);

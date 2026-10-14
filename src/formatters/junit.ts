@@ -59,18 +59,21 @@ function testCase(filePath: string, error: RuleError, name: string): string {
   return `${open}\n${indent(body, 1)}\n</testcase>`;
 }
 
-function testSuite(result: FileResult, cwd: string): string {
+function testSuite(result: FileResult, cwd: string, seen: Map<string, number>): string {
   const filePath = displayPath(result.filePath, cwd);
   const failures = result.errors.filter((error) => severityOf(error) === 'error').length;
-  // CI servers key test cases by class and name, so two findings of one rule
-  // at one place would be shown as one. The second and later get a number.
-  const seen = new Map<string, number>();
+  // CI servers key test cases by class and name across the whole report, so
+  // two findings of one rule at one place would be shown as one - in one
+  // file, or in two whose class names agree, as a/b.feature and a.b.feature
+  // do. The second and later get a number.
+  const classname = classNameFor(filePath);
   const cases =
     result.errors.length > 0
       ? result.errors.map((error) => {
           const name = `${error.rule} (${positionOf(error)})`;
-          const count = (seen.get(name) ?? 0) + 1;
-          seen.set(name, count);
+          const key = `${classname}\n${name}`;
+          const count = (seen.get(key) ?? 0) + 1;
+          seen.set(key, count);
           return testCase(filePath, error, count === 1 ? name : `${name} #${count}`);
         })
       : [
@@ -100,9 +103,10 @@ export function format(results: readonly FileResult[], cwd: string = process.cwd
     0,
   );
 
+  const seen = new Map<string, number>();
   const body = [
     `<testsuites${attributes({name: 'gurkencheck', tests, failures, errors: 0})}>`,
-    ...results.map((result) => indent(testSuite(result, cwd), 1)),
+    ...results.map((result) => indent(testSuite(result, cwd, seen), 1)),
     '</testsuites>',
   ].join('\n');
 
