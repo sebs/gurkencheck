@@ -108,7 +108,7 @@ export const RULE_DOCS: RuleDoc[] = [
     config: '{\n  "keywords-in-logical-order": "on"\n}',
     good: 'Feature: Logging in\n\n  Scenario: A known user logs in\n    Given I am a known user\n    When I log in\n    Then I see my dashboard',
     bad: 'Feature: Logging in\n\n  Scenario: A known user logs in\n    Given I am a known user\n    Then I see my dashboard\n    When I log in',
-    message: 'Step "When I log in" should not appear after step using keyword then',
+    message: 'Step "When I log in" should not appear after step using keyword Then',
   },
   {
     name: 'max-scenarios-per-file',
