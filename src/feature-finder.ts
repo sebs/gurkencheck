@@ -99,10 +99,16 @@ function toSlashes(pattern: string): string {
  * searched as well, so `features/*`, `**` and `features/**\/` all mean what a
  * shell would make of them.
  */
-function toFeatureGlobs(pattern: string): string[] | undefined {
-  if (pattern === '.') {
+function toFeatureGlobs(given: string): string[] | undefined {
+  if (given === '.') {
     return ['**/*.feature'];
   }
+  // A file named with a slash after it - tab completion leaves one after a
+  // directory, and a name like c.feature is easily taken for one - is the
+  // file all the same; asking the file system for it with the slash says
+  // it is not there.
+  const withoutSlash = given.replace(/(?<=[^/])\/+$/u, '');
+  const pattern = withoutSlash !== given && isFile(withoutSlash) ? withoutSlash : given;
 
   let stats: fs.Stats | undefined;
   try {
@@ -129,6 +135,14 @@ function toFeatureGlobs(pattern: string): string[] | undefined {
     return [`${glob}/*.feature`];
   }
   return [glob, `${glob}/**/*.feature`];
+}
+
+function isFile(name: string): boolean {
+  try {
+    return fs.statSync(name).isFile();
+  } catch {
+    return false;
+  }
 }
 
 function isFeatureFile(name: string): boolean {

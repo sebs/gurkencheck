@@ -349,3 +349,8 @@ test('a glob spelling out a leading dot reaches dot-directories, and * still doe
   assert.deepEqual(findFeatureFiles(['.*/**/*.feature']).files.sort(), ['.hidden/a.feature', '.hidden/inner/b.feature']);
   assert.deepEqual(findFeatureFiles(['*']).files.filter((file) => file.startsWith('.hidden')), []);
 });
+
+test('a file named with a slash after it is the file', () => {
+  assert.deepEqual(findFeatureFiles([`${FOUND}/a.feature/`]).files, [`${FOUND}/a.feature`]);
+  assert.deepEqual(findFeatureFiles([`${FOUND}/a.feature/`]).invalidPatterns, []);
+});
