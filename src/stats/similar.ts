@@ -162,6 +162,8 @@ function allowedEdits(ratio: number, length: number): number {
 
 interface Candidate {
   index: number;
+  /** Where it is among the candidates. */
+  ordinal: number;
   text: string;
   /** The text's characters, as code points. */
   points: number[];
@@ -229,15 +231,21 @@ export function groupSimilar<T extends {text: string}>(
   if (edits < 1) {
     return [];
   }
-  const candidates: Candidate[] = entries
-    .map((entry, index) => {
-      const points = codePoints(entry.text);
-      return {index, text: entry.text, points, tally: tally(points)};
-    })
-    .filter((candidate) => candidate.points.length >= options.minLength);
+  const candidates: Candidate[] = [];
+  entries.forEach((entry, index) => {
+    const points = codePoints(entry.text);
+    if (points.length >= options.minLength) {
+      candidates.push({index, ordinal: candidates.length, text: entry.text, points, tally: tally(points)});
+    }
+  });
 
-  /** `length:piece:text` -> the candidates of that length holding that piece. */
-  const index = new Map<string, Candidate[]>();
+  /**
+   * `length:piece:text` -> the candidates of that length holding that piece,
+   * in order, and how many of them lie before the anchor now being grouped:
+   * those are never looked at again, so a piece many steps share is not
+   * gone through from its start for every one of them.
+   */
+  const index = new Map<string, {holding: Candidate[]; passed: number}>();
   /** Candidates too short to cut into pieces, compared with every step. */
   const short: Candidate[] = [];
   for (const candidate of candidates) {
@@ -248,35 +256,69 @@ export function groupSimilar<T extends {text: string}>(
     }
     pieces(length, edits).forEach((piece, number) => {
       const key = `${length}:${number}:${slice(candidate, piece.start, piece.length)}`;
-      const holding = index.get(key);
-      if (holding === undefined) {
-        index.set(key, [candidate]);
-      } else {
-        holding.push(candidate);
+      const found = index.get(key);
+      if (found === undefined) {
+        index.set(key, {holding: [candidate], passed: 0});
+      } else if (found.holding.at(-1) !== candidate) {
+        found.holding.push(candidate);
       }
     });
   }
 
-  /** The candidates that could be within the budget of `step`. */
-  const nearby = (step: Candidate): Iterable<Candidate> => {
+  /** For each candidate, the last anchor it was looked at for. */
+  const seenFor = new Int32Array(candidates.length).fill(-1);
+  /** Candidates already in a group. */
+  const taken = new Uint8Array(candidates.length);
+
+  /**
+   * Calls `visit` once for each candidate after `step` that is still free
+   * and could be within the budget of it. Only those after it: one before it
+   * still free was an anchor itself, with this one free beside it, and would
+   * have taken it into its group had the two been close.
+   */
+  const forEachNearby = (step: Candidate, at: number, visit: (candidate: Candidate) => void): void => {
+    const consider = (candidate: Candidate): void => {
+      const position = candidate.ordinal;
+      if (position <= at || taken[position] === 1 || seenFor[position] === at) {
+        return;
+      }
+      seenFor[position] = at;
+      visit(candidate);
+    };
     const length = step.points.length;
     if (length <= edits) {
-      return candidates;
+      candidates.forEach(consider);
+      return;
     }
-    const found = new Set<Candidate>(short);
+    short.forEach(consider);
     for (let other = Math.max(edits + 1, length - edits); other <= length + edits; other++) {
       pieces(other, edits).forEach((piece, number) => {
         const from = Math.max(0, piece.start - edits);
         const to = Math.min(length - piece.length, piece.start + edits);
         for (let start = from; start <= to; start++) {
-          const key = `${other}:${number}:${slice(step, start, piece.length)}`;
-          for (const candidate of index.get(key) ?? []) {
-            found.add(candidate);
+          const found = index.get(`${other}:${number}:${slice(step, start, piece.length)}`);
+          if (found === undefined) {
+            continue;
           }
+          const {holding} = found;
+          while (found.passed < holding.length && holding[found.passed]!.ordinal <= at) {
+            found.passed++;
+          }
+          // Those taken into a group are dropped as they are passed, so
+          // the lists shrink as the groups are found.
+          let kept = found.passed;
+          for (let next = found.passed; next < holding.length; next++) {
+            const candidate = holding[next]!;
+            if (taken[candidate.ordinal] === 1) {
+              continue;
+            }
+            holding[kept++] = candidate;
+            consider(candidate);
+          }
+          holding.length = kept;
         }
       });
     }
-    return found;
   };
 
   const close = (a: Candidate, b: Candidate): boolean => {
@@ -290,24 +332,23 @@ export function groupSimilar<T extends {text: string}>(
     );
   };
 
-  const grouped = new Set<Candidate>();
   const groups: T[][] = [];
-  for (const anchor of candidates) {
-    if (grouped.has(anchor)) {
-      continue;
+  candidates.forEach((anchor, at) => {
+    if (taken[at] === 1) {
+      return;
     }
     const members = [anchor];
-    for (const candidate of nearby(anchor)) {
-      if (candidate !== anchor && !grouped.has(candidate) && close(anchor, candidate)) {
+    forEachNearby(anchor, at, (candidate) => {
+      if (close(anchor, candidate)) {
         members.push(candidate);
       }
-    }
+    });
     if (members.length > 1) {
       for (const member of members) {
-        grouped.add(member);
+        taken[member.ordinal] = 1;
       }
       groups.push(members.sort((a, b) => a.index - b.index).map((member) => entries[member.index]!));
     }
-  }
+  });
   return groups;
 }
