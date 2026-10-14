@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {after, before, test} from 'node:test';
-import {DEFAULT_CONFIG_FILE_NAME, readConfiguration} from '../src/config-parser.ts';
+import {DEFAULT_CONFIG_FILE_NAME, findConfigFile, readConfiguration} from '../src/config-parser.ts';
 import {verifyConfiguration} from '../src/config-verifier.ts';
 import {RECOMMENDED} from '../src/presets.ts';
 import {loadRules} from '../src/rules.ts';
@@ -303,6 +303,23 @@ test('a symlinked configuration extends from where it really is', async () => {
     const result = await readConfiguration(path.join(directory, 'project', '.gurkencheckrc'), rules);
     assert.ok(result.ok, JSON.stringify(result));
     assert.deepEqual(result.configuration, {'no-empty-file': 'on'});
+  } finally {
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});
+
+test('findConfigFile gives a path readConfiguration can read, from a directory or a file', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-find-'));
+  try {
+    fs.mkdirSync(path.join(directory, 'features'));
+    fs.writeFileSync(path.join(directory, '.gurkencheckrc'), '{"no-empty-file": "on"}');
+    fs.writeFileSync(path.join(directory, 'features', 'a.feature'), 'Feature: A\n');
+    for (const from of [path.join(directory, 'features'), path.join(directory, 'features', 'a.feature')]) {
+      const found = findConfigFile(from);
+      assert.ok(found !== undefined, from);
+      const read = await readConfiguration(found, rules);
+      assert.ok(read.ok, `${from}: ${JSON.stringify(read)}`);
+    }
   } finally {
     fs.rmSync(directory, {recursive: true, force: true});
   }

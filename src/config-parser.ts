@@ -15,22 +15,29 @@ export const DEFAULT_CONFIG_FILE_NAME = '.gurkencheckrc';
 
 /**
  * The configuration file a run with no --config uses: the nearest
- * `.gurkencheckrc` in the working directory or any directory above it, or
- * `undefined` when there is none.
+ * `.gurkencheckrc` in `cwd` (or, for a file, its directory) or any directory
+ * above it, as a path from the working directory, or `undefined` when there
+ * is none.
  *
  * Looking only in the working directory meant that running from a
  * subdirectory of a project fell back to the recommended preset without a
  * word, and a run that looks right is checking the wrong thing.
  */
 export function findConfigFile(cwd: string = process.cwd()): string | undefined {
+  // Started from a file - the feature file being edited - its directory.
   let directory = path.resolve(cwd);
+  if (lstatOrUndefined(directory)?.isFile() === true) {
+    directory = path.dirname(directory);
+  }
   for (;;) {
     const candidate = path.join(directory, DEFAULT_CONFIG_FILE_NAME);
     // lstat rather than exists: a symlink to a file that is gone is still a
     // configuration somebody meant to use, and passing over it would lint
     // with the recommended rules as if there were none.
     if (lstatOrUndefined(candidate) !== undefined) {
-      return path.relative(cwd, candidate);
+      // Relative to the working directory, as readConfiguration reads a path,
+      // whatever directory the search started from.
+      return path.relative(process.cwd(), candidate) || candidate;
     }
     const parent = path.dirname(directory);
     if (parent === directory) {
