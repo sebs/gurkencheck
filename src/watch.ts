@@ -297,6 +297,28 @@ export async function watch(
     return EXIT_OK;
   }
 
+  // Each root's own deletion, from the directory it is in: the recursive
+  // watch on a root is often told nothing when the root itself goes, and the
+  // results from before stayed on screen. Not counted among the living, like
+  // the watches of listed files below.
+  for (const root of roots) {
+    const resolved = path.resolve(root);
+    const parent = path.dirname(resolved);
+    if (parent === resolved) continue;
+    try {
+      const watcher = fs.watch(parent, (_event, filename) => {
+        if (filename !== null && filename.toString() === path.basename(resolved) && !fs.existsSync(resolved)) {
+          changed.add(shown(resolved));
+          schedule();
+        }
+      });
+      watcher.on('error', () => watcher.close());
+      watchers.push(watcher);
+    } catch {
+      // The root is watched all the same; only its going might be missed.
+    }
+  }
+
   // The directories of listed files the recursive watches do not reach, each
   // watched on its own. Not counted among the living: they are there to say
   // the configuration changed, and with no feature files left to watch there

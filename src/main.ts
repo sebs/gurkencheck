@@ -274,7 +274,14 @@ export async function run(
     for (const message of unmatched) {
       diagnostics.report({level: 'error', message});
     }
-    return unreadable.length > 0 || unmatched.length > 0 ? EXIT_USAGE : code;
+    // Checked before the first pass too, but a watch runs on: a path deleted
+    // since is said to be gone, rather than a pass over nothing reading as a
+    // clean one.
+    const invalid = search?.invalidPatterns ?? [];
+    for (const pattern of invalid) {
+      diagnostics.report({level: 'error', message: describeInvalidPattern(pattern)});
+    }
+    return unreadable.length > 0 || unmatched.length > 0 || invalid.length > 0 ? EXIT_USAGE : code;
   };
 
   /**
@@ -285,6 +292,7 @@ export async function run(
    */
   const searchFailed = (): boolean =>
     (search?.unreadable.length ?? 0) > 0 ||
+    (search?.invalidPatterns.length ?? 0) > 0 ||
     unmatchedMessages(search ?? {unmatched: [], allIgnored: []}, positionals).length > 0;
 
   let passes = 0;

@@ -825,3 +825,28 @@ test('a directory the ignore patterns skip is not walked, so one inside it that 
     }
   });
 });
+
+test('--watch says a watched path is gone, rather than that it has no errors', async () => {
+  await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {
+    const child = spawn(process.execPath, [CLI, '--watch', 'Example.feature'], {cwd});
+    let output = '';
+    child.stdout.on('data', (chunk) => (output += String(chunk)));
+    child.stderr.on('data', (chunk) => (output += String(chunk)));
+    const waitFor = async (pattern: RegExp): Promise<void> => {
+      const deadline = Date.now() + 10000;
+      while (!pattern.test(output)) {
+        if (Date.now() > deadline) assert.fail(`timed out waiting for ${String(pattern)} in:\n${output}`);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+    };
+    try {
+      await waitFor(/Watching for changes/u);
+      output = '';
+      fs.rmSync(path.join(cwd, 'Example.feature'));
+      await waitFor(/"Example\.feature" does not exist/u);
+      assert.doesNotMatch(output, /No errors found/u);
+    } finally {
+      await stop(child);
+    }
+  });
+});
