@@ -4,7 +4,6 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import {uniq} from './util/collections.ts';
 import {escapeGlob, globRoot, globStream, globSync, literalPath} from './util/glob.ts';
 
 /** The ignore file looked for when `--ignore` is not given. */
@@ -101,6 +100,30 @@ function isFeatureFile(name: string): boolean {
 }
 
 /**
+ * What makes two paths the same file: where they lead, in the case the disk
+ * has it in. `a.feature` and `A.feature` on a file system that ignores case,
+ * or a file and a symlink to it, are one file and should be checked once.
+ */
+function identityOf(file: string): string {
+  try {
+    return fs.realpathSync.native(file);
+  } catch {
+    return path.resolve(file);
+  }
+}
+
+/** The files with any repeat of one already listed left out, in order. */
+function withoutRepeats(files: readonly string[]): string[] {
+  const seen = new Set<string>();
+  return files.filter((file) => {
+    const identity = identityOf(file);
+    if (seen.has(identity)) return false;
+    seen.add(identity);
+    return true;
+  });
+}
+
+/**
  * Why an argument the search refused names nothing to check, in a sentence.
  *
  * Only a name can be refused - any glob is searched - and a name is refused
@@ -193,7 +216,7 @@ export function findFeatureFiles(
     }
   }
 
-  return {files: uniq(files), invalidPatterns, ignoredFiles};
+  return {files: withoutRepeats(files), invalidPatterns, ignoredFiles};
 }
 
 /**
@@ -237,8 +260,9 @@ export function findFeatureFileStream(
       for await (const file of globStream(featureGlob, {ignore})) {
         if (!isFeatureFile(file)) continue;
         if (seen !== undefined) {
-          if (seen.has(file)) continue;
-          seen.add(file);
+          const identity = identityOf(file);
+          if (seen.has(identity)) continue;
+          seen.add(identity);
         }
         yield file;
       }

@@ -290,3 +290,16 @@ test('says why a name was refused', () => {
     assert.deepEqual(findFeatureFiles(['pipe.feature']).invalidPatterns, ['pipe.feature']);
   }
 });
+
+test('a file named twice, through a symlink or in another case, is found once', async () => {
+  fs.symlinkSync('a.feature', `${FOUND}/link.feature`);
+  const named = [`${FOUND}/a.feature`, `${FOUND}/link.feature`];
+  // On a file system that ignores case, A.feature is a.feature as well.
+  const ignoresCase = fs.existsSync(`${FOUND}/A.feature`);
+  if (ignoresCase) named.push(`${FOUND}/A.feature`);
+
+  assert.deepEqual(findFeatureFiles(named).files, [`${FOUND}/a.feature`]);
+  const streamed: string[] = [];
+  for await (const file of findFeatureFileStream(named).files) streamed.push(file);
+  assert.deepEqual(streamed, [`${FOUND}/a.feature`]);
+});
