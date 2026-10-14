@@ -55,6 +55,23 @@ export interface WatchOptions {
   signal?: AbortSignal;
 }
 
+/**
+ * True when a change to this path may have moved feature files: it is a
+ * directory now, or it has gone and looked like one.
+ *
+ * Moving or renaming a folder is one event, naming the folder rather than
+ * any of the feature files inside it, so judging by the name alone it was
+ * passed over and the results on screen were those from before the move.
+ */
+function mayHoldFeatures(absolutePath: string): boolean {
+  try {
+    return fs.statSync(absolutePath).isDirectory();
+  } catch {
+    const name = path.basename(absolutePath);
+    return path.extname(name) === '' && !name.startsWith('.');
+  }
+}
+
 /** A path relative to the working directory, as a notice shows it. */
 function shown(absolutePath: string): string {
   return path.relative(process.cwd(), absolutePath) || absolutePath;
@@ -170,7 +187,7 @@ export async function watch(
     }
 
     try {
-      const watcher = fs.watch(root, {recursive: true}, (_event, filename) => {
+      const watcher = fs.watch(root, {recursive: true}, (event, filename) => {
         // Some platforms hand over no name; there is nothing to filter on, so
         // check rather than risk missing a change.
         if (filename === null) {
@@ -178,8 +195,16 @@ export async function watch(
           return;
         }
         const relativePath = filename.toString();
-        const listed = files().has(path.resolve(root, relativePath));
-        if (!listed && (ignored(relativePath) || !isInteresting(relativePath, configFileName))) {
+        const absolutePath = path.resolve(root, relativePath);
+        const listed = files().has(absolutePath);
+        if (
+          !listed &&
+          (ignored(relativePath) ||
+            (!isInteresting(relativePath, configFileName) &&
+              // A move is a rename. macOS also reports a change under the
+              // watched directory's own name, which is not one.
+              !(event === 'rename' && mayHoldFeatures(absolutePath))))
+        ) {
           return;
         }
         // The path as you would type it: two files called login.feature in

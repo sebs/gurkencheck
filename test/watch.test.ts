@@ -360,3 +360,35 @@ test('names a change by its path, and counts files sharing a name apart', async 
     );
   });
 });
+
+test('checks again when a folder of feature files is moved in or renamed', async () => {
+  const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-elsewhere-'));
+  try {
+    fs.mkdirSync(path.join(elsewhere, 'incoming'));
+    fs.writeFileSync(path.join(elsewhere, 'incoming', 'Moved.feature'), 'Feature: A\n');
+
+    await withWatch(async ({directory, passes}) => {
+      const target = path.join(directory, 'incoming');
+      await waitFor(
+        'a pass for the folder moved in',
+        () => passes() >= 2,
+        () => {
+          if (!fs.existsSync(target)) fs.renameSync(path.join(elsewhere, 'incoming'), target);
+        },
+      );
+
+      const before = passes();
+      const renamed = path.join(directory, 'renamed');
+      await waitFor(
+        'a pass for the folder renamed',
+        () => passes() > before,
+        () => {
+          if (fs.existsSync(renamed)) fs.renameSync(renamed, target);
+          else fs.renameSync(target, renamed);
+        },
+      );
+    });
+  } finally {
+    fs.rmSync(elsewhere, {recursive: true, force: true});
+  }
+});
