@@ -22,6 +22,21 @@ export function describeArgumentError(thrown: unknown, usage = ''): string {
     return `${short}${long} needs a value: ${short}${long} ${placeholder}`;
   }
 
+  // A value starting with a dash, as in -c -x.json: Node's three lines come
+  // down to one, with the way to pass it.
+  const ambiguous = /^Option '(-{1,2}[\w-]+)' argument is ambiguous/u.exec(message);
+  if (ambiguous !== null) {
+    const option = ambiguous[1]!;
+    const long = option.startsWith('--') ? option : new RegExp(`${option}, (--[\\w-]+)`, 'u').exec(usage)?.[1] ?? option;
+    return `${option} was given a value starting with -. Write it as ${long}=<value> to pass one, or give ${option} a value.`;
+  }
+
+  // A switch given a value, as in --help=yes.
+  const noValue = /^Option '(?:-\w, )?(--[\w-]+)' does not take an argument/u.exec(message);
+  if (noValue !== null) {
+    return `${noValue[1]} takes no value.`;
+  }
+
   if (code === 'ERR_PARSE_ARGS_UNKNOWN_OPTION') {
     const option = /^Unknown option '([^']*)'/u.exec(message)?.[1];
     if (option !== undefined) {

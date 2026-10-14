@@ -5,7 +5,11 @@ import {describeArgumentError} from '../../src/util/args.ts';
 
 function errorFor(args: string[]): unknown {
   try {
-    parseArgs({args, options: {config: {type: 'string', short: 'c'}}, allowPositionals: true});
+    parseArgs({
+      args,
+      options: {config: {type: 'string', short: 'c'}, help: {type: 'boolean', short: 'h'}},
+      allowPositionals: true,
+    });
   } catch (thrown) {
     return thrown;
   }
@@ -23,4 +27,11 @@ test('a missing value is named as the help names it', () => {
   const usage = '  -c, --config <path>     configuration file';
   assert.equal(describeArgumentError(errorFor(['-c']), usage), '-c, --config needs a value: -c, --config <path>');
   assert.equal(describeArgumentError(errorFor(['--config'])), '-c, --config needs a value: -c, --config <value>');
+});
+
+test('a value starting with a dash, and a value for a switch, each get one line', () => {
+  const usage = '  -c, --config <path>     configuration file';
+  const dashed = describeArgumentError(errorFor(['-c', '-x.json']), usage);
+  assert.equal(dashed, '-c was given a value starting with -. Write it as --config=<value> to pass one, or give -c a value.');
+  assert.equal(describeArgumentError(errorFor(['--help=yes'])), '--help takes no value.');
 });
