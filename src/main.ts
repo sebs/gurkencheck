@@ -35,6 +35,7 @@ import type {Configuration, RuleRegistry} from './types.ts';
 import type {Sequence} from './util/stream.ts';
 import {runStats} from './stats/command.ts';
 import {version} from './version.ts';
+import {stillWaitingFor, waitFor} from './util/waiting.ts';
 
 /** Directory names a watch takes no notice of, however deep they turn up. */
 const DEFAULT_IGNORED_NAMES = ['node_modules', '.git'];
@@ -354,7 +355,7 @@ export async function run(
     // A formatter may print the output itself or hand it back as a string.
     let output;
     try {
-      output = await formatter!(results, {rules: new Map(rules)});
+      output = await waitFor('the formatter', formatter!(results, {rules: new Map(rules)}));
     } catch (thrown) {
       diagnostics.report({
         level: 'error',
@@ -465,7 +466,7 @@ async function runStreaming(
     formatting = true;
     // A hook may be async; what it hands back has to be text to write, or
     // nothing - undefined or null alike, from any hook.
-    const written = await step();
+    const written = await waitFor(`the formatter's ${hook}()`, step());
     if (written !== undefined && written !== null && typeof written !== 'string') {
       throw new Error(`${hook}() returned ${typeof written} instead of a string`);
     }
@@ -588,6 +589,7 @@ function failOnStrayErrors(): void {
         thrown instanceof Error ? thrown.message : safeText(thrown)
       }`,
     });
+    ended = true;
     process.exit(EXIT_USAGE);
   };
   process.on('unhandledRejection', fail);
@@ -603,9 +605,41 @@ function safeText(value: unknown): string {
   }
 }
 
+/** True once the run has ended, one way or the other. */
+let ended = false;
+
+/**
+ * Says so when the run never finished: a custom rule or formatter returned a
+ * promise that never settles, node found nothing left to do, and ended the
+ * process with 13 - a code gurkencheck does not use - and a warning about
+ * its own source rather than the plugin's.
+ */
+function failWhenNeverFinished(): void {
+  process.on('exit', () => {
+    if (ended) {
+      return;
+    }
+    const waited = stillWaitingFor();
+    TO_STDERR.report({
+      level: 'error',
+      message:
+        waited.length > 0
+          ? `The run never finished: ${waited.join(', ')} returned a promise that never settles.`
+          : 'The run never finished: something it waited for never settled, most likely a promise from a custom rule or formatter.',
+    });
+    process.exitCode = EXIT_USAGE;
+  });
+}
+
 // Only take over the process when run as a command, not when imported.
 if (isMainModule()) {
   failOnStrayErrors();
+  failWhenNeverFinished();
   stopWritingWhenOutputCloses();
-  process.exitCode = await main(process.argv.slice(2));
+  // Not awaited at the top level: node takes a top-level await that never
+  // settles for its own failure, and warns about it before anything here can.
+  void main(process.argv.slice(2)).then((code) => {
+    ended = true;
+    process.exitCode = code;
+  });
 }

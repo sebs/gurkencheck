@@ -768,6 +768,23 @@ test('a failure outside the run, in plugin code, is a failure to run, not a find
   });
 });
 
+test('a rule or formatter whose promise never settles is named, and the run fails to run', async () => {
+  await withProject(CLEAN_FEATURE, '{"hang": "on"}', async (cwd) => {
+    const {code, stderr} = await cli(['--rulesdir', path.resolve('test/rulesdir/hanging_rules'), '.'], cwd);
+    assert.equal(code, 2);
+    assert.match(stderr, /The run never finished: the rule "hang" returned a promise that never settles/u);
+    assert.doesNotMatch(stderr, /unsettled top-level await/u);
+  });
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    const plain = await cli(['-f', path.resolve('test/formatters/hanging.mjs'), '.'], cwd);
+    assert.equal(plain.code, 2);
+    assert.match(plain.stderr, /the formatter returned a promise that never settles/u);
+    const streaming = await cli(['-f', path.resolve('test/formatters/hanging-streaming.mjs'), '.'], cwd);
+    assert.equal(streaming.code, 2);
+    assert.match(streaming.stderr, /the formatter's end\(\) returned a promise that never settles/u);
+  });
+});
+
 test('a formatter emptying the results it prints does not change the verdict', async () => {
   const formatter = path.resolve('test/formatters/emptying.mjs');
   await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {

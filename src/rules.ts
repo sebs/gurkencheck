@@ -20,6 +20,7 @@ import type {
 } from './types.ts';
 import type {Feature} from '@cucumber/messages';
 import {globSync} from './util/glob.ts';
+import {waitFor} from './util/waiting.ts';
 
 /** Where a file really is, in the case the disk has it in. */
 function realPath(file: string): string {
@@ -376,7 +377,10 @@ export async function finishRun(
     const severity = getRuleSeverity(config);
 
     try {
-      const found: unknown = await rule.onRunEnd(getRuleSettings(config), run.contextFor(rule.name));
+      const found: unknown = await waitFor(
+        `the rule "${rule.name}" at the end of the run`,
+        rule.onRunEnd(getRuleSettings(config), run.contextFor(rule.name)),
+      );
       if (!Array.isArray(found)) {
         findings.push(notAList(rule.name, found, severity));
         continue;
@@ -431,11 +435,9 @@ export async function runEnabledRules(
     // Typed as what a custom rule could really hand back, not what it should.
     let found: unknown;
     try {
-      found = await rule.run(
-        feature,
-        file,
-        getRuleSettings(config),
-        run.contextFor(rule.name),
+      found = await waitFor(
+        `the rule "${rule.name}"`,
+        rule.run(feature, file, getRuleSettings(config), run.contextFor(rule.name)),
       );
     } catch (thrown) {
       // A rule that throws - one of your own from --rulesdir, or a built-in
