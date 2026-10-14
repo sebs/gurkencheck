@@ -158,3 +158,14 @@ test('the formatters refuse a top that is not a whole number of at least 1', () 
     assert.throws(() => toMarkdown(statistics, {top}), /top has to be a whole number of at least 1/u, String(top));
   }
 });
+
+test('the text report writes out control characters from the feature files', () => {
+  const report = toText(
+    collectStatistics([
+      parseFeature('c.feature', 'Feature: A\n  Scenario: Clear \u001b[2J screen\n    Given a\ttabbed step\n'),
+    ]),
+    options,
+  );
+  assert.doesNotMatch(report, /[\u0000-\u0008\u000B-\u001F]/u);
+  assert.match(report, /Clear \\u001b\[2J screen/u);
+});

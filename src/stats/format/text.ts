@@ -8,13 +8,19 @@ import {style} from '../../logger.ts';
 import type {SimilarGroup, StepEntry, Statistics} from '../types.ts';
 import {andMore, head, location, percent, plural, summarise} from './shared.ts';
 import type {StatsFormatOptions} from './shared.ts';
+import {printable} from '../../util/printable.ts';
 import {displayWidth, padEndToWidth, padStartToWidth, truncateToWidth} from '../../util/width.ts';
 
 /** Longer than this and a step is a paragraph; the report shows the start. */
 const TEXT_WIDTH = 90;
 
+/**
+ * A text from the feature files, made safe to show and cut to the width.
+ * Written out first, so an escape sequence in a scenario name cannot clear
+ * the screen and a tab cannot throw the columns out, then measured.
+ */
 function truncate(text: string, width = TEXT_WIDTH): string {
-  return truncateToWidth(text, width);
+  return truncateToWidth(printable(text), width);
 }
 
 /** One line of a label-and-number block. */
@@ -32,13 +38,14 @@ interface Row {
 
 /** Lays out a block so the numbers line up under each other. */
 function block(entries: readonly Row[]): string[] {
-  const labelWidth = entries.reduce((widest, row) => Math.max(widest, displayWidth(row.label)), 0);
-  const valueWidth = entries.reduce(
+  const shown = entries.map((row) => ({...row, label: printable(row.label), value: printable(row.value)}));
+  const labelWidth = shown.reduce((widest, row) => Math.max(widest, displayWidth(row.label)), 0);
+  const valueWidth = shown.reduce(
     (widest, row) => (row.wide === true ? widest : Math.max(widest, displayWidth(row.value))),
     0,
   );
 
-  return entries.map((row) => {
+  return shown.map((row) => {
     const value = row.wide === true ? row.value : padStartToWidth(row.value, valueWidth);
     const line = `  ${padEndToWidth(row.label, labelWidth)}   ${value}`;
     return row.note === undefined ? line : `${line}   ${style.gray(row.note)}`;
@@ -73,7 +80,7 @@ function listing(entries: readonly Entry[], indent = '    '): string[] {
     if (entry.where === undefined) {
       return counted;
     }
-    return `${padEndToWidth(counted, prefix.length + textWidth)}  ${style.gray(entry.where)}`;
+    return `${padEndToWidth(counted, prefix.length + textWidth)}  ${style.gray(printable(entry.where))}`;
   });
 }
 
@@ -270,7 +277,7 @@ export function toText(statistics: Statistics, options: StatsFormatOptions): str
       '',
       `Could not be read (${plural(files.unreadable.length, 'file')}, not counted above)`,
       ...unreadable.shown.map(
-        (file) => `    ${location(file.file, file.line)}  ${style.gray(file.reason)}`,
+        (file) => `    ${printable(location(file.file, file.line))}  ${style.gray(printable(file.reason))}`,
       ),
       ...more(unreadable.hidden, 'file'),
     );
