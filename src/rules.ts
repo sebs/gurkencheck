@@ -47,6 +47,12 @@ function extractRule(loaded: Record<string, unknown>, source: string): LintRule 
 }
 
 async function loadRulesFrom(directory: string): Promise<{rule: LintRule; file: string}[]> {
+  // An empty name - --rulesdir "$RULES" with $RULES unset - resolves to the
+  // working directory, and every module there would be imported, which runs
+  // it. It is refused before anything is loaded.
+  if (directory.trim() === '') {
+    throw new Error('--rulesdir needs a directory, but was given an empty name.');
+  }
   const resolved = path.resolve(directory);
   // A directory that is not there would otherwise contribute no rules and no
   // complaint, and a run meant to include them would pass without them.
