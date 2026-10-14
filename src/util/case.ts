@@ -22,7 +22,8 @@ const WORD = new RegExp(
     // A capital followed by a small letter starts the next word, so OAuth
     // is O and Auth rather than OA and uth.
     `[${UPPER}]+(?![${LOWER}])[${DIGIT}]*`,
-    `[${DIGIT}]+`,
+    // Digits and the small letters after them are one word: 2fa, 3d, 4k.
+    `[${DIGIT}]+[${LOWER}]*`,
   ].join('|'),
   'gu',
 );

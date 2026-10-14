@@ -56,3 +56,10 @@ test('a combining mark carries on the word it is in', () => {
   assert.equal(kebabCase(decomposed), decomposed);
   assert.equal(pascalCase('Été plan'), 'ÉtéPlan');
 });
+
+test('a word may start with digits', () => {
+  assert.deepEqual(words('user-2fa'), ['user', '2fa']);
+  assert.equal(kebabCase('user-2fa'), 'user-2fa');
+  assert.equal(snakeCase('render_3d_model'), 'render_3d_model');
+  assert.equal(kebabCase('4k-video'), '4k-video');
+});
