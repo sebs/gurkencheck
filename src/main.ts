@@ -615,12 +615,31 @@ async function main(argv: readonly string[]): Promise<number> {
  */
 function stopWritingWhenOutputCloses(): void {
   process.stdout.on('error', (thrown: NodeJS.ErrnoException) => {
-    if (thrown.code === 'EPIPE') {
-      process.stdout.write = (() => true) as typeof process.stdout.write;
-      return;
+    process.stdout.write = (() => true) as typeof process.stdout.write;
+    if (thrown.code !== 'EPIPE') {
+      couldNotWrite(thrown);
     }
-    throw thrown;
   });
+}
+
+/** Set once the output could not be written, which makes the run exit 2. */
+let outputFailed = false;
+
+/**
+ * Ends the run as one that could not run when its output could not be
+ * written - a full disk, a file size limit, a descriptor that is not open
+ * for writing. Thrown from the stream's error event, as it once was, it was
+ * an uncaught exception: a stack trace and exit 1, the code for "a rule was
+ * broken", for a clean run as well.
+ */
+function couldNotWrite(thrown: NodeJS.ErrnoException): void {
+  if (!outputFailed) {
+    TO_STDERR.report({level: 'error', message: `Could not write the report: ${thrown.message}`});
+  }
+  outputFailed = true;
+  if (ended) {
+    process.exitCode = EXIT_USAGE;
+  }
 }
 
 /**
@@ -679,6 +698,6 @@ if (isMainModule()) {
   // settles for its own failure, and warns about it before anything here can.
   void main(process.argv.slice(2)).then((code) => {
     ended = true;
-    process.exitCode = code;
+    process.exitCode = outputFailed ? EXIT_USAGE : code;
   });
 }

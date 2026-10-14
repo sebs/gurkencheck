@@ -961,6 +961,27 @@ test('--ignore takes a brace pattern whole, commas and all', async () => {
   });
 });
 
+test('output that cannot be written is a run that could not run, said in a line', async () => {
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    const readOnly = path.join(cwd, 'somefile');
+    fs.writeFileSync(readOnly, '');
+    for (const args of [['-f', 'json', '.'], ['-f', 'tap', '.'], ['stats', '.']]) {
+      const fd = fs.openSync(readOnly, 'r');
+      try {
+        const child = spawn(process.execPath, [CLI, ...args], {cwd, stdio: ['ignore', fd, 'pipe']});
+        let stderr = '';
+        child.stderr!.on('data', (chunk) => (stderr += String(chunk)));
+        const code = await new Promise<number | null>((resolve) => child.on('close', resolve));
+        assert.equal(code, 2, `${args.join(' ')}: ${stderr}`);
+        assert.match(stderr, /Could not write the report: EBADF/u, args.join(' '));
+        assert.doesNotMatch(stderr, /^\s+at /mu, 'no stack trace');
+      } finally {
+        fs.closeSync(fd);
+      }
+    }
+  });
+});
+
 test('a directory named outright and skipped whole is a run that checked nothing', async () => {
   await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
     fs.mkdirSync(path.join(cwd, 'legacy'));
