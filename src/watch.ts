@@ -88,7 +88,12 @@ function mayHoldFeatures(absolutePath: string): boolean {
   }
 }
 
-/** True when a feature file sits anywhere below `directory`, stopping at the first. */
+/**
+ * True when a feature file sits anywhere below `directory`, stopping at the
+ * first - or when a directory cannot be read, which may hide some: a
+ * directory made unreadable is a run that fails, and taken for an empty one
+ * it left the results from before on screen.
+ */
 function holdsFeatureFile(directory: string): boolean {
   const pending = [directory];
   while (pending.length > 0) {
@@ -96,7 +101,7 @@ function holdsFeatureFile(directory: string): boolean {
     try {
       entries = fs.readdirSync(pending.pop()!, {withFileTypes: true});
     } catch {
-      continue;
+      return true;
     }
     for (const entry of entries) {
       if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
