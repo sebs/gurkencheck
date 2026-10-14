@@ -79,3 +79,9 @@ test('a long run of trailing punctuation takes linear time', () => {
   normaliseStepText(`${step} .`);
   assert.ok(performance.now() - started < 500, 'took too long');
 });
+
+test('a < and a > with spaces inside them are comparisons, not a placeholder', () => {
+  assert.equal(normaliseStepText('3 < 5 and 7 > 2'), '0 < 0 and 0 > 0');
+  assert.notEqual(normaliseStepText('a < b and c > d'), normaliseStepText('a < x and y > d'));
+  assert.equal(normaliseStepText('I have <count> items'), 'i have <> items');
+});

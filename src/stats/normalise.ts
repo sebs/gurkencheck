@@ -29,7 +29,10 @@ export const STRING_MARKER = '""';
 /** Stands in for a number, whatever its value. */
 export const NUMBER_MARKER = '0';
 
-const PLACEHOLDER = /<[^<>]*>/gu;
+// Placeholder-shaped only: not starting or ending with a space, so `3 < 5
+// and 7 > 2` is two comparisons rather than one placeholder between them -
+// which made steps that differ in everything between them one step.
+const PLACEHOLDER = /<[^<>\s](?:[^<>\n]*[^<>\s])?>/gu;
 /** A double quoted string, which may hold quotes escaped with a backslash. */
 const QUOTED = /"(?:[^"\\]|\\.)*"/gu;
 
