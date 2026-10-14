@@ -60,7 +60,8 @@ export interface UnreadableFile {
   file: string;
   /** The parser's complaint, or the rule name it maps onto. */
   reason: string;
-  line: number;
+  /** Where the parser gave up; left out for a file that could not be read at all. */
+  line?: number;
 }
 
 /** How many files were written in each Gherkin dialect. */

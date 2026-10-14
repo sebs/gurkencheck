@@ -8,6 +8,7 @@ import {readFileSync} from 'node:fs';
 import {test} from 'node:test';
 import {parseFeature} from '../../src/gherkin/parse.ts';
 import {collectStatistics, distribution} from '../../src/stats/collect.ts';
+import {toText} from '../../src/stats/format/index.ts';
 import type {Statistics} from '../../src/stats/types.ts';
 
 const FIXTURES = 'test/stats/fixtures';
@@ -193,4 +194,22 @@ test('quantiles are values something actually has, not averages of two', () => {
     max: 4,
     mean: 2.5,
   });
+});
+
+test('a file that could not be read says where once, and has no line of 0', () => {
+  const stats = collectStatistics([
+    parseFeature('bad.feature', 'Feature: A\n  Scenario: B\n    Given c\n  Nonsense here\n'),
+    {
+      file: {relativePath: 'gone.feature', lines: []},
+      feature: undefined,
+      errors: [{message: 'ENOENT: no such file', rule: 'unexpected-error', line: 0}],
+    },
+  ]);
+  const [bad, gone] = stats.files.unreadable;
+  assert.equal(bad!.line, 4);
+  assert.doesNotMatch(bad!.reason, /^\(\d+:\d+\)/u);
+  assert.deepEqual(gone, {file: 'gone.feature', reason: 'ENOENT: no such file'});
+  const text = toText(stats, {top: 10});
+  assert.match(text, /^ {4}gone\.feature {2}/mu);
+  assert.doesNotMatch(text, /gone\.feature:0/u);
 });

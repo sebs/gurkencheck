@@ -269,7 +269,11 @@ function absorb(tally: Tally, result: ParseResult): void {
   const file = result.file.relativePath;
   const failure = result.errors[0];
   if (failure !== undefined) {
-    tally.unreadable.push({file, reason: failure.message, line: failure.line});
+    // The parser starts its messages with where it is, as (3:1); the report
+    // gives the place beside the reason, and saying it twice says nothing.
+    // A file that could not be read at all has no line to give.
+    const reason = failure.message.replace(/^\(\d+:\d+\): /u, '');
+    tally.unreadable.push({file, reason, ...(failure.line > 0 ? {line: failure.line} : {})});
     return;
   }
 

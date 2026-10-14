@@ -29,8 +29,9 @@ export function summarise(distribution: Distribution): string {
 }
 
 /** `features/login.feature:12` */
-export function location(file: string, line: number): string {
-  return `${file}:${line}`;
+export function location(file: string, line: number | undefined): string {
+  // A file as a whole has no line, and :0 points at one that does not exist.
+  return line === undefined || line <= 0 ? file : `${file}:${line}`;
 }
 
 /** `1 file` / `3 files` */
