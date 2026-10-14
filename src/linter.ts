@@ -89,6 +89,17 @@ function unknownRulesNamed(suppressions: Suppressions, rules: RuleRegistry): Rul
   return findings;
 }
 
+/** Freezes an object and everything reachable from it. */
+function deepFreeze(value: unknown): void {
+  if (typeof value !== 'object' || value === null || Object.isFrozen(value)) {
+    return;
+  }
+  Object.freeze(value);
+  for (const key of Object.keys(value)) {
+    deepFreeze((value as Record<string, unknown>)[key]);
+  }
+}
+
 /**
  * The directive checks' findings as loud as the configuration asks: warnings
  * unless it names the check, none for "off", errors for "on".
@@ -142,8 +153,15 @@ export async function* lintStream(
     let suppressions = EMPTY_SUPPRESSIONS;
 
     if (errors.length === 0) {
-      errors = await runEnabledRules(result.feature, result.file, configuration, rules, run);
+      // The directives are read before any rule runs, and the rules are
+      // handed the file and its syntax tree frozen: a rule changing either -
+      // lines.reverse() - changed which findings the directives hid, and
+      // what every rule after it saw. Now such a rule fails as one that
+      // crashed, and nothing else changes.
       suppressions = readSuppressions(result.file.lines, result.feature);
+      deepFreeze(result.file);
+      deepFreeze(result.feature);
+      errors = await runEnabledRules(result.feature, result.file, configuration, rules, run);
       if (!suppressions.isEmpty) {
         errors = errors.filter((error) => !suppressions.isSuppressed(error));
         errors.push(

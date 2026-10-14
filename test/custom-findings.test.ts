@@ -3,9 +3,13 @@
  * rule should not have returned, and what becomes of them.
  */
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {test} from 'node:test';
 import {FORMATTERS} from '../src/formatters/index.ts';
 import {hasErrors, lint} from '../src/linter.ts';
+import {loadRules} from '../src/rules.ts';
 import type {LintRule, RuleError} from '../src/types.ts';
 
 const FILE = 'test/linter/NoViolations.feature';
@@ -141,4 +145,30 @@ test('a rule set to warn that crashes only warns', async () => {
     [['unexpected-error', 'warning']],
   );
   assert.equal(hasErrors(results), false);
+});
+
+test('a rule changing the file it is handed fails, and changes nothing else', async () => {
+  const meddling = {
+    name: 'meddling',
+    run: (_feature: unknown, file: {lines: string[]}) => {
+      file.lines.reverse();
+      return [];
+    },
+  } as unknown as LintRule;
+  const rules = new Map([...(await loadRules()), ['meddling', meddling]]);
+  const source = 'Feature: A\n  # gurkencheck-disable-next-line no-unnamed-scenarios\n  Scenario:\n    Given b\n  Scenario:\n    Given c\n';
+  const file = path.join(os.tmpdir(), `gurkencheck-meddling-${process.pid}.feature`);
+  fs.writeFileSync(file, source);
+  try {
+    const [result] = await lint([file], {meddling: 'on', 'no-unnamed-scenarios': 'on'}, rules);
+    assert.deepEqual(
+      result!.errors.map(({rule, line}) => [rule, line]),
+      [
+        ['unexpected-error', 0],
+        ['no-unnamed-scenarios', 5],
+      ],
+    );
+  } finally {
+    fs.rmSync(file, {force: true});
+  }
 });
