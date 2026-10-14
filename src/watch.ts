@@ -55,6 +55,11 @@ export interface WatchOptions {
   signal?: AbortSignal;
 }
 
+/** A path relative to the working directory, as a notice shows it. */
+function shown(absolutePath: string): string {
+  return path.relative(process.cwd(), absolutePath) || absolutePath;
+}
+
 /** True when a change to this path could change what a run would report. */
 export function isInteresting(relativePath: string, configFileName: string): boolean {
   const name = path.basename(relativePath);
@@ -177,7 +182,9 @@ export async function watch(
         if (!listed && (ignored(relativePath) || !isInteresting(relativePath, configFileName))) {
           return;
         }
-        changed.add(path.basename(relativePath));
+        // The path as you would type it: two files called login.feature in
+        // different folders are two changes, and either could be the one.
+        changed.add(shown(path.resolve(root, relativePath)));
         schedule();
       });
       watcher.on('error', (thrown: Error) => {
@@ -231,7 +238,7 @@ export async function watch(
     try {
       const watcher = fs.watch(directory, (_event, filename) => {
         if (filename === null || files().has(path.join(directory, filename.toString()))) {
-          changed.add(filename === null ? 'a file' : filename.toString());
+          changed.add(filename === null ? 'a file' : shown(path.join(directory, filename.toString())));
           schedule();
         }
       });

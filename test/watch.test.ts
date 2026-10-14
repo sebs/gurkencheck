@@ -338,3 +338,25 @@ test('featureRoots drops a directory already covered by another', () => {
 test('featureRoots ignores a pattern that names nothing', () => {
   assert.deepEqual(featureRoots(['nowhere-at-all']), []);
 });
+
+test('names a change by its path, and counts files sharing a name apart', async () => {
+  await withWatch(async ({directory, passes, notices}) => {
+    fs.mkdirSync(path.join(directory, 'one'));
+    fs.mkdirSync(path.join(directory, 'two'));
+    await waitFor(
+      'a pass for the two files',
+      () => notices().some((message) => /2 files changed/u.test(message)),
+      () => {
+        fs.writeFileSync(path.join(directory, 'one', 'Same.feature'), 'Feature: A\n');
+        fs.writeFileSync(path.join(directory, 'two', 'Same.feature'), 'Feature: B\n');
+      },
+    );
+    assert.ok(passes() >= 2);
+
+    await waitFor(
+      'a notice naming the path',
+      () => notices().some((message) => message.includes(`${path.join('one', 'Same.feature')} changed`)),
+      () => fs.writeFileSync(path.join(directory, 'one', 'Same.feature'), 'Feature: C\n'),
+    );
+  });
+});
