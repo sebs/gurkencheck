@@ -371,6 +371,30 @@ Each result is `{filePath, errors}`, and each error is
 `{message, rule, line, column, severity}`. A default export, a `printResults` export, or a
 module that is itself the function all work.
 
+A formatter like that is handed the whole run once it is over. One that should write as
+the files are checked, as `stylish` and `tap` do, also exports `startRun`. It is called
+once per run and returns the hooks for that run, each giving back the text to write, or a
+promise of it:
+
+```js
+// progress.mjs
+export function startRun() {
+  let failed = 0;
+  return {
+    start: () => 'checking\n', // optional, before the first file
+    file(result) {
+      // as soon as each file is done
+      if (result.errors.some((error) => error.severity === 'error')) failed++;
+      return `${result.filePath}: ${result.errors.length}\n`;
+    },
+    end: () => `${failed} files failed\n`, // optional, after the last file
+  };
+}
+```
+
+Text is written exactly as returned, so each hook ends its own lines. A module exporting
+`startRun` is used that way even when it exports a whole-run formatter too.
+
 ## Custom rules
 
 Point `--rulesdir` at a directory of your own modules. Each exports an object with a
