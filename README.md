@@ -487,13 +487,17 @@ about.
 import {findFeatureFiles, lint, loadRules, readConfiguration} from 'gurkencheck';
 
 const rules = await loadRules();
-const config = await readConfiguration('.gurkencheckrc', rules);
+// No path: the nearest .gurkencheckrc, or the recommended rules, as on the command line.
+const config = await readConfiguration(undefined, rules);
 
 if (config.ok) {
   const {files} = findFeatureFiles(['features']);
   const results = await lint(files, config.configuration, rules);
 }
 ```
+
+Given a path, `readConfiguration` reads that file and reports it missing if it is not there,
+as `--config` does.
 
 Each error carries `message`, `rule`, `line` and, where the rule knows one, `column` —
 both 1-based, so an editor can underline exactly the right text. Errors about a whole file

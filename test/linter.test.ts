@@ -266,3 +266,23 @@ test('a directive naming a rule that does not exist is warned about', async () =
     fs.rmSync(file, {force: true});
   }
 });
+
+test('the README library example lints with no configuration file', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-example-'));
+  const originalCwd = process.cwd();
+  try {
+    fs.mkdirSync(path.join(directory, 'features'));
+    fs.writeFileSync(path.join(directory, 'features', 'a.feature'), 'Feature: A\n  Scenario:\n    Given b\n');
+    process.chdir(directory);
+    const {findFeatureFiles, readConfiguration} = await import('../src/index.ts');
+    const rules = await loadRules();
+    const config = await readConfiguration(undefined, rules);
+    assert.ok(config.ok);
+    const {files} = findFeatureFiles(['features']);
+    const results = await lint(files, config.configuration, rules);
+    assert.deepEqual(results[0]!.errors.map((error) => error.rule), ['no-unnamed-scenarios']);
+  } finally {
+    process.chdir(originalCwd);
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});
