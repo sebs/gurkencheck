@@ -413,3 +413,19 @@ test('a package that is installed but cannot be loaded is not asked whether it i
     fs.rmSync(directory, {recursive: true, force: true});
   }
 });
+
+test('a configuration module whose default export is null is said to export none', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-null-config-'));
+  try {
+    const packageDirectory = path.join(directory, 'node_modules', 'null-config');
+    fs.mkdirSync(packageDirectory, {recursive: true});
+    fs.writeFileSync(path.join(packageDirectory, 'package.json'), '{"type": "module", "exports": "./index.js"}');
+    fs.writeFileSync(path.join(packageDirectory, 'index.js'), 'export default null;\n');
+    fs.writeFileSync(path.join(directory, 'rc.json'), '{"extends": "null-config"}');
+    const result = await readConfiguration(path.join(directory, 'rc.json'), rules);
+    assert.ok(!result.ok);
+    assert.match(result.details[0]!, /does not export a configuration object; its default export is null/u);
+  } finally {
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});

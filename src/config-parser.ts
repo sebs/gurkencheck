@@ -295,10 +295,15 @@ async function loadExtended(
       `Could not load "${specifier}", extended from "${shown(fromFile)}": ${thrown instanceof Error ? thrown.message : String(thrown)}`,
     );
   }
-  const exported = module['default'] ?? module;
+  // A default export is the configuration, whatever it is: falling back to
+  // the module itself when it was null took {default: null} for one, and
+  // reported a rule called "default".
+  const exported = 'default' in module ? module['default'] : module;
   if (!isConfigurationObject(exported)) {
     throw new ConfigurationError(
-      `"${specifier}" does not export a configuration object.`,
+      `"${specifier}" does not export a configuration object; its default export is ${
+        exported === null ? 'null' : Array.isArray(exported) ? 'an array' : typeof exported
+      }.`,
     );
   }
   return {configuration: exported, source: resolved};
