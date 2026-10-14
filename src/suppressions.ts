@@ -79,13 +79,15 @@ export function readSuppressions(lines: readonly string[], feature?: Feature): S
   const named: {rule: string; line: number}[] = [];
   let found = false;
   /**
-   * The first line that is neither blank nor a comment. A finding about the
-   * whole file belongs to no line, so it is taken to sit here: a `disable`
-   * written in the comments at the top of the file covers it, one further
-   * down does not.
+   * The `Feature:` line, or without a parsed feature the first line that is
+   * neither blank nor a comment. A finding about the whole file belongs to no
+   * line, so it is taken to sit here: a `disable` above the Feature covers
+   * it - in the comments at the top, or between its tags and the keyword -
+   * and one further down does not.
    */
   const firstContent = lines.findIndex((text) => text.trim() !== '' && !text.trim().startsWith('#'));
-  const wholeFileLine = firstContent === -1 ? lines.length + 1 : firstContent + 1;
+  const wholeFileLine =
+    feature?.location.line ?? (firstContent === -1 ? lines.length + 1 : firstContent + 1);
 
   lines.forEach((text, index) => {
     if (inDocString[index] === true) {

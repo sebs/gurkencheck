@@ -181,3 +181,10 @@ test('a rule that crashed is never hidden', () => {
   assert.ok(!found.isSuppressed(error('unexpected-error', 3)));
   assert.ok(!found.isSuppressed(error('unexpected-error', 0)));
 });
+
+test('a disable between the Feature tags and the keyword covers the whole file', () => {
+  const source = ['@billing', '# gurkencheck-disable file-name', 'Feature: A', '  Scenario: B'].join('\n');
+  const {feature} = parseFeature('a.feature', source);
+  const found = readSuppressions(source.split('\n'), feature);
+  assert.ok(found.isSuppressed(error('file-name', 0)));
+});
