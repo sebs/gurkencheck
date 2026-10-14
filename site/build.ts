@@ -416,7 +416,8 @@ a <code>--format</code> of its own whose values have nothing to do with the lint
 <h2>Skipping files</h2>
 <p>Put one glob per line in a <code>${DEFAULT_IGNORE_FILE_NAME}</code> file, or pass
 <code>--ignore</code> on the command line. Without either, <code>node_modules</code> is skipped
-and everything else is checked.</p>
+and everything else is checked. Like the configuration, the nearest ignore file in the
+directory gurkencheck runs in or above it is used, and its patterns are read from where it is.</p>
 <p>A search of a directory, like a glob's <code>*</code> and <code>**</code>, also passes over
 anything whose name starts with a dot, such as <code>.git</code>, and does not follow symlinks.
 Name such a file or directory on the command line to check it.</p>

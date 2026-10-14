@@ -8,6 +8,7 @@ import {
   DEFAULT_IGNORED_PATTERNS,
   DEFAULT_IGNORE_FILE_NAME,
   describeInvalidPattern,
+  findIgnoreFile,
   findFeatureFileStream,
   findFeatureFiles,
   readIgnorePatterns,
@@ -302,4 +303,16 @@ test('a file named twice, through a symlink or in another case, is found once', 
   const streamed: string[] = [];
   for await (const file of findFeatureFileStream(named).files) streamed.push(file);
   assert.deepEqual(streamed, [`${FOUND}/a.feature`]);
+});
+
+test('the nearest ignore file above the working directory is used, relative to where it is', () => {
+  fs.writeFileSync(DEFAULT_IGNORE_FILE_NAME, `${FOUND}/folder\n`);
+  process.chdir('folder');
+  try {
+    assert.equal(findIgnoreFile(), path.join(fs.realpathSync(workingDirectory), DEFAULT_IGNORE_FILE_NAME));
+    // folder/with/found/features/folder is skipped, seen from folder/ too.
+    assert.deepEqual(findFeatureFiles(['.']).files, ['with/found/features/a.feature']);
+  } finally {
+    process.chdir(workingDirectory);
+  }
 });

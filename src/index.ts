@@ -22,6 +22,7 @@ export {
   describeInvalidPattern,
   featureRoots,
   findFeatureFileStream,
+  findIgnoreFile,
   findFeatureFiles,
   readIgnorePatterns,
 } from './feature-finder.ts';

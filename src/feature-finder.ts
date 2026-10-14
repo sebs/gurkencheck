@@ -144,12 +144,56 @@ export function describeInvalidPattern(pattern: string): string {
 }
 
 /** True when the argument names a feature file that the ignore patterns skip. */
-function isIgnoredFile(pattern: string, globs: readonly string[], ignore: readonly string[]): boolean {
+function isIgnoredFile(pattern: string, globs: readonly string[], ignore: IgnoreList): boolean {
   const [featureGlob] = globs;
   if (globs.length !== 1 || !isFeatureFile(pattern) || literalPath(featureGlob!) === undefined) {
     return false;
   }
-  return globSync(featureGlob!).length > 0 && globSync(featureGlob!, {ignore}).length === 0;
+  return (
+    globSync(featureGlob!).length > 0 &&
+    globSync(featureGlob!, {ignore: ignore.patterns, ignoreBase: ignore.base}).length === 0
+  );
+}
+
+/**
+ * The ignore file a run with no --ignore uses: the nearest
+ * `.gurkencheckignore` in the working directory or any directory above it,
+ * or `undefined` when there is none - found the way the configuration is, so
+ * that running from a subdirectory of a project skips what the project
+ * skips.
+ */
+export function findIgnoreFile(cwd: string = process.cwd()): string | undefined {
+  let directory = path.resolve(cwd);
+  for (;;) {
+    const candidate = path.join(directory, DEFAULT_IGNORE_FILE_NAME);
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+    const parent = path.dirname(directory);
+    if (parent === directory) {
+      return undefined;
+    }
+    directory = parent;
+  }
+}
+
+/** Ignore patterns, and the directory they are relative to. */
+interface IgnoreList {
+  patterns: string[];
+  base: string;
+}
+
+/**
+ * The patterns a run skips: --ignore's, relative to the working directory, or
+ * the nearest ignore file's, relative to where it is.
+ */
+function readIgnoreList(ignoreArgument: readonly string[] | undefined): IgnoreList {
+  const given = ignoreArgument?.filter((pattern) => pattern.trim() !== '') ?? [];
+  const file = given.length > 0 ? undefined : findIgnoreFile();
+  return {
+    patterns: readIgnorePatterns(ignoreArgument, file ?? DEFAULT_IGNORE_FILE_NAME),
+    base: file === undefined ? process.cwd() : path.dirname(file),
+  };
 }
 
 /**
@@ -161,7 +205,7 @@ function isIgnoredFile(pattern: string, globs: readonly string[], ignore: readon
  */
 export function readIgnorePatterns(
   ignoreArgument: readonly string[] | undefined,
-  ignoreFileName: string = DEFAULT_IGNORE_FILE_NAME,
+  ignoreFileName: string = findIgnoreFile() ?? DEFAULT_IGNORE_FILE_NAME,
 ): string[] {
   const given = ignoreArgument?.filter((pattern) => pattern.trim() !== '') ?? [];
   if (given.length > 0) {
@@ -196,7 +240,7 @@ export function findFeatureFiles(
   ignoreArgument?: readonly string[],
 ): FeatureSearch {
   const searched = patterns.length > 0 ? patterns : ['.'];
-  const ignore = readIgnorePatterns(ignoreArgument);
+  const ignore = readIgnoreList(ignoreArgument);
 
   const files: string[] = [];
   const invalidPatterns: string[] = [];
@@ -212,7 +256,9 @@ export function findFeatureFiles(
       ignoredFiles.push(pattern);
     }
     for (const featureGlob of globs) {
-      files.push(...globSync(featureGlob, {ignore}).filter(isFeatureFile));
+      files.push(
+        ...globSync(featureGlob, {ignore: ignore.patterns, ignoreBase: ignore.base}).filter(isFeatureFile),
+      );
     }
   }
 
@@ -235,7 +281,7 @@ export function findFeatureFileStream(
   ignoreArgument?: readonly string[],
 ): FeatureFileStream {
   const searched = patterns.length > 0 ? patterns : ['.'];
-  const ignore = readIgnorePatterns(ignoreArgument);
+  const ignore = readIgnoreList(ignoreArgument);
 
   const globs: string[] = [];
   const invalidPatterns: string[] = [];
@@ -257,7 +303,7 @@ export function findFeatureFileStream(
     const seen = globs.length > 1 ? new Set<string>() : undefined;
 
     for (const featureGlob of globs) {
-      for await (const file of globStream(featureGlob, {ignore})) {
+      for await (const file of globStream(featureGlob, {ignore: ignore.patterns, ignoreBase: ignore.base})) {
         if (!isFeatureFile(file)) continue;
         if (seen !== undefined) {
           const identity = identityOf(file);

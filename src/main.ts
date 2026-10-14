@@ -11,9 +11,10 @@ import {DEFAULT_CONFIG_FILE_NAME, findConfigFile, readConfiguration} from './con
 import {EXIT_LINT_ERRORS, EXIT_OK, EXIT_USAGE} from './exit-codes.ts';
 import {
   DEFAULT_IGNORE_FILE_NAME,
-  featureRoots,
   describeInvalidPattern,
+  featureRoots,
   findFeatureFileStream,
+  findIgnoreFile,
 } from './feature-finder.ts';
 import {watch} from './watch.ts';
 import {
@@ -311,7 +312,7 @@ export async function run(
         files: () => [
           configPath,
           ...(settings?.files ?? []),
-          ...(ignore === undefined ? [DEFAULT_IGNORE_FILE_NAME] : []),
+          ...(ignore === undefined ? [findIgnoreFile() ?? DEFAULT_IGNORE_FILE_NAME] : []),
         ],
       },
       async () => {

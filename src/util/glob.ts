@@ -255,6 +255,11 @@ export interface GlobOptions {
    * reads them. A pattern matching a directory drops everything below it.
    */
   ignore?: readonly string[];
+  /**
+   * The directory the ignore patterns are relative to: where the ignore file
+   * is, which need not be `cwd`. Left out, `cwd`.
+   */
+  ignoreBase?: string;
 }
 
 /** One line of an ignore list, read the way .gitignore reads it. */
@@ -352,12 +357,14 @@ function newSearch(pattern: string, options: GlobOptions): Search {
     matches = globToRegExp(`${escapeGlob(root)}/${rest}`);
   }
 
+  const ignoreBase = path.resolve(cwd, options.ignoreBase ?? cwd);
   return {
     searchRoot,
     match(absolutePath: string): string | undefined {
       const relativePath = path.relative(cwd, absolutePath).split(path.sep).join('/');
       if (!matches.test(absolutePath.split(path.sep).join('/'))) return undefined;
-      if (isIgnored(relativePath, ignores)) return undefined;
+      const fromIgnoreBase = path.relative(ignoreBase, absolutePath).split(path.sep).join('/');
+      if (isIgnored(fromIgnoreBase, ignores)) return undefined;
       return relativePath;
     },
   };
