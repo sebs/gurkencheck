@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {detectLanguage, getDialect, isKnownLanguage} from '../../src/gherkin/dialects.ts';
+import {
+  detectLanguage,
+  getDialect,
+  isKnownLanguage,
+  suggestLanguage,
+  unknownLanguageMessage,
+} from '../../src/gherkin/dialects.ts';
 import {getNeutralKeyword, getNodeType} from '../../src/gherkin/keywords.ts';
 import {parseFeature, toLines} from '../../src/gherkin/parse.ts';
 
@@ -236,4 +242,13 @@ test('a header or a default language naming one is refused, not taken for a dial
   assert.deepEqual(fallback.errors, [
     {message: 'Language not supported: toString', rule: 'unexpected-error', line: 0},
   ]);
+});
+
+test('a language code in the wrong case, or with a region, is offered the one meant', () => {
+  assert.equal(suggestLanguage('DE'), 'de');
+  assert.equal(suggestLanguage('zh-cn'), 'zh-CN');
+  assert.equal(suggestLanguage('en-US'), 'en');
+  assert.equal(suggestLanguage('de_DE'), 'de');
+  assert.equal(suggestLanguage('klingon'), undefined);
+  assert.equal(unknownLanguageMessage('DE'), 'Unknown language "DE". Did you mean "de"?');
 });

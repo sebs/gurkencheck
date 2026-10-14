@@ -22,7 +22,7 @@ import {
   loadFormatter,
   loadStreamingFormatter,
 } from './formatters/index.ts';
-import {isKnownLanguage} from './gherkin/dialects.ts';
+import {isKnownLanguage, unknownLanguageMessage} from './gherkin/dialects.ts';
 import {hasErrors, lint, lintStream} from './linter.ts';
 import {SILENT, TO_STDERR} from './diagnostics.ts';
 import type {Diagnostics} from './diagnostics.ts';
@@ -152,7 +152,7 @@ export async function run(
           : ' given to --language';
       diagnostics.report({
         level: 'error',
-        message: `Unknown language "${language}"${from}. Use a Gherkin language code, such as "fr".`,
+        message: unknownLanguageMessage(language, from),
       });
       return undefined;
     }

@@ -16,7 +16,7 @@ import {
   describeInvalidPattern,
   findFeatureFileStream,
 } from '../feature-finder.ts';
-import {isKnownLanguage} from '../gherkin/dialects.ts';
+import {isKnownLanguage, unknownLanguageMessage} from '../gherkin/dialects.ts';
 import {readAndParseFiles} from '../gherkin/parse.ts';
 import {SILENT} from '../diagnostics.ts';
 import type {Diagnostics} from '../diagnostics.ts';
@@ -129,7 +129,7 @@ export async function runStats(
   if (language !== undefined && !isKnownLanguage(language)) {
     diagnostics.report({
       level: 'error',
-      message: `Unknown language "${language}". Use a Gherkin language code, such as "fr".`,
+      message: unknownLanguageMessage(language),
     });
     return EXIT_USAGE;
   }

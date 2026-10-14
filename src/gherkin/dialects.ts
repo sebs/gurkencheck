@@ -41,6 +41,29 @@ export function isKnownLanguage(language: string): boolean {
   return Object.hasOwn(ALL_DIALECTS, language);
 }
 
+/**
+ * The language code meant by one Gherkin does not know, if there is one:
+ * `DE` for `de`, `zh-cn` for `zh-CN`, or `en-US` and `de_DE` for the
+ * language the region belongs to. Gherkin reads codes exactly, so this is
+ * only ever offered, never taken in their place.
+ */
+export function suggestLanguage(language: string): string | undefined {
+  const codes = Object.keys(ALL_DIALECTS);
+  const wanted = language.toLowerCase().replace(/_/gu, '-');
+  return (
+    codes.find((code) => code.toLowerCase() === wanted) ??
+    codes.find((code) => code.toLowerCase() === wanted.split('-')[0])
+  );
+}
+
+/** `Unknown language "DE". Did you mean "de"?`, or the general hint. */
+export function unknownLanguageMessage(language: string, from = ''): string {
+  const suggestion = suggestLanguage(language);
+  return suggestion === undefined
+    ? `Unknown language "${language}"${from}. Use a Gherkin language code, such as "fr".`
+    : `Unknown language "${language}"${from}. Did you mean "${suggestion}"?`;
+}
+
 const LANGUAGE_HEADER = /^\s*#\s*language\s*:\s*([\w-]+)\s*$/;
 
 /**
