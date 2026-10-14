@@ -132,6 +132,7 @@ function missingConfiguration(file: string): {ok: false; message: string; detail
 function unreadableBecause(thrown: unknown, filePath: string): string {
   const code = (thrown as NodeJS.ErrnoException | undefined)?.code;
   if (code === 'EISDIR') return 'it is a directory, not a file';
+  if (code === 'ELOOP') return 'it is a symlink that leads back to itself';
   if (code === 'EACCES' || code === 'EPERM') return 'permission was denied';
   if (code === 'ENOENT') {
     return lstatOrUndefined(filePath)?.isSymbolicLink() === true

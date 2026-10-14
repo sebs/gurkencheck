@@ -443,3 +443,15 @@ test('a configuration that is not a regular file is refused, not waited on', asy
     fs.rmSync(directory, {recursive: true, force: true});
   }
 });
+
+test('a configuration that is a symlink loop is said to be one', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-loop-config-'));
+  try {
+    fs.symlinkSync('rc.json', path.join(directory, 'rc.json'));
+    const result = await readConfiguration(path.join(directory, 'rc.json'), rules);
+    assert.ok(!result.ok);
+    assert.match(result.details[0]!, /it is a symlink that leads back to itself/u);
+  } finally {
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});
