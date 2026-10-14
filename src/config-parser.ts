@@ -70,7 +70,13 @@ export type ConfigurationResult =
        */
       files?: string[];
     }
-  | {ok: false; message: string; details: string[]};
+  | {
+      ok: false;
+      message: string;
+      details: string[];
+      /** The files read before the mistake was found, for a watch to keep an eye on. */
+      files?: string[];
+    };
 
 class ConfigurationError extends Error {}
 
@@ -182,6 +188,7 @@ function presetMeant(specifier: string): string | undefined {
 async function loadExtended(
   specifier: string,
   fromFile: string,
+  files: Set<string>,
 ): Promise<{configuration: Record<string, unknown>; source: string}> {
   // Only the table's own entries: constructor, toString and the like are on
   // every object, and taken for presets they were empty ones - the
@@ -216,6 +223,9 @@ async function loadExtended(
         `Could not find "${specifier}", extended from "${shown(fromFile)}".`,
       );
     }
+    // Noted before it is read, so that a file that cannot be read is among
+    // the ones a watch keeps an eye on, and its being fixed is noticed.
+    files.add(resolved);
     return {configuration: parseFile(resolved), source: resolved};
   }
 
@@ -234,6 +244,9 @@ async function loadExtended(
   }
 
   if (resolved.endsWith('.json')) {
+    // Noted before it is read, so that a file that cannot be read is among
+    // the ones a watch keeps an eye on, and its being fixed is noticed.
+    files.add(resolved);
     return {configuration: parseFile(resolved), source: resolved};
   }
 
@@ -281,7 +294,7 @@ async function flatten(
   let merged: Configuration = {};
   try {
     for (const specifier of extendsList(configuration, source)) {
-      const extended = await loadExtended(specifier, source);
+      const extended = await loadExtended(specifier, source, files);
       merged = {
         ...merged,
         ...(await flatten(extended.configuration, extended.source, ancestors, files, origins)),
@@ -390,6 +403,7 @@ export async function readConfiguration(
         ok: false,
         message: `Could not read config file "${configPath}"`,
         details: [thrown.message],
+        files: [path.resolve(configPath), ...files],
       };
     }
     throw thrown;
@@ -406,6 +420,7 @@ export async function readConfiguration(
       ok: false,
       message: `Could not read config file "${configPath}"`,
       details: [`"${LANGUAGE}" must be a language code, such as "fr".${inFile(origins.get(LANGUAGE), configPath)}`],
+      files: [...files],
     };
   }
 
@@ -420,7 +435,7 @@ export async function readConfiguration(
     verifyConfiguration(entries, rules).map((error) => `${error}${inFile(source, configPath)}`),
   );
   if (errors.length > 0) {
-    return {ok: false, message: `Error(s) in configuration file "${configPath}":`, details: errors};
+    return {ok: false, message: `Error(s) in configuration file "${configPath}":`, details: errors, files: [...files]};
   }
 
   return {

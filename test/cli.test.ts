@@ -727,3 +727,35 @@ test('a file whose name reads as an option is refused, not obeyed', async () => 
     assert.equal(named.code, 1);
   });
 });
+
+test('--watch notices the fix to an extended file it was told is broken', async () => {
+  await withProject(DIRTY_FEATURE, '{"extends": "./team.json"}', async (cwd) => {
+    const team = path.join(cwd, 'team.json');
+    fs.writeFileSync(team, CONFIG);
+    const child = spawn(process.execPath, [CLI, '--watch', '.'], {cwd});
+    let output = '';
+    child.stdout.on('data', (chunk) => (output += String(chunk)));
+    child.stderr.on('data', (chunk) => (output += String(chunk)));
+    const waitFor = async (pattern: RegExp, retry?: () => void): Promise<void> => {
+      const deadline = Date.now() + 10000;
+      let nextRetry = 0;
+      while (!pattern.test(output)) {
+        if (Date.now() > deadline) assert.fail(`timed out waiting for ${String(pattern)} in:\n${output}`);
+        if (retry !== undefined && Date.now() >= nextRetry) {
+          retry();
+          nextRetry = Date.now() + 300;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+    };
+    try {
+      await waitFor(/Watching for changes/u);
+      output = '';
+      await waitFor(/Could not parse/u, () => fs.writeFileSync(team, '{broken'));
+      output = '';
+      await waitFor(/error +Missing Scenario name/u, () => fs.writeFileSync(team, CONFIG));
+    } finally {
+      await stop(child);
+    }
+  });
+});

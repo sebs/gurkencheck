@@ -145,10 +145,18 @@ export async function run(
    * watch, since a change to the configuration is one of the things it
    * checks again for.
    */
+  /** Every configuration file read, for a watch to keep an eye on. */
+  const configurationFiles = new Set<string>();
   const readSettings = async (): Promise<
     {configuration: Configuration; language: string | undefined; files?: string[]} | undefined
   > => {
     const read = await readConfiguration(values.config, rules);
+    // Kept across passes, broken ones included: a watch has to notice the
+    // fix to a file it was told is broken, which a list read afresh from a
+    // configuration that failed would leave out.
+    for (const file of read.files ?? []) {
+      configurationFiles.add(file);
+    }
     if (!read.ok) {
       diagnostics.report({level: 'error', message: read.message, details: read.details});
       return undefined;
@@ -356,7 +364,7 @@ export async function run(
         // there to overrule it.
         files: () => [
           configPath,
-          ...(settings?.files ?? []),
+          ...configurationFiles,
           ...(ignore === undefined ? [findIgnoreFile() ?? DEFAULT_IGNORE_FILE_NAME] : []),
         ],
       },
