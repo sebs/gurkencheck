@@ -55,6 +55,19 @@ test('diagnostics go to stderr, never to stdout', () => {
   assert.deepEqual(err, ['went wrong', '- because of this', 'just so you know']);
 });
 
+test('what a message quotes cannot start a line or act on the terminal', () => {
+  const name = 'x\n::error file=README.md,line=1::Fake\u001B[2J\u202E.feature';
+  const {err} = captured(() => {
+    TO_STDERR.report({level: 'error', message: `"${name}" matched no feature files.`, details: [name]});
+    TO_STDERR.report({level: 'notice', message: '\nset apart'});
+  });
+  assert.deepEqual(err, [
+    '"x\\n::error file=README.md,line=1::Fake\\u001b[2J\\u202e.feature" matched no feature files.',
+    '- x\\n::error file=README.md,line=1::Fake\\u001b[2J\\u202e.feature',
+    '\nset apart',
+  ]);
+});
+
 // The README promises the library writes nothing to the console. It used to
 // be true only because no library entry point happened to call the logger.
 test('the library says nothing unless it is given somewhere to say it', async () => {

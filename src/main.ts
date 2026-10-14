@@ -553,10 +553,11 @@ async function main(argv: readonly string[]): Promise<number> {
       level: 'error',
       message: 'gurkencheck stopped unexpectedly. This is a bug, please report it:',
     });
-    TO_STDERR.report({
-      level: 'detail',
-      message: thrown instanceof Error ? (thrown.stack ?? thrown.message) : asText(thrown),
-    });
+    // Line by line: a line break inside a message is written out, not kept.
+    const text = thrown instanceof Error ? (thrown.stack ?? thrown.message) : asText(thrown);
+    for (const line of text.split('\n')) {
+      TO_STDERR.report({level: 'detail', message: line});
+    }
     return EXIT_USAGE;
   }
 }

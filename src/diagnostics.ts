@@ -13,6 +13,7 @@
  * the statistics - is the formatter's business and goes to stdout.
  */
 import * as logger from './logger.ts';
+import {printable} from './util/printable.ts';
 
 /**
  * How a diagnostic is meant to read.
@@ -56,6 +57,18 @@ export function collectDiagnostics(): CollectedDiagnostics {
 }
 
 /**
+ * A message as it is safe to write: blank lines before it kept, as a notice
+ * set apart from what came before; everything else that acts rather than
+ * shows written out. Messages quote paths, and a file name can hold a line
+ * break followed by `::error ...`, which GitHub Actions takes for a command,
+ * or an escape sequence that clears the terminal.
+ */
+function safe(message: string): string {
+  const blank = /^\n*/u.exec(message)![0];
+  return `${blank}${printable(message.slice(blank.length))}`;
+}
+
+/**
  * Writes to stderr, the way the command line always has.
  *
  * Findings go to stdout so they can be redirected or piped; anything about
@@ -65,14 +78,14 @@ export function collectDiagnostics(): CollectedDiagnostics {
 export const TO_STDERR: Diagnostics = {
   report({level, message, details}: Diagnostic): void {
     if (level === 'error') {
-      logger.boldError(message);
+      logger.boldError(safe(message));
     } else if (level === 'detail') {
-      logger.error(message);
+      logger.error(safe(message));
     } else {
-      logger.note(message);
+      logger.note(safe(message));
     }
     for (const detail of details ?? []) {
-      logger.error(`- ${detail}`);
+      logger.error(`- ${safe(detail)}`);
     }
   },
 };
