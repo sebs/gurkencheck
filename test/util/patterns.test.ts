@@ -16,3 +16,8 @@ test('a pattern written for the old reading still works', () => {
   assert.deepEqual(invalidPatterns('patterns', ['^@wip\\-', '^@\\p{Lu}']), []);
   assert.equal(invalidPatterns('patterns', ['(']).length, 1);
 });
+
+test('a misspelt Unicode property is a mistake, not literal text', () => {
+  assert.throws(() => compilePattern('^@\\p{Lux}'));
+  assert.equal(invalidPatterns('patterns', ['^@\\p{Lux}', '\\P{Upercase}']).length, 2);
+});

@@ -32,7 +32,14 @@ export function invalidPatterns(setting: string, patterns: unknown, flags = ''):
 export function compilePattern(pattern: string, flags = ''): RegExp {
   try {
     return new RegExp(pattern, `${flags}u`);
-  } catch {
+  } catch (thrown) {
+    // A pattern naming a Unicode property was written for the u reading,
+    // so a mistake in it - \p{Lux} - is a mistake, not the old reading: taken
+    // the old way it would match the letters p{Lux}, and a ban would ban
+    // nothing without a word.
+    if (/\\[pP]\{/u.test(pattern)) {
+      throw thrown;
+    }
     return new RegExp(pattern, flags);
   }
 }
