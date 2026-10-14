@@ -333,6 +333,8 @@ test('a preset named without its prefix, or misspelt, gets the one meant', async
     for (const [name, message] of [
       ['recommended', /Did you mean the built-in "gurkencheck:recommended"\?/u],
       ['gurkencheck:recomended', /Did you mean "gurkencheck:recommended"\?/u],
+      ['GURKENCHECK:RECOMMENDED', /built-in configuration called "GURKENCHECK:RECOMMENDED"\. Did you mean "gurkencheck:recommended"\?/u],
+      ['Gurkencheck:Recommended', /Did you mean "gurkencheck:recommended"\?/u],
     ] as const) {
       fs.writeFileSync(path.join(directory, 'rc.json'), JSON.stringify({extends: name}));
       const result = await readConfiguration(path.join(directory, 'rc.json'), rules);

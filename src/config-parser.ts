@@ -216,7 +216,8 @@ function extendsList(configuration: Record<string, unknown>, source: string): st
 
 /** The built-in preset a name most likely means, prefixed or not. */
 function presetMeant(specifier: string): string | undefined {
-  const bare = (name: string): string => name.replace(/^gurkencheck:/u, '');
+  // The prefix in any case: GURKENCHECK:RECOMMENDED is one meant too.
+  const bare = (name: string): string => name.replace(/^gurkencheck:/iu, '');
   const meant = closest(bare(specifier), Object.keys(PRESETS).map(bare));
   return meant === undefined ? undefined : `gurkencheck:${meant}`;
 }
@@ -241,7 +242,9 @@ async function loadExtended(
   if (preset !== undefined) {
     return {configuration: preset as Record<string, unknown>, source: specifier};
   }
-  if (specifier.startsWith('gurkencheck:')) {
+  // No package name has capitals or a colon, so a prefix in another case
+  // is a preset written that way, not a package to look for.
+  if (/^gurkencheck:/iu.test(specifier)) {
     const meant = presetMeant(specifier);
     throw new ConfigurationError(
       meant === undefined
