@@ -160,3 +160,18 @@ test('a description line starting with quotes does not hide the directives below
   assert.ok(found.isSuppressed(error('name-length', 6)));
   assert.ok(!found.isSuppressed(error('use-and', 10)), 'a directive inside a doc string is still text');
 });
+
+test('-- ends the rule names, and what follows is a note', () => {
+  const found = suppressions(
+    ['# gurkencheck-disable-file name-length -- generated from the API spec', 'Feature: A'].join('\n'),
+  );
+  assert.ok(found.isSuppressed(error('name-length', 2)));
+  assert.ok(!found.isSuppressed(error('use-and', 2)));
+  assert.deepEqual(found.named, [{rule: 'name-length', line: 1}]);
+});
+
+test('a bare directive with a note still covers every rule', () => {
+  const found = suppressions(['# gurkencheck-disable -- legacy file', 'Feature: A'].join('\n'));
+  assert.ok(found.isSuppressed(error('use-and', 2)));
+  assert.deepEqual(found.named, []);
+});

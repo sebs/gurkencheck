@@ -2,16 +2,16 @@
  * Running the rules over a set of feature files.
  */
 import path from 'node:path';
-import {readAndParseFiles} from './gherkin/parse.ts';
+import {PARSER_RULES, readAndParseFiles} from './gherkin/parse.ts';
 import {beginRun, finishRun, isRuleEnabled, runEnabledRules} from './rules.ts';
 import {readSuppressions} from './suppressions.ts';
 import type {Suppressions} from './suppressions.ts';
-import type {Configuration, FileResult, RuleRegistry} from './types.ts';
+import type {Configuration, FileResult, RuleError, RuleRegistry} from './types.ts';
 import {sortBy} from './util/collections.ts';
 import type {Sequence} from './util/stream.ts';
 
 /** Stands in for a file whose directives were never read, and hides nothing. */
-const EMPTY_SUPPRESSIONS: Suppressions = {isEmpty: true, isSuppressed: () => false};
+const EMPTY_SUPPRESSIONS: Suppressions = {isEmpty: true, named: [], isSuppressed: () => false};
 
 export interface LintOptions {
   /**
@@ -57,6 +57,23 @@ function reportsAcrossFiles(rules: RuleRegistry, configuration: Configuration): 
  * Stopping early - `break` in a `for await` - stops the reading as well as
  * the checking, rather than running on to the last file.
  */
+/**
+ * A warning for each rule a directive names that does not exist. A typo there
+ * switches nothing off, and the finding it was meant to hide stays with no
+ * hint why. Added after the directives have been applied, so that a
+ * directive cannot hide the warning about itself.
+ */
+function unknownRulesNamed(suppressions: Suppressions, rules: RuleRegistry): RuleError[] {
+  return suppressions.named
+    .filter(({rule}) => !rules.has(rule) && !(PARSER_RULES as readonly string[]).includes(rule))
+    .map(({rule, line}) => ({
+      message: `A directive names "${rule}", which is not a rule, so it switches nothing off`,
+      rule: 'unknown-rule-in-directive',
+      line,
+      severity: 'warning' as const,
+    }));
+}
+
 export async function* lintStream(
   files: Sequence<string>,
   configuration: Configuration,
@@ -84,6 +101,7 @@ export async function* lintStream(
       suppressions = readSuppressions(result.file.lines, result.feature);
       if (!suppressions.isEmpty) {
         errors = errors.filter((error) => !suppressions.isSuppressed(error));
+        errors.push(...unknownRulesNamed(suppressions, rules));
       }
     }
 

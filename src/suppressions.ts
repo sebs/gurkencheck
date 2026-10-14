@@ -11,7 +11,10 @@
  *   # gurkencheck-disable-file no-trailing-spaces
  *
  * With no rule names, a directive covers every rule. `disable` runs to the
- * end of the file unless an `enable` closes it.
+ * end of the file unless an `enable` closes it. As in eslint, ` -- ` ends the
+ * rule names, and what follows is a note on why:
+ *
+ *   # gurkencheck-disable-file name-length -- generated from the API spec
  *
  * Comments are read from the raw text rather than the parsed document, so a
  * directive still works in a file the parser rejected. A `#` inside a doc
@@ -47,10 +50,15 @@ export interface Suppressions {
   isSuppressed(error: RuleError): boolean;
   /** True when the file carries no directives at all. */
   readonly isEmpty: boolean;
+  /** Every rule a directive names, with the line of the directive. */
+  readonly named: readonly {rule: string; line: number}[];
 }
 
 function parseRuleNames(rest: string): string[] {
+  // `-- reason` explains the directive; its words are not rule names, and
+  // read as ones they would leave the directive covering nothing.
   const names = rest
+    .replace(/(?:^|\s)--(?:\s.*)?$/u, '')
     .split(/[,\s]+/)
     .map((name) => name.trim())
     .filter((name) => name !== '');
@@ -68,6 +76,7 @@ export function readSuppressions(lines: readonly string[], feature?: Feature): S
   /** Line number -> the rules switched off on that line only. */
   const nextLine = new Map<number, Set<string>>();
   const switches: Switch[] = [];
+  const named: {rule: string; line: number}[] = [];
   let found = false;
   /**
    * The first line that is neither blank nor a comment. A finding about the
@@ -93,6 +102,9 @@ export function readSuppressions(lines: readonly string[], feature?: Feature): S
     const line = index + 1;
 
     for (const name of names) {
+      if (name !== ALL_RULES) {
+        named.push({rule: name, line});
+      }
       if (kind === 'disable-file') {
         wholeFile.add(name);
       } else if (kind === 'disable-next-line') {
@@ -110,6 +122,7 @@ export function readSuppressions(lines: readonly string[], feature?: Feature): S
 
   return {
     isEmpty: !found,
+    named,
     isSuppressed(error: RuleError): boolean {
       for (const candidate of wholeFile) {
         if (covers(error.rule, candidate)) return true;

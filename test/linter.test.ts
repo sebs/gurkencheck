@@ -247,3 +247,22 @@ test(
     assert.equal(results[1]?.errors[0]?.rule, 'one-feature-per-file');
   }),
 );
+
+test('a directive naming a rule that does not exist is warned about', async () => {
+  const file = path.join(os.tmpdir(), `gurkencheck-directive-${process.pid}.feature`);
+  fs.writeFileSync(file, '# gurkencheck-disable no-trailing-spacs\nFeature: A\n  Scenario: B\n    Given c\n');
+  try {
+    const rules = await loadRules();
+    const [result] = await lint([file], {'no-trailing-spaces': 'on'}, rules);
+    assert.deepEqual(result!.errors, [
+      {
+        message: 'A directive names "no-trailing-spacs", which is not a rule, so it switches nothing off',
+        rule: 'unknown-rule-in-directive',
+        line: 1,
+        severity: 'warning',
+      },
+    ]);
+  } finally {
+    fs.rmSync(file, {force: true});
+  }
+});
