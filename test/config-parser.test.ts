@@ -269,7 +269,7 @@ test('a trailing comma is fine, and an empty file is said to be empty', async ()
     fs.writeFileSync(empty, '// nothing yet\n');
     const refused = await readConfiguration(empty, rules);
     assert.ok(!refused.ok);
-    assert.match(refused.details[0]!, /is empty\. Write \{\} to switch every rule off/u);
+    assert.match(refused.details[0]!, /is empty\. Write \{\} in it for a configuration with no rules switched on/u);
   } finally {
     fs.rmSync(directory, {recursive: true, force: true});
   }

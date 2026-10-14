@@ -619,3 +619,14 @@ test('a directory that cannot be read is reported, not passed over', async () =>
     }
   });
 });
+
+test('an empty configuration found by looking may be removed; one given with -c is not advised so', async () => {
+  await withProject(CLEAN_FEATURE, '', async (cwd) => {
+    const found = await cli(['.'], cwd);
+    assert.match(found.stderr, /or remove it to use the recommended rules/u);
+    fs.writeFileSync(path.join(cwd, 'given.json'), '');
+    const given = await cli(['-c', 'given.json', '.'], cwd);
+    assert.doesNotMatch(given.stderr, /remove it/u);
+    assert.match(given.stderr, /"given\.json" is empty/u);
+  });
+});

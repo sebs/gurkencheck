@@ -98,7 +98,12 @@ function unreadableBecause(thrown: unknown, filePath: string): string {
   return thrown instanceof Error ? thrown.message : String(thrown);
 }
 
-function parseFile(filePath: string): Record<string, unknown> {
+/**
+ * Reads one configuration file. `found` says it is the .gurkencheckrc found
+ * without --config, the only one whose removal brings back the recommended
+ * rules.
+ */
+function parseFile(filePath: string, found = false): Record<string, unknown> {
   // Reading and parsing fail for different reasons, and a directory or a
   // file you may not read is not a mistake in its JSON.
   let text: string;
@@ -111,7 +116,9 @@ function parseFile(filePath: string): Record<string, unknown> {
   const json = stripJsonComments(text.replace(/^\uFEFF/u, ''));
   if (json.trim() === '') {
     throw new ConfigurationError(
-      `"${filePath}" is empty. Write {} to switch every rule off, or remove it to use the recommended rules.`,
+      found
+        ? `"${filePath}" is empty. Write {} to switch every rule off, or remove it to use the recommended rules.`
+        : `"${filePath}" is empty. Write {} in it for a configuration with no rules switched on.`,
     );
   }
   let parsed: unknown;
@@ -331,7 +338,9 @@ export async function readConfiguration(
         details: [],
       };
     }
-  } else {
+  }
+  const foundByLooking = configPath === undefined;
+  if (configPath === undefined) {
     const found = findConfigFile();
     if (found === undefined) {
       // Nothing to read, so fall back to the recommended rules rather than
@@ -346,7 +355,7 @@ export async function readConfiguration(
   const files = new Set<string>();
   const origins = new Map<string, string>();
   try {
-    flattened = await flatten(parseFile(configPath), configPath, new Set(), files, origins);
+    flattened = await flatten(parseFile(configPath, foundByLooking), configPath, new Set(), files, origins);
   } catch (thrown) {
     if (thrown instanceof ConfigurationError) {
       return {
