@@ -366,6 +366,23 @@ test('junit keeps the line breaks in a message as they were', () => {
   assert.doesNotMatch(output, /^\s*line two/mu);
 });
 
+test('junit names two findings of one rule at one place apart', () => {
+  const output = formatJunit(
+    [
+      {
+        filePath: '/a.feature',
+        errors: [
+          {line: 1, column: 1, message: 'first', rule: 'r'},
+          {line: 1, column: 1, message: 'second', rule: 'r'},
+        ],
+      },
+    ],
+    '/',
+  );
+  assert.match(output, /name="r \(1:1\)"/u);
+  assert.match(output, /name="r \(1:1\) #2"/u);
+});
+
 test('junit output is well formed XML', () => {
   // A crude well-formedness check: every opened tag is closed in order.
   const output = capture(getFormatter('junit')!, RESULTS);

@@ -44,9 +44,9 @@ function positionOf(error: RuleError): string {
   return error.column === undefined ? `${error.line}` : `${error.line}:${error.column}`;
 }
 
-function testCase(filePath: string, error: RuleError): string {
+function testCase(filePath: string, error: RuleError, name: string): string {
   const open = `<testcase${attributes({
-    name: `${error.rule} (${positionOf(error)})`,
+    name,
     classname: classNameFor(filePath),
   })}>`;
   const detail = escapeXml(`${filePath}:${positionOf(error)} (${error.rule}) ${error.message}`);
@@ -62,9 +62,17 @@ function testCase(filePath: string, error: RuleError): string {
 function testSuite(result: FileResult, cwd: string): string {
   const filePath = displayPath(result.filePath, cwd);
   const failures = result.errors.filter((error) => severityOf(error) === 'error').length;
+  // CI servers key test cases by class and name, so two findings of one rule
+  // at one place would be shown as one. The second and later get a number.
+  const seen = new Map<string, number>();
   const cases =
     result.errors.length > 0
-      ? result.errors.map((error) => testCase(filePath, error))
+      ? result.errors.map((error) => {
+          const name = `${error.rule} (${positionOf(error)})`;
+          const count = (seen.get(name) ?? 0) + 1;
+          seen.set(name, count);
+          return testCase(filePath, error, count === 1 ? name : `${name} #${count}`);
+        })
       : [
           `<testcase${attributes({
             name: filePath,
