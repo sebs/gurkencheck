@@ -422,3 +422,12 @@ test('a dot pattern does not skip what is reached through ../', () => {
     fs.rmSync(outside, {recursive: true, force: true});
   }
 });
+
+test('a brace alternative spelling out a dot directory reaches it', () => {
+  fs.mkdirSync('.github/specs', {recursive: true});
+  fs.mkdirSync('specs', {recursive: true});
+  fs.writeFileSync('.github/specs/a.feature', '');
+  fs.writeFileSync('specs/b.feature', '');
+  assert.deepEqual(findFeatureFiles(['{specs,.github/specs}/*.feature']).files.sort(), ['.github/specs/a.feature', 'specs/b.feature']);
+  assert.deepEqual(findFeatureFiles(['{.github,specs}/specs/*.feature']).files, ['.github/specs/a.feature']);
+});

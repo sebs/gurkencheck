@@ -451,9 +451,10 @@ function newSearch(pattern: string, options: GlobOptions): Search {
     searchRoot = path.resolve(cwd, prefix);
     const root = searchRoot.split(path.sep).join('/').replace(/\/$/, '');
     matches = globToRegExp(`${escapeGlob(root)}/${rest}`, '', false);
-    // A segment spelling out a leading dot - .github/**, .h* - asks for
-    // names a search passes over otherwise.
-    walksHidden = /(?:^|\/)\\?\./u.test(rest);
+    // A segment spelling out a leading dot - .github/**, .h*, or one
+    // alternative of a brace, {specs,.github/specs} - asks for names a search
+    // passes over otherwise.
+    walksHidden = /(?:^|[/{,])\\?\./u.test(rest);
   }
 
   const ignoreBase = path.resolve(cwd, options.ignoreBase ?? cwd);
