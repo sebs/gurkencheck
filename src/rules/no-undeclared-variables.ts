@@ -6,7 +6,7 @@ const name = 'no-undeclared-variables';
 
 const rule: LintRule = {
   name,
-  run(feature) {
+  run(feature, file) {
     if (feature === undefined) {
       return [];
     }
@@ -20,23 +20,27 @@ const rule: LintRule = {
         continue;
       }
 
-      const {declared, tables, used} = variablesOf(scenario);
+      const {declared, tables, used} = variablesOf(scenario, file.lines);
 
       for (const [variable, positions] of used) {
         // Declared nowhere is one mistake; declared in some tables but not
         // all is another, and the table leaving it out is worth naming.
-        const messages = !declared.has(variable)
-          ? [`Step variable "${variable}" does not exist in the examples table`]
+        const missingFrom = !declared.has(variable)
+          ? ['the examples table']
           : tables
               .filter((table) => !table.columns.has(variable))
-              .map(
-                (table) =>
-                  `Step variable "${variable}" does not exist in the examples table on line ${table.line}`,
-              );
+              .map((table) => `the examples table on line ${table.line}`);
 
-        for (const message of messages) {
-          for (const position of positions) {
-            errors.push({message, rule: name, ...position});
+        for (const table of missingFrom) {
+          for (const {in: where = 'step', ...position} of positions) {
+            // What holds it is named: a variable in the Outline's name is
+            // not a step variable.
+            const holder = where === 'step' ? 'Step' : `${where.charAt(0).toUpperCase()}${where.slice(1)}`;
+            errors.push({
+              message: `${holder} variable "${variable}" does not exist in ${table}`,
+              rule: name,
+              ...position,
+            });
           }
         }
       }

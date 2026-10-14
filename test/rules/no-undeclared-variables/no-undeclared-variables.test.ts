@@ -1,4 +1,7 @@
+import assert from 'node:assert/strict';
 import {test} from 'node:test';
+import {parseFeature} from '../../../src/gherkin/parse.ts';
+import {newRunContext} from '../../../src/rules.ts';
 import rule from '../../../src/rules/no-undeclared-variables.ts';
 import {checkRule} from '../../helpers.ts';
 
@@ -17,8 +20,12 @@ test('reports step variables missing from the examples table', async () => {
     rule,
     'no-undeclared-variables/UnusedStepVariables.feature',
     {},
-    // The last is in a doc string, reported on its own line rather than the step's.
-    [5, 12, 18, 30, 43].map((line) => undeclared('b', line)),
+    // The last is in a doc string, reported on its own line rather than the
+    // step's. Line 18 is the Outline's own name, and says so.
+    [
+      ...[5, 12, 30, 43].map((line) => undeclared('b', line)),
+      {message: 'Scenario Outline name variable "b" does not exist in the examples table', line: 18},
+    ],
   );
 });
 
@@ -50,4 +57,24 @@ test('takes only placeholder-shaped text as a variable, and places doc string on
   await checkRule(rule, 'no-undeclared-variables/AngleBrackets.feature', {}, [
     {message: 'Step variable "b" does not exist in the examples table', line: 8},
   ]);
+});
+
+test('places a variable at its own column, and names an Outline name as one', async () => {
+  const source = [
+    'Feature: A',
+    '  Scenario Outline: Buy <count> of <item>',
+    '    Given I have <count> and <colour>',
+    '    Examples:',
+    '      | count |',
+    '      | 1     |',
+  ].join('\n');
+  const {feature, file} = parseFeature('a.feature', source);
+  const errors = await rule.run(feature, file, undefined, newRunContext());
+  assert.deepEqual(
+    errors.map(({message, line, column}) => [message, line, column]),
+    [
+      ['Scenario Outline name variable "item" does not exist in the examples table', 2, 36],
+      ['Step variable "colour" does not exist in the examples table', 3, 30],
+    ],
+  );
 });

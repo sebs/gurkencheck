@@ -19,10 +19,12 @@ import {at} from '../util/location.ts';
  */
 const VARIABLE = /<([^<>\s"'=/](?:[^<>\n"'=]*[^<>\s"'=/])?)>/gu;
 
-/** Where a variable was seen: the node holding it. */
+/** Where a variable was seen. */
 export interface Position {
   line: number;
   column?: number;
+  /** What holds it, as a message would put it: `step`, `Scenario Outline name`. */
+  in?: string;
 }
 
 /** Variable name -> every place it appears. */
@@ -55,24 +57,39 @@ function note(variable: string, position: Position, into: Sightings): void {
     into.set(variable, [position]);
     return;
   }
-  const already = seen.some((p) => p.line === position.line && p.column === position.column);
+  const already = seen.some((p) => p.line === position.line && p.column === position.column && p.in === position.in);
   if (!already) {
     seen.push(position);
   }
 }
 
-/** Records every `<variable>` in `text` against the node holding it. */
-function collect(text: string | undefined, position: Position, into: Sightings): void {
+/**
+ * Records every `<variable>` in `text`, which starts at `start` in the file,
+ * at the column of the variable itself. Columns count characters, as Gherkin
+ * counts them, not UTF-16 units.
+ */
+function collect(text: string | undefined, start: Position, into: Sightings): void {
   if (text === undefined || text === '') {
     return;
   }
   for (const match of text.matchAll(VARIABLE)) {
-    note(match[1]!, position, into);
+    const offset = [...text.slice(0, match.index)].length;
+    note(match[1]!, {...start, ...(start.column === undefined ? {} : {column: start.column + offset})}, into);
   }
 }
 
-/** Gathers the variables a Scenario Outline declares and the ones it uses. */
-export function variablesOf(scenario: Scenario): ScenarioVariables {
+/** The column `text` starts at on `line`, or `fallback` when it is not there. */
+function columnOf(line: string | undefined, text: string, fallback: number | undefined): number | undefined {
+  const index = line?.indexOf(text) ?? -1;
+  return index === -1 ? fallback : [...line!.slice(0, index)].length + 1;
+}
+
+/**
+ * Gathers the variables a Scenario Outline declares and the ones it uses.
+ * Given the file's lines, a variable in the Outline's name is placed exactly;
+ * without them, at the keyword.
+ */
+export function variablesOf(scenario: Scenario, lines?: readonly string[]): ScenarioVariables {
   const declared: Sightings = new Map();
   const used: Sightings = new Map();
   const tables: ExamplesTable[] = [];
@@ -91,16 +108,27 @@ export function variablesOf(scenario: Scenario): ScenarioVariables {
     tables.push({line: examples.location.line, columns});
   }
 
-  collect(scenario.name, at(scenario.location), used);
+  const nameLine = scenario.location.line;
+  collect(
+    scenario.name,
+    {
+      line: nameLine,
+      column: columnOf(lines?.[nameLine - 1], scenario.name, scenario.location.column),
+      in: `${scenario.keyword} name`,
+    },
+    used,
+  );
 
   for (const step of scenario.steps) {
-    collect(step.text, at(step.location), used);
+    // The keyword holds the space after it, so the text starts right there.
+    const textColumn = (step.location.column ?? 1) + [...step.keyword].length;
+    collect(step.text, {line: step.location.line, column: textColumn, in: 'step'}, used);
 
     // Steps can carry a data table or a doc string, and both may contain
     // variables. See https://cucumber.io/docs/gherkin/reference/
     for (const row of step.dataTable?.rows ?? []) {
       for (const cell of row.cells) {
-        collect(cell.value, at(cell.location), used);
+        collect(cell.value, {...at(cell.location), in: 'step'}, used);
       }
     }
     // A doc string's content starts on the line below its opening delimiter,
@@ -108,9 +136,13 @@ export function variablesOf(scenario: Scenario): ScenarioVariables {
     if (step.docString !== undefined) {
       const {content, location, mediaType, delimiter} = step.docString;
       // Cucumber fills in the content type too, as in """<format>.
-      collect(mediaType, {line: location.line, column: (location.column ?? 1) + delimiter.length}, used);
+      collect(
+        mediaType,
+        {line: location.line, column: (location.column ?? 1) + delimiter.length, in: 'step'},
+        used,
+      );
       content.split('\n').forEach((line, index) => {
-        collect(line, {line: location.line + 1 + index, column: location.column}, used);
+        collect(line, {line: location.line + 1 + index, column: location.column, in: 'step'}, used);
       });
     }
   }
