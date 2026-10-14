@@ -152,10 +152,15 @@ export function verifyConfiguration(configuration: Configuration, rules: RuleReg
     const prefix = `Invalid rule configuration for "${ruleName}" - `;
 
     if (rule === undefined && (DIRECTIVE_CHECKS as readonly string[]).includes(ruleName)) {
-      // The checks on directives take a state, and nothing else.
+      // The checks on directives take a state, and nothing else - and only
+      // a list with something after the state is told it has no settings.
+      if (Array.isArray(ruleConfig) && ruleConfig.length === 2) {
+        errors.push(`${prefix}the check has no settings, so the config should be "on", "warn" or "off"`);
+        continue;
+      }
       const state = Array.isArray(ruleConfig) && ruleConfig.length === 1 ? ruleConfig[0] : ruleConfig;
       if (!STATES.includes(state as string)) {
-        errors.push(`${prefix}the config should be "on", "warn" or "off"; the check has no settings`);
+        errors.push(`${prefix}the config should be "on", "warn" or "off"`);
       }
       continue;
     }
@@ -171,8 +176,10 @@ export function verifyConfiguration(configuration: Configuration, rules: RuleReg
           errors.push(`${prefix}the config should be a state, or a list of a state and the rule's settings`);
           continue;
         }
+        // "on" is the only state an always-on rule takes, so it is the only
+        // one offered: "warn" and "off" are refused just below.
         if (Array.isArray(ruleConfig) && ruleConfig.length === 2) {
-          errors.push(`${prefix}the rule has no settings, so the config should be "on", "warn" or "off"`);
+          errors.push(`${prefix}the rule has no settings and is always on, so the config should be "on"`);
           continue;
         }
         const state = Array.isArray(ruleConfig) ? ruleConfig[0] : ruleConfig;
@@ -187,7 +194,7 @@ export function verifyConfiguration(configuration: Configuration, rules: RuleReg
             `${prefix}this rule always fails the run. A file breaking it cannot be parsed at all, so it cannot be only a warning.`,
           );
         } else if (!STATES.includes(state as string)) {
-          errors.push(`${prefix}the config should be "on", "warn" or "off"`);
+          errors.push(`${prefix}the rule is always on, so the config should be "on"`);
         }
         continue;
       }

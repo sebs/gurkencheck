@@ -108,7 +108,7 @@ test('explains that an always-on rule cannot be only a warning', () => {
 test('still rejects a nonsense state for an always-on rule', () => {
   const errors = verify({'no-multiline-steps': 'yes'} as unknown as Configuration);
   assert.deepEqual(errors, [
-    'Invalid rule configuration for "no-multiline-steps" - the config should be "on", "warn" or "off"',
+    'Invalid rule configuration for "no-multiline-steps" - the rule is always on, so the config should be "on"',
   ]);
 });
 
@@ -172,7 +172,7 @@ test('a tag listed without its @ is said to be no tag', () => {
 
 test('an always-on rule takes no settings, and an empty list is said to be one', () => {
   assert.deepEqual(verify({'one-feature-per-file': ['on', {x: 1}]} as unknown as Configuration), [
-    'Invalid rule configuration for "one-feature-per-file" - the rule has no settings, so the config should be "on", "warn" or "off"',
+    'Invalid rule configuration for "one-feature-per-file" - the rule has no settings and is always on, so the config should be "on"',
   ]);
   assert.deepEqual(verify({'one-feature-per-file': []} as unknown as Configuration), [
     `Invalid rule configuration for "one-feature-per-file" - the config should be a state, or a list of a state and the rule's settings`,
@@ -217,4 +217,15 @@ test('a long value of the wrong type is quoted short', () => {
   const [error] = verify({'name-length': ['on', {Step: 'x'.repeat(100000)}]} as unknown as Configuration);
   assert.ok(error!.length < 300, `message is ${error!.length} long`);
   assert.match(error!, /…$/u);
+});
+
+test('a directive check given a nonsense state is not told it has no settings', () => {
+  for (const config of ['ON', []]) {
+    assert.deepEqual(verify({'unknown-directive': config} as unknown as Configuration), [
+      'Invalid rule configuration for "unknown-directive" - the config should be "on", "warn" or "off"',
+    ]);
+  }
+  assert.deepEqual(verify({'unknown-directive': ['on', {}]} as unknown as Configuration), [
+    'Invalid rule configuration for "unknown-directive" - the check has no settings, so the config should be "on", "warn" or "off"',
+  ]);
 });
