@@ -80,9 +80,10 @@ async function loadRulesFrom(directory: string): Promise<{rule: LintRule; file: 
     throw new Error(`The rules directory "${directory}" is not a directory.`);
   }
   // Declaration files sit beside TypeScript rules as a matter of course, and
-  // hold types, not code.
+  // hold types, not code; tests sit beside them as often, and importing one
+  // to see whether it is a rule would run it.
   const files = globSync(`*.${RULE_EXTENSIONS}`, {cwd: resolved}).filter(
-    (file) => !/\.d\.[mc]?ts$/u.test(file),
+    (file) => !/\.d\.[mc]?ts$/u.test(file) && !/\.(?:test|spec)\.[mc]?[jt]s$/u.test(file),
   );
   const loaded: {rule: LintRule; file: string}[] = [];
 
