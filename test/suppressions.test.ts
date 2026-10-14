@@ -188,3 +188,8 @@ test('a disable between the Feature tags and the keyword covers the whole file',
   const found = readSuppressions(source.split('\n'), feature);
   assert.ok(found.isSuppressed(error('file-name', 0)));
 });
+
+test('three dashes or more end the rule names too, as in eslint', () => {
+  const found = suppressions(['# gurkencheck-disable-file name-length --- generated', 'Feature: A'].join('\n'));
+  assert.deepEqual(found.named, [{rule: 'name-length', line: 1}]);
+});

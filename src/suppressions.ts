@@ -58,10 +58,11 @@ export interface Suppressions {
 }
 
 function parseRuleNames(rest: string): string[] {
-  // `-- reason` explains the directive; its words are not rule names, and
+  // `-- reason` explains the directive - with two dashes or more, as eslint
+  // takes it; its words are not rule names, and
   // read as ones they would leave the directive covering nothing.
   const names = rest
-    .replace(/(?:^|\s)--(?:\s.*)?$/u, '')
+    .replace(/(?:^|\s)-{2,}(?:\s.*)?$/u, '')
     .split(/[,\s]+/)
     .map((name) => name.trim())
     .filter((name) => name !== '');
