@@ -33,7 +33,9 @@ import {markDocStrings} from './util/lines.ts';
  * to follow the directive's name: `\b` would also match before a hyphen, and
  * read `disable-nextline` as a `disable` of every rule named after it.
  */
-const DIRECTIVE = /^\s*#\s*gurkencheck-(disable-next-line|disable-file|disable|enable)(?=\s|$)(.*)$/;
+// The s flag lets the rest take any character: without it, a line or
+// paragraph separator in a note - U+2028 - left the directive unread.
+const DIRECTIVE = /^\s*#\s*gurkencheck-(disable-next-line|disable-file|disable|enable)(?=\s|$)(.*)$/s;
 
 /** The warning given for a directive naming a rule that does not exist. */
 export const UNKNOWN_RULE_IN_DIRECTIVE = 'unknown-rule-in-directive';

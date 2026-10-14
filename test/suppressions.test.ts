@@ -194,3 +194,11 @@ test('three dashes or more end the rule names too, as in eslint', () => {
   const found = suppressions(['# gurkencheck-disable-file name-length --- generated', 'Feature: A'].join('\n'));
   assert.deepEqual(found.named, [{rule: 'name-length', line: 1}]);
 });
+
+test('a line or paragraph separator in a note leaves the directive as it is', () => {
+  for (const separator of ['\u2028', '\u2029']) {
+    const found = suppressions([`# gurkencheck-disable-file no-trailing-spaces -- a${separator}b`, 'Feature: A '].join('\n'));
+    assert.deepEqual(found.misspelt, [], JSON.stringify(separator));
+    assert.ok(found.isSuppressed(error('no-trailing-spaces', 2)), JSON.stringify(separator));
+  }
+});
