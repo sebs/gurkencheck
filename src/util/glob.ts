@@ -210,6 +210,7 @@ function walk(
   onFile: (absolutePath: string) => void,
   onUnreadable?: OnUnreadable,
   hidden = false,
+  pruned: (absolutePath: string) => boolean = () => false,
 ): void {
   for (const entry of readEntries(directory, onUnreadable)) {
     if (!hidden && isHidden(entry.name)) {
@@ -217,7 +218,8 @@ function walk(
     }
     const absolutePath = path.join(directory, entry.name);
     if (entry.isDirectory()) {
-      walk(absolutePath, onFile, onUnreadable, hidden);
+      if (pruned(absolutePath)) continue;
+      walk(absolutePath, onFile, onUnreadable, hidden, pruned);
     } else if (entry.isFile()) {
       onFile(absolutePath);
     }
@@ -235,7 +237,12 @@ function walk(
  * it gives way at every file, and the reading and checking downstream happen
  * in the gaps.
  */
-async function* walkStream(root: string, onUnreadable?: OnUnreadable, hidden = false): AsyncGenerator<string> {
+async function* walkStream(
+  root: string,
+  onUnreadable?: OnUnreadable,
+  hidden = false,
+  pruned: (absolutePath: string) => boolean = () => false,
+): AsyncGenerator<string> {
   // An explicit stack rather than recursion: a recursive async generator
   // delegates through one `yield*` per level of nesting for every file it
   // hands over, so a deep tree pays for its depth on every single file.
@@ -255,6 +262,7 @@ async function* walkStream(root: string, onUnreadable?: OnUnreadable, hidden = f
 
     const absolutePath = path.join(top.directory, entry.name);
     if (entry.isDirectory()) {
+      if (pruned(absolutePath)) continue;
       // Pushed so that its contents come before the entries after it here,
       // which is what a depth-first walk means.
       stack.push({directory: absolutePath, entries: readEntries(absolutePath, onUnreadable), index: 0});
@@ -404,6 +412,13 @@ interface Search {
   searchRoot: string;
   /** Whether the walk goes into names starting with a dot. */
   walksHidden: boolean;
+  /**
+   * True for a directory the ignore patterns skip whole. It is not walked:
+   * nothing below it could be a match, and walking it anyway read every
+   * file of node_modules, and failed the run on a directory there it could
+   * not read.
+   */
+  pruned(absolutePath: string): boolean;
   /** The path to report, or `undefined` when this entry is not a match. */
   match(absolutePath: string): string | undefined;
 }
@@ -445,6 +460,9 @@ function newSearch(pattern: string, options: GlobOptions): Search {
   return {
     searchRoot,
     walksHidden,
+    pruned(absolutePath: string): boolean {
+      return ignores.length > 0 && isIgnored(withoutLeadingParents(path.relative(ignoreBase, absolutePath)), ignores, true);
+    },
     match(absolutePath: string): string | undefined {
       const relativePath = path.relative(cwd, absolutePath).split(path.sep).join('/');
       if (!matches.test(absolutePath.split(path.sep).join('/'))) return undefined;
@@ -484,7 +502,7 @@ export function globSync(pattern: string, options: GlobOptions = {}): string[] {
   if (stats.isFile()) {
     consider(search.searchRoot);
   } else {
-    walk(search.searchRoot, consider, options.onUnreadable, search.walksHidden);
+    walk(search.searchRoot, consider, options.onUnreadable, search.walksHidden, search.pruned);
   }
 
   return found.sort();
@@ -520,7 +538,7 @@ export async function* globStream(
     return;
   }
 
-  for await (const absolutePath of walkStream(search.searchRoot, options.onUnreadable, search.walksHidden)) {
+  for await (const absolutePath of walkStream(search.searchRoot, options.onUnreadable, search.walksHidden, search.pruned)) {
     const relativePath = search.match(absolutePath);
     if (relativePath !== undefined) {
       yield relativePath;

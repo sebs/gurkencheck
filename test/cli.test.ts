@@ -809,3 +809,19 @@ test('piped, one long message does not pad every other one to its length', async
     }
   });
 });
+
+test('a directory the ignore patterns skip is not walked, so one inside it that cannot be read does not matter', async () => {
+  if (process.platform === 'win32' || process.getuid?.() === 0) return;
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    const locked = path.join(cwd, 'node_modules', 'pkg', 'locked');
+    fs.mkdirSync(locked, {recursive: true});
+    fs.chmodSync(locked, 0o000);
+    try {
+      const {code, stderr} = await cli(['.'], cwd);
+      assert.equal(stderr, '');
+      assert.equal(code, 0);
+    } finally {
+      fs.chmodSync(locked, 0o755);
+    }
+  });
+});
