@@ -27,7 +27,7 @@ import {isKnownLanguage, unknownLanguageMessage} from './gherkin/dialects.ts';
 import {hasErrors, lint, lintStream} from './linter.ts';
 import {SILENT, TO_STDERR} from './diagnostics.ts';
 import type {Diagnostics} from './diagnostics.ts';
-import {isRuleEnabled, loadRules} from './rules.ts';
+import {loadRules} from './rules.ts';
 import {BUILT_IN_RULES} from './rules/index.ts';
 import type {StreamingFormatter} from './formatters/index.ts';
 import type {Configuration, RuleRegistry} from './types.ts';
@@ -168,12 +168,13 @@ export async function run(
   }
   // A configuration switches on only what it names, so a rule brought in with
   // --rulesdir and left out of it is loaded and then never run - and a run
-  // without it looks the same as one in which it found nothing.
+  // without it looks the same as one in which it found nothing. One the
+  // configuration names, even as off, is where somebody meant it to be.
   for (const [name, rule] of settings === undefined ? [] : rules) {
-    if (!BUILT_IN_RULES.includes(rule) && !isRuleEnabled(settings!.configuration[name])) {
+    if (!BUILT_IN_RULES.includes(rule) && settings!.configuration[name] === undefined) {
       diagnostics.report({
         level: 'notice',
-        message: `The rule "${name}" from --rulesdir is not switched on in the configuration, so it does not run.`,
+        message: `The rule "${name}" from --rulesdir is not in the configuration, so it does not run.`,
       });
     }
   }

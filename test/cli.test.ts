@@ -502,12 +502,14 @@ test('says so when a rule from --rulesdir is not switched on', async () => {
   await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
     const {code, stderr} = await cli(['--rulesdir', rulesDir, '.'], cwd);
     assert.equal(code, 0);
-    assert.match(stderr, /The rule "custom" from --rulesdir is not switched on/u);
+    assert.match(stderr, /The rule "custom" from --rulesdir is not in the configuration/u);
   });
-  await withProject(CLEAN_FEATURE, '{"custom": "on"}', async (cwd) => {
-    const {stderr} = await cli(['--rulesdir', rulesDir, '.'], cwd);
-    assert.doesNotMatch(stderr, /not switched on/u);
-  });
+  for (const state of ['on', 'off']) {
+    await withProject(CLEAN_FEATURE, `{"custom": "${state}"}`, async (cwd) => {
+      const {stderr} = await cli(['--rulesdir', rulesDir, '.'], cwd);
+      assert.doesNotMatch(stderr, /not in the configuration/u, state);
+    });
+  }
 });
 
 test('finds the configuration in a directory above the working directory', async () => {
