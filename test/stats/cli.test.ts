@@ -159,11 +159,17 @@ test('stats reads files in the language the configuration sets', async () => {
 });
 
 test('--top takes plain digits only', async () => {
-  for (const top of ['0x2', '1e3', ' 3', '99999999999999999999']) {
+  for (const top of ['0x2', '1e3', ' 3']) {
     const {code, stderr} = await cli(['stats', FIXTURES, `--top=${top}`]);
     assert.equal(code, 2, top);
     assert.match(stderr, /--top needs a whole number/u, top);
   }
+});
+
+test('--top too large to count exactly is said to be too large', async () => {
+  const {code, stderr} = await cli(['stats', FIXTURES, '--top=9007199254740993']);
+  assert.equal(code, 2);
+  assert.match(stderr, /--top can be at most 9007199254740991, not "9007199254740993"/u);
 });
 
 test('stats refuses a configuration it cannot read, rather than reading in English', async () => {

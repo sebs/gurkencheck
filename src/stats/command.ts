@@ -99,6 +99,15 @@ export async function runStats(
     // Digits only: Number() would also take 0x10, 1e3 and ' 3', none of which
     // anybody means as a count.
     top = /^\d+$/u.test(values.top) ? Number(values.top) : Number.NaN;
+    // A count too big to hold exactly is still a whole number, so saying it
+    // is not one sends you looking for the wrong mistake.
+    if (top > Number.MAX_SAFE_INTEGER) {
+      diagnostics.report({
+        level: 'error',
+        message: `--top can be at most ${Number.MAX_SAFE_INTEGER}, not "${values.top}".`,
+      });
+      return EXIT_USAGE;
+    }
     if (!Number.isSafeInteger(top) || top < 1) {
       diagnostics.report({
         level: 'error',
