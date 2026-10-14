@@ -890,6 +890,37 @@ test('--watch says a watched path is gone, rather than that it has no errors', a
   });
 });
 
+test('--watch passes over a feature file outside its glob, rather than calling it clean', async () => {
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    fs.mkdirSync(path.join(cwd, 'sub'));
+    fs.writeFileSync(path.join(cwd, 'sub', 's.feature'), CLEAN_FEATURE);
+    const child = spawn(process.execPath, [CLI, '--watch', '*.feature'], {cwd});
+    let output = '';
+    child.stdout.on('data', (chunk) => (output += String(chunk)));
+    child.stderr.on('data', (chunk) => (output += String(chunk)));
+    const waitFor = async (pattern: RegExp): Promise<void> => {
+      const deadline = Date.now() + 10000;
+      while (!pattern.test(output)) {
+        if (Date.now() > deadline) assert.fail(`timed out waiting for ${String(pattern)} in:\n${output}`);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+    };
+    try {
+      await waitFor(/Watching for changes/u);
+      output = '';
+      fs.writeFileSync(path.join(cwd, 'sub', 's.feature'), DIRTY_FEATURE);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      assert.doesNotMatch(output, /s\.feature changed/u);
+      // A new file the glob takes in is still a change.
+      fs.writeFileSync(path.join(cwd, 'New.feature'), DIRTY_FEATURE);
+      await waitFor(/Missing Scenario name|unnamed/u);
+      assert.match(output, /New\.feature changed/u);
+    } finally {
+      await stop(child);
+    }
+  });
+});
+
 test('a directory named outright and skipped whole is a run that checked nothing', async () => {
   await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
     fs.mkdirSync(path.join(cwd, 'legacy'));

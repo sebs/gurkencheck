@@ -14,6 +14,7 @@ import {
   describeInvalidPattern,
   featureRoots,
   findFeatureFileStream,
+  findFeatureFiles,
   findIgnoreFile,
   unmatchedMessages,
 } from './feature-finder.ts';
@@ -263,9 +264,30 @@ export async function run(
   // Discovery is a stream, and a stream can only be read once - so a run that
   // may happen more than once is given a fresh one each time.
   let search: ReturnType<typeof findFeatureFileStream> | undefined;
+  /** The files the last search found, as absolute paths, for a watch. */
+  let found = new Set<string>();
   const discover = (): Sequence<string> => {
     search = findFeatureFileStream(positionals, ignore);
-    return search.files;
+    found = new Set();
+    return noting(search.files, found);
+  };
+  /**
+   * True when a run would check this feature file: one the last pass did, or
+   * one a search finds now - a file new since then. A file that has gone and
+   * was not checked changes nothing.
+   */
+  const wouldCheck = (absolutePath: string): boolean => {
+    if (found.has(absolutePath)) {
+      return true;
+    }
+    if (!fs.existsSync(absolutePath)) {
+      return false;
+    }
+    try {
+      return findFeatureFiles(positionals, ignore).files.some((file) => path.resolve(file) === absolutePath);
+    } catch {
+      return true;
+    }
   };
 
   /**
@@ -393,11 +415,9 @@ export async function run(
       {
         diagnostics,
         ignore: DEFAULT_IGNORED_NAMES,
-        // Given only feature files, a change to another one beside them is
-        // none of this run's business.
-        ...(positionals.length > 0 && positionals.every((given) => given.endsWith('.feature') && isFile(given))
-          ? {only: new Set(positionals.map((given) => path.resolve(given)))}
-          : {}),
+        // A change to a feature file the run would not check - beside the
+        // ones named, outside the glob, ignored - is none of its business.
+        checks: wouldCheck,
         // The configuration is watched even when it does not exist yet, so
         // writing one is noticed; the ignore file only when --ignore is not
         // there to overrule it.
@@ -431,11 +451,11 @@ export async function run(
   return await checkOnce();
 }
 
-function isFile(given: string): boolean {
-  try {
-    return fs.statSync(given).isFile();
-  } catch {
-    return false;
+/** The files as they go by, each noted in `seen` as an absolute path. */
+async function* noting(files: Sequence<string>, seen: Set<string>): AsyncGenerator<string> {
+  for await (const file of files) {
+    seen.add(path.resolve(file));
+    yield file;
   }
 }
 

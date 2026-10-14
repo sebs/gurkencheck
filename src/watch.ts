@@ -54,6 +54,13 @@ export interface WatchOptions {
    */
   only?: ReadonlySet<string>;
   /**
+   * True when a run would check the feature file at this absolute path. A
+   * change to one it would not - outside the glob it was given, or ignored
+   * - is passed over: announced, with a pass after it saying no errors were
+   * found, it read as the file just broken being clean.
+   */
+  checks?: (absolutePath: string) => boolean;
+  /**
    * Stops the watch when it aborts.
    *
    * Ctrl-C stops it too. This is for a caller that is not a terminal - a test,
@@ -245,7 +252,12 @@ export async function watch(
         const relativePath = filename.toString();
         const absolutePath = path.resolve(root, relativePath);
         const listed = files().has(absolutePath);
-        if (options.only !== undefined && !listed && relativePath.endsWith('.feature') && !options.only.has(absolutePath)) {
+        if (
+          !listed &&
+          relativePath.endsWith('.feature') &&
+          ((options.only !== undefined && !options.only.has(absolutePath)) ||
+            (options.checks !== undefined && !options.checks(absolutePath)))
+        ) {
           return;
         }
         if (
