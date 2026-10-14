@@ -440,3 +440,8 @@ test('a negation meant for something else does not bring node_modules back', () 
   assert.deepEqual(findFeatureFiles(['.']).files.filter((file) => file.startsWith('node_modules')), []);
   assert.ok(findFeatureFiles(['.']).files.includes(`${FOUND}/a.feature`));
 });
+
+test('a glob whose directories are typed in another case reports them as the disk spells them', () => {
+  if (!fs.existsSync(FOUND.toUpperCase())) return;
+  assert.deepEqual(findFeatureFiles([`${FOUND.toUpperCase()}/*.feature`]).files, [`${FOUND}/a.feature`]);
+});

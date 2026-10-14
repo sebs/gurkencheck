@@ -129,7 +129,7 @@ function toFeatureGlobs(given: string): FeatureGlobs | undefined {
   const pattern = withoutSlash !== given && isFile(withoutSlash) ? withoutSlash : given;
   const literal = literalGlobs(pattern);
 
-  const glob = toSlashes(pattern).replace(/(?<=.)\/+$/, '');
+  const glob = withPrefixAsOnDisk(toSlashes(pattern).replace(/(?<=.)\/+$/, ''));
   if (literalPath(glob) === undefined) {
     // A glob is searched as a glob, as a shell would expand it, and taken as a
     // name only when it matches nothing - which is how [wip].feature is still
@@ -139,6 +139,23 @@ function toFeatureGlobs(given: string): FeatureGlobs | undefined {
     return {globs: globForms(glob), ...(literal === undefined ? {} : {fallback: literal})};
   }
   return literal === undefined ? undefined : {globs: literal};
+}
+
+/**
+ * A glob with its leading run of plain directories spelled as the disk spells
+ * them: FEATURES/*.feature on a file system that ignores case reported
+ * FEATURES/bad.feature, a path no listing shows, where a path named outright
+ * is already put right.
+ */
+function withPrefixAsOnDisk(glob: string): string {
+  const segments = glob.split('/');
+  let literal = 0;
+  while (literal < segments.length - 1 && literalPath(segments[literal]!) !== undefined) literal++;
+  const prefix = segments.slice(0, literal).join('/');
+  if (prefix === '' || !isDirectory(prefix)) {
+    return glob;
+  }
+  return [toSlashes(onDiskSpelling(prefix)), ...segments.slice(literal)].join('/');
 }
 
 /** The globs searching a path that exists, as the name it is, or undefined. */
