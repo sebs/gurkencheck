@@ -4,6 +4,7 @@
  */
 import {ALWAYS_ON_RULES} from './gherkin/parse.ts';
 import {BUILT_IN_RULES} from './rules/index.ts';
+import {closest} from './util/suggest.ts';
 import type {Configuration, LintRule, RuleRegistry} from './types.ts';
 
 const STATES = ['on', 'warn', 'off'];
@@ -176,7 +177,12 @@ export function verifyConfiguration(configuration: Configuration, rules: RuleReg
         }
         continue;
       }
-      errors.push(`Rule "${ruleName}" does not exist`);
+      const suggestion = closest(ruleName, [...rules.keys(), ...ALWAYS_ON_RULES]);
+      errors.push(
+        suggestion === undefined
+          ? `Rule "${ruleName}" does not exist`
+          : `Rule "${ruleName}" does not exist. Did you mean "${suggestion}"?`,
+      );
       continue;
     }
 

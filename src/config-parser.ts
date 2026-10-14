@@ -9,6 +9,7 @@ import {PRESETS, RECOMMENDED} from './presets.ts';
 import type {Configuration, RuleRegistry} from './types.ts';
 import {stripJsonComments, stripTrailingCommas} from './util/json.ts';
 import {resolvePackage} from './util/resolve.ts';
+import {closest} from './util/suggest.ts';
 
 /** The configuration file looked for when none is given on the command line. */
 export const DEFAULT_CONFIG_FILE_NAME = '.gurkencheckrc';
@@ -154,6 +155,13 @@ function extendsList(configuration: Record<string, unknown>, source: string): st
   );
 }
 
+/** The built-in preset a name most likely means, prefixed or not. */
+function presetMeant(specifier: string): string | undefined {
+  const bare = (name: string): string => name.replace(/^gurkencheck:/u, '');
+  const meant = closest(bare(specifier), Object.keys(PRESETS).map(bare));
+  return meant === undefined ? undefined : `gurkencheck:${meant}`;
+}
+
 /**
  * Loads what one `extends` entry refers to: a built-in preset, another
  * configuration file, or a package.
@@ -171,8 +179,11 @@ async function loadExtended(
     return {configuration: preset as Record<string, unknown>, source: specifier};
   }
   if (specifier.startsWith('gurkencheck:')) {
+    const meant = presetMeant(specifier);
     throw new ConfigurationError(
-      `There is no built-in configuration called "${specifier}". Available: ${Object.keys(PRESETS).join(', ')}`,
+      meant === undefined
+        ? `There is no built-in configuration called "${specifier}". Available: ${Object.keys(PRESETS).join(', ')}`
+        : `There is no built-in configuration called "${specifier}". Did you mean "${meant}"?`,
     );
   }
 
@@ -200,8 +211,13 @@ async function loadExtended(
   try {
     resolved = resolvePackage(specifier, from);
   } catch {
+    // A preset named without its prefix - "recommended" - or misspelt is not
+    // a package anybody forgot to install.
+    const meant = presetMeant(specifier);
     throw new ConfigurationError(
-      `Could not resolve the package "${specifier}", extended from "${fromFile}". Is it installed?`,
+      meant === undefined
+        ? `Could not resolve the package "${specifier}", extended from "${fromFile}". Is it installed?`
+        : `Could not resolve the package "${specifier}", extended from "${fromFile}". Did you mean the built-in "${meant}"?`,
     );
   }
 

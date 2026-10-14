@@ -186,3 +186,9 @@ test('a number too large to read exactly is said to be too large', () => {
     'Invalid rule configuration for "name-length" - "Feature" is too large: it can be at most 9007199254740991',
   ]);
 });
+
+test('a misspelt rule name gets the one meant', () => {
+  assert.deepEqual(verify({'no-trailing-space': 'on'} as unknown as Configuration), [
+    'Rule "no-trailing-space" does not exist. Did you mean "no-trailing-spaces"?',
+  ]);
+});

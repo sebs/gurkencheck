@@ -324,3 +324,20 @@ test('findConfigFile gives a path readConfiguration can read, from a directory o
     fs.rmSync(directory, {recursive: true, force: true});
   }
 });
+
+test('a preset named without its prefix, or misspelt, gets the one meant', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-preset-'));
+  try {
+    for (const [name, message] of [
+      ['recommended', /Did you mean the built-in "gurkencheck:recommended"\?/u],
+      ['gurkencheck:recomended', /Did you mean "gurkencheck:recommended"\?/u],
+    ] as const) {
+      fs.writeFileSync(path.join(directory, 'rc.json'), JSON.stringify({extends: name}));
+      const result = await readConfiguration(path.join(directory, 'rc.json'), rules);
+      assert.ok(!result.ok);
+      assert.match(result.details[0]!, message, name);
+    }
+  } finally {
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});
