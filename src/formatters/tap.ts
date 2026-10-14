@@ -50,10 +50,17 @@ function quote(value: string): string {
 /**
  * Escapes a test point's description. An unescaped `#` starts a directive, so
  * a failing file whose path holds `# TODO` or `# SKIP` would be read as one
- * that is allowed to fail, and the run would pass.
+ * that is allowed to fail, and the run would pass. A line break would end the
+ * test point and leave the rest of the path as a line TAP does not know, so
+ * it and the other control characters are written as escapes; backslashes
+ * are escaped too, so `\n` cannot be mistaken for one.
  */
 function description(text: string): string {
-  return text.replace(/[\\#]/g, '\\$&');
+  return text
+    .replace(/[\\#]/g, '\\$&')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .replace(/[\u0000-\u001F\u007F]/gu, (character) => `\\x${character.charCodeAt(0).toString(16).padStart(2, '0')}`);
 }
 
 function severityOf(error: RuleError): string {

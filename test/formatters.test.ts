@@ -273,6 +273,13 @@ test('tap escapes a # in a path, so it is not read as a directive', () => {
   assert.match(output, /^not ok 1 - \/x \\# TODO later\\\\y\.feature$/mu);
 });
 
+test('tap keeps a path with a line break on its test point line', () => {
+  const output = capture(getFormatter('tap')!, [{filePath: '/a\nnot ok 9 - b.feature', errors: []}]);
+  const lines = output.split('\n');
+  assert.equal(lines[1], 'ok 1 - /a\\nnot ok 9 - b.feature');
+  assert.equal(lines.filter((line) => /^(not )?ok /u.test(line)).length, 1);
+});
+
 test('tap emits an empty plan when there is nothing to report', () => {
   assert.equal(capture(getFormatter('tap')!, []), 'TAP version 13\n1..0');
 });
