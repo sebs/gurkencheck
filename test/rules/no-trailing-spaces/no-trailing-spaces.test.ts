@@ -48,3 +48,7 @@ test('takes time in proportion to the line, however many spaces are in it', asyn
   assert.deepEqual(await rule.run(feature, file, undefined, newRunContext()), []);
   assert.ok(Date.now() - started < 1000, `took ${Date.now() - started} ms`);
 });
+
+test('leaves alone a doc string whose only content is whitespace', async () => {
+  await checkRule(rule, 'no-trailing-spaces/WhitespaceOnlyDocString.feature', {}, []);
+});

@@ -46,10 +46,15 @@ export function docStringParts(lines: readonly string[], feature?: Feature): Doc
     for (const {node} of stepContainersOf(feature)) {
       for (const step of node.steps) {
         if (step.docString === undefined) continue;
-        const {content, location} = step.docString;
-        const contentLines = content === '' ? 0 : content.split('\n').length;
-        // The opening delimiter, the content, and the closing delimiter.
-        const last = location.line + contentLines + 1;
+        const {location, delimiter} = step.docString;
+        // The closing delimiter is the next line that starts with the one
+        // that opened it. Counting the content's lines instead goes wrong for
+        // content of one blank or whitespace line, which the parser hands
+        // over as no content at all.
+        let last = location.line + 1;
+        while (last <= lines.length && !(lines[last - 1] ?? '').trimStart().startsWith(delimiter)) {
+          last++;
+        }
         for (let line = location.line; line <= last && line <= lines.length; line++) {
           parts[line - 1] = line === location.line || line === last ? 'delimiter' : 'content';
         }
