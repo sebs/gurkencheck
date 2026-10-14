@@ -480,3 +480,21 @@ test('an --ignore list is split at its commas, but not at those inside braces or
   assert.deepEqual(splitIgnoreList('*.{wip,draft}.feature,build'), ['*.{wip,draft}.feature', 'build']);
   assert.deepEqual(splitIgnoreList('a\\,b,c'), ['a\\,b', 'c']);
 });
+
+test('a glob ending in .feature searches a directory it matches, as the shell would', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-dir-feature-'));
+  const cwd = process.cwd();
+  try {
+    fs.mkdirSync(path.join(directory, 'specs', 'checkout.feature'), {recursive: true});
+    fs.writeFileSync(path.join(directory, 'specs', 'ok.feature'), 'Feature: A\n');
+    fs.writeFileSync(path.join(directory, 'specs', 'checkout.feature', 'broken.feature'), 'Feature: B\n');
+    process.chdir(directory);
+    assert.deepEqual(findFeatureFiles(['specs/*.feature']).files.sort(), [
+      'specs/checkout.feature/broken.feature',
+      'specs/ok.feature',
+    ]);
+  } finally {
+    process.chdir(cwd);
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});

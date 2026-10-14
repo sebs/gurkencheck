@@ -186,11 +186,12 @@ function literalGlobs(pattern: string): string[] | undefined {
   return undefined;
 }
 
-/** The globs a glob argument stands for: what it matches, and below the directories it matches. */
+/**
+ * The globs a glob argument stands for: what it matches, and below the
+ * directories it matches - one ending in .feature too, as the shell's
+ * expansion of it would search a directory called checkout.feature.
+ */
 function globForms(glob: string): string[] {
-  if (isFeatureFile(glob)) {
-    return [glob];
-  }
   if (/(?:^|\/)\*\*$/.test(glob)) {
     return [`${glob}/*.feature`];
   }
