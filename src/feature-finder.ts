@@ -9,7 +9,10 @@ import {escapeGlob, globRoot, globStream, globSync, isDirectoryIgnored, literalP
 /** The ignore file looked for when `--ignore` is not given. */
 export const DEFAULT_IGNORE_FILE_NAME = '.gurkencheckignore';
 
-/** Never worth linting, and expensive to walk into. */
+/**
+ * Never worth linting, and expensive to walk into. Always skipped, whatever
+ * else is ignored, unless an ignore list says `!node_modules`.
+ */
 export const DEFAULT_IGNORED_PATTERNS = ['node_modules'];
 
 export interface FeatureSearch {
@@ -297,11 +300,13 @@ function readIgnoreList(ignoreArgument: readonly string[] | undefined): IgnoreLi
 }
 
 /**
- * Reads the ignore file, one glob pattern per line, ignoring blank lines.
+ * The patterns a run skips: node_modules, always, then --ignore's or the
+ * ignore file's, one per line, leaving out blank lines and comments.
  *
- * A list that comes to nothing - an ignore file holding only comments, or
- * `--ignore ''` - is the same as no list, so node_modules stays skipped. Taken
- * as an empty list, it would start linting every installed package.
+ * The list adds to node_modules rather than replacing it. Replacing it meant
+ * that writing an ignore file for anything else - build, legacy - started
+ * linting every installed package. As the last pattern to match decides,
+ * `!node_modules` in the list still brings it back for anyone who wants it.
  */
 export function readIgnorePatterns(
   ignoreArgument: readonly string[] | undefined,
@@ -309,17 +314,17 @@ export function readIgnorePatterns(
 ): string[] {
   const given = ignoreArgument?.filter((pattern) => pattern.trim() !== '') ?? [];
   if (given.length > 0) {
-    return given;
+    return [...DEFAULT_IGNORED_PATTERNS, ...given];
   }
 
   let contents: string;
   try {
     contents = fs.readFileSync(ignoreFileName, 'utf8');
   } catch {
-    // No ignore file, or one that cannot be read: fall back to the defaults
-    // rather than stopping the run, so that node_modules stays skipped either
-    // way. Reading it outright rather than checking that it exists first also
-    // closes the gap between the two, in which it can be moved or removed.
+    // No ignore file, or one that cannot be read: the defaults alone, rather
+    // than stopping the run. Reading it outright rather than checking that it
+    // exists first also closes the gap between the two, in which it can be
+    // moved or removed.
     return [...DEFAULT_IGNORED_PATTERNS];
   }
 
@@ -328,7 +333,7 @@ export function readIgnorePatterns(
     .split(/\r\n|\r|\n/)
     .map((line) => line.trim())
     .filter((line) => line !== '' && !line.startsWith('#'));
-  return patterns.length > 0 ? patterns : [...DEFAULT_IGNORED_PATTERNS];
+  return [...DEFAULT_IGNORED_PATTERNS, ...patterns];
 }
 
 /**

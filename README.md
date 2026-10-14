@@ -352,9 +352,10 @@ extends, and later entries in a list win over earlier ones.
 ## Skipping files
 
 Put one glob per line in a `.gurkencheckignore` file, or pass `--ignore` on the command
-line. Without either, `node_modules` is skipped and everything else is checked. Like the
-configuration, the nearest `.gurkencheckignore` in the directory gurkencheck runs in or any
-directory above it is used.
+line. `node_modules` is always skipped, and the patterns you give add to it rather than
+replace it; write `!node_modules` among them to check it after all. Like the configuration,
+the nearest `.gurkencheckignore` in the directory gurkencheck runs in or any directory above
+it is used, and `--ignore` takes its place.
 
 A search of a directory, like a glob's `*` and `**`, also passes over anything whose name
 starts with a dot, such as `.git` or `.hidden.feature`, and does not follow symlinks. Name
@@ -376,9 +377,7 @@ Patterns are read the way `.gitignore` reads them:
 - A leading `!` brings back something an earlier pattern skipped. The last pattern to match
   decides, and nothing inside a skipped directory can be brought back.
 
-Blank lines and lines starting with `#` are ignored. A list with no patterns left in it, such
-as an ignore file holding only comments, counts as no list, so `node_modules` is still
-skipped.
+Blank lines and lines starting with `#` are ignored.
 
 ## Custom formatters
 
