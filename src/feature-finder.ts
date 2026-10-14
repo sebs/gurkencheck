@@ -203,8 +203,15 @@ export function describeInvalidPattern(pattern: string): string {
     }
     return `"${pattern}" does not exist.`;
   }
+  // Asked about one that is fine - as a caller of the library may - it says
+  // so rather than finding fault with it.
+  if (stats.isDirectory()) {
+    return `"${pattern}" is a directory, which names feature files to check.`;
+  }
   if (stats.isFile()) {
-    return `"${pattern}" is not a .feature file.`;
+    return isFeatureFile(pattern)
+      ? `"${pattern}" is a feature file, which names itself to check.`
+      : `"${pattern}" is not a .feature file.`;
   }
   return `"${pattern}" is neither a file nor a directory.`;
 }

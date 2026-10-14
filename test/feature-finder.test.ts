@@ -371,3 +371,11 @@ test('says what is wrong with a symlink loop, a dangling symlink and an unreacha
     }
   }
 });
+
+test('asked about a path that is fine, describeInvalidPattern says so', () => {
+  assert.equal(describeInvalidPattern(FOUND), `"${FOUND}" is a directory, which names feature files to check.`);
+  assert.equal(
+    describeInvalidPattern(`${FOUND}/a.feature`),
+    `"${FOUND}/a.feature" is a feature file, which names itself to check.`,
+  );
+});
