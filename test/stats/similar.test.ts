@@ -87,3 +87,8 @@ test('a chain of one-edit neighbours does not join steps far apart', () => {
   // The most used step starts the first group, with what is close to it.
   assert.deepEqual(groups[0]!.map((entry) => entry.text), chain.slice(0, 4));
 });
+
+test('a ratio of 0.9 allows one edit on a ten-character step', () => {
+  const groups = groupSimilar(steps('abcdefghij', 'abcdefghik'), {ratio: 0.9, minLength: 8, maxEdits: 3});
+  assert.equal(groups.length, 1);
+});

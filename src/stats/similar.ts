@@ -132,6 +132,15 @@ export function boundedEditDistance(left: string, right: string, limit: number):
   return previous[width] ?? limit + 1;
 }
 
+/**
+ * How many edits `ratio` allows on a step of `length`. 1 - 0.9 is
+ * 0.09999999999999998 in floating point, so ten of it came to just under 1
+ * and floored to none; the tolerance takes that back.
+ */
+function allowedEdits(ratio: number, length: number): number {
+  return Math.floor((1 - ratio) * length + 1e-9);
+}
+
 interface Candidate {
   index: number;
   text: string;
@@ -232,7 +241,7 @@ export function groupSimilar<T extends {text: string}>(
 
   const close = (a: Candidate, b: Candidate): boolean => {
     const [shorter, longer] = a.text.length <= b.text.length ? [a, b] : [b, a];
-    const limit = Math.min(edits, Math.floor((1 - options.ratio) * longer.text.length));
+    const limit = Math.min(edits, allowedEdits(options.ratio, longer.text.length));
     return (
       limit >= 1 &&
       longer.text.length - shorter.text.length <= limit &&
