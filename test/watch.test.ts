@@ -541,3 +541,27 @@ test('checks again when a directory of feature files is made unreadable', async 
     }
   });
 });
+
+test('a file with no extension going is not taken for a directory, and starts no pass', async () => {
+  await withWatch(async ({directory, passes, notices}) => {
+    fs.writeFileSync(path.join(directory, 'Makefile'), 'all:\n');
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const before = passes();
+    fs.rmSync(path.join(directory, 'Makefile'));
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    assert.equal(passes(), before);
+    assert.ok(notices().every((message) => !message.includes('Makefile')), JSON.stringify(notices()));
+  });
+});
+
+test('a directory of feature files going is still a change, named as a directory', async () => {
+  await withWatch(async ({directory, passes, notices}) => {
+    fs.mkdirSync(path.join(directory, 'gone'));
+    fs.writeFileSync(path.join(directory, 'gone', 'a.feature'), 'Feature: A\n');
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const before = passes();
+    fs.rmSync(path.join(directory, 'gone'), {recursive: true});
+    await waitFor('a pass for the removal', () => passes() > before);
+    assert.ok(notices().some((message) => message.includes(`gone${path.sep} changed`) || /director/u.test(message)), JSON.stringify(notices()));
+  });
+});

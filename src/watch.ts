@@ -77,15 +77,39 @@ export interface WatchOptions {
  * any of the feature files inside it, so judging by the name alone it was
  * passed over and the results on screen were those from before the move.
  */
-function mayHoldFeatures(absolutePath: string): boolean {
+function mayHoldFeatures(absolutePath: string, wasDirectory: boolean): boolean {
   try {
     // A directory now there is worth a pass only if it holds a feature file:
     // a new empty one, made before anything is put in it, changes nothing.
     return fs.statSync(absolutePath).isDirectory() && holdsFeatureFile(absolutePath);
   } catch {
-    const name = path.basename(absolutePath);
-    return path.extname(name) === '' && !name.startsWith('.');
+    return wasDirectory;
   }
+}
+
+/**
+ * Every directory below `directory`, itself included, as the walk for
+ * feature files would see them - not hidden ones, not node_modules.
+ */
+function directoriesBelow(directory: string): string[] {
+  const found: string[] = [];
+  const pending = [directory];
+  while (pending.length > 0) {
+    const next = pending.pop()!;
+    found.push(next);
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(next, {withFileTypes: true});
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules') {
+        pending.push(path.join(next, entry.name));
+      }
+    }
+  }
+  return found;
 }
 
 /**
@@ -113,12 +137,12 @@ function holdsFeatureFile(directory: string): boolean {
   return false;
 }
 
-/** True when the path is a directory now, or was not a feature file when it went. */
-function isDirectoryChange(absolutePath: string): boolean {
+/** True when the path is a directory now, or was one when it went. */
+function isDirectoryChange(absolutePath: string, wasDirectory: boolean): boolean {
   try {
     return fs.statSync(absolutePath).isDirectory();
   } catch {
-    return !absolutePath.endsWith('.feature') && !path.basename(absolutePath).startsWith('.');
+    return wasDirectory;
   }
 }
 
@@ -239,6 +263,31 @@ export async function watch(
     timer.unref?.();
   };
 
+  /** The directories below the roots, kept up to date as they change. */
+  const directories = new Set<string>();
+  /** Notes what the path is now: a directory and those below it, or gone. */
+  const noteDirectories = (absolutePath: string): void => {
+    let directory = false;
+    try {
+      directory = fs.statSync(absolutePath).isDirectory();
+    } catch {
+      // Gone, or not to be looked at: either way, not a directory now.
+    }
+    if (directory) {
+      for (const below of directoriesBelow(absolutePath)) {
+        directories.add(below);
+      }
+      return;
+    }
+    if (directories.delete(absolutePath)) {
+      for (const known of directories) {
+        if (known.startsWith(`${absolutePath}${path.sep}`)) {
+          directories.delete(known);
+        }
+      }
+    }
+  };
+
   /** Watchers still working. A watcher that gives up takes itself out. */
   const living = new Set<fs.FSWatcher>();
 
@@ -261,6 +310,7 @@ export async function watch(
       continue;
     }
 
+    noteDirectories(path.resolve(root));
     try {
       const watcher = fs.watch(root, {recursive: true}, (event, filename) => {
         // Some platforms hand over no name; there is nothing to filter on, so
@@ -273,6 +323,15 @@ export async function watch(
         const relativePath = filename.toString();
         const absolutePath = path.resolve(root, relativePath);
         const listed = files().has(absolutePath);
+        // Whether a path that has gone was a directory is known from before,
+        // not guessed from its name: Makefile, or the file vim writes to try
+        // a directory out, going was announced as a directory and checked.
+        const wasDirectory = directories.has(absolutePath);
+        // Not below a hidden directory or node_modules, where the walk for
+        // feature files does not go: .git alone changes by the hundred.
+        if (!relativePath.split(path.sep).some((part) => part.startsWith('.') || part === 'node_modules')) {
+          noteDirectories(absolutePath);
+        }
         if (
           !listed &&
           relativePath.endsWith('.feature') &&
@@ -287,7 +346,7 @@ export async function watch(
             (!isInteresting(relativePath, configFileName) &&
               // A move is a rename. macOS also reports a change under the
               // watched directory's own name, which is not one.
-              !(event === 'rename' && mayHoldFeatures(absolutePath))))
+              !(event === 'rename' && mayHoldFeatures(absolutePath, wasDirectory))))
         ) {
           return;
         }
@@ -295,7 +354,7 @@ export async function watch(
         // different folders are two changes, and either could be the one.
         // A directory is named as one, so a notice does not count it as a file.
         changed.add(
-          isDirectoryChange(absolutePath) && !listed ? `${shown(absolutePath)}${path.sep}` : shown(absolutePath),
+          isDirectoryChange(absolutePath, wasDirectory) && !listed ? `${shown(absolutePath)}${path.sep}` : shown(absolutePath),
         );
         schedule();
       });
