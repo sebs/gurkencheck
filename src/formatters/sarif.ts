@@ -124,7 +124,37 @@ export function toSarif(
   };
 }
 
-/** Writes the SARIF log to stdout. */
+/** How many results are written at a time. */
+const SLICE = 1000;
+
+/**
+ * Writes the SARIF log to stdout.
+ *
+ * The results are written a slice at a time: as one string, the log of a
+ * run with a few million findings is longer than a string may be, and the
+ * report failed with "Invalid string length" where json and junit manage.
+ * What is written is the same as the log written in one go.
+ */
 export function printResults(results: readonly FileResult[], context?: FormatterContext): void {
-  console.log(JSON.stringify(toSarif(results, process.cwd(), context?.rules), null, 2));
+  const log = toSarif(results, process.cwd(), context?.rules) as {runs: [{results: unknown[]}]};
+  const findings = log.runs[0].results;
+  if (findings.length === 0) {
+    console.log(JSON.stringify(log, null, 2));
+    return;
+  }
+  log.runs[0].results = [];
+  const outline = JSON.stringify(log, null, 2);
+  // The only "results" key: every quote inside a string is escaped.
+  const at = outline.lastIndexOf('"results": []');
+  // A result sits four levels deep - the log, runs, the run, results.
+  const indent = ' '.repeat(8);
+  console.log(`${outline.slice(0, at)}"results": [`);
+  for (let start = 0; start < findings.length; start += SLICE) {
+    const slice = findings.slice(start, start + SLICE).map((finding, index) => {
+      const comma = start + index < findings.length - 1 ? ',' : '';
+      return `${indent}${JSON.stringify(finding, null, 2).replaceAll('\n', `\n${indent}`)}${comma}`;
+    });
+    console.log(slice.join('\n'));
+  }
+  console.log(`${' '.repeat(6)}]${outline.slice(at + '"results": []'.length)}`);
 }

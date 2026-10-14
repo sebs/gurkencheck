@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import {test} from 'node:test';
 import {
   DEFAULT_FORMAT,
@@ -608,4 +609,18 @@ test('sarif does not link a custom rule that replaced a built-in one to its page
 
   const builtIn = toSarif(results, '/') as {runs: {tool: {driver: {rules: {helpUri?: string}[]}}}[]};
   assert.match(builtIn.runs[0]!.tool.driver.rules[0]!.helpUri!, /rules\/use-and\.html$/u);
+});
+
+test('sarif written a slice at a time is the same log as written in one go', () => {
+  const many: FileResult[] = [
+    {
+      filePath: path.resolve('a.feature'),
+      errors: Array.from({length: 2500}, (_, line) => ({line: line + 1, column: 2, message: `m ${line} "q"\n`, rule: 'r'})),
+    },
+    ...RESULTS,
+  ];
+  for (const results of [many, RESULTS, [{filePath: '/features/Clean.feature', errors: []}]]) {
+    const written = capture(getFormatter('sarif')!, results);
+    assert.equal(written, JSON.stringify(toSarif(results, process.cwd()), null, 2));
+  }
 });
