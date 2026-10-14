@@ -1,9 +1,12 @@
+import assert from 'node:assert/strict';
 import {test} from 'node:test';
+import {parseFeature} from '../../../src/gherkin/parse.ts';
+import {newRunContext} from '../../../src/rules.ts';
 import rule from '../../../src/rules/use-and.ts';
 import {checkRule} from '../../helpers.ts';
 
 const shouldUseAnd = (keyword: string, text: string, line: number) => ({
-  message: `Step "${keyword}${text}" should use And instead of ${keyword}`,
+  message: `Step "${keyword}${text}" should use And instead of ${keyword.trim()}`,
   line,
 });
 
@@ -27,4 +30,16 @@ test('reports a keyword repeated instead of And', async () => {
 
 test('takes a * step as carrying on, like And', async () => {
   await checkRule(rule, 'use-and/StarSteps.feature', {}, []);
+});
+
+test('suggests the word for And in the file s own language', async () => {
+  const {feature, file} = parseFeature(
+    'de.feature',
+    '# language: de\nFunktionalität: A\n  Szenario: B\n    Angenommen x\n    Angenommen y\n',
+  );
+  const errors = await rule.run(feature, file, undefined, newRunContext());
+  assert.deepEqual(
+    errors.map((error) => error.message),
+    ['Step "Angenommen y" should use Und instead of Angenommen'],
+  );
 });

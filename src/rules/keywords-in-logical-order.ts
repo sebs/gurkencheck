@@ -19,6 +19,8 @@ const rule: LintRule = {
 
     for (const {node} of stepContainersOf(feature)) {
       let furthest = -1;
+      /** The keyword, as written in the file, of the step that set `furthest`. */
+      let furthestKeyword = '';
 
       for (const step of node.steps) {
         const keyword = getNeutralKeyword(step, feature.language);
@@ -30,12 +32,15 @@ const rule: LintRule = {
 
         if (position < furthest) {
           errors.push({
-            message: `Step "${step.keyword}${step.text}" should not appear after step using keyword ${ORDER[furthest]}`,
+            message: `Step "${step.keyword}${step.text}" should not appear after step using keyword ${furthestKeyword}`,
             rule: name,
             ...at(step.location),
           });
         }
-        furthest = Math.max(furthest, position);
+        if (position > furthest) {
+          furthest = position;
+          furthestKeyword = step.keyword.trim();
+        }
       }
     }
 
