@@ -1,7 +1,6 @@
 /**
  * Output formats.
  */
-import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import type {FileResult} from '../types.ts';
@@ -10,7 +9,7 @@ import {printResults as junit} from './junit.ts';
 import {printResults as sarif} from './sarif.ts';
 import {printResults as stylish, startRun as streamStylish} from './stylish.ts';
 import {printResults as tap, startRun as streamTap} from './tap.ts';
-import {resolvePackage} from '../util/resolve.ts';
+import {resolvePackage, resolvePath} from '../util/resolve.ts';
 
 /**
  * Turns results into output.
@@ -162,15 +161,19 @@ async function loadFormatterModule(
 
   let resolved: string;
   if (specifier.startsWith('.') || path.isAbsolute(specifier)) {
-    resolved = path.resolve(cwd, specifier);
+    const found = resolvePath(path.resolve(cwd, specifier));
+    if (found === undefined) {
+      throw new Error(`Could not find the formatter "${specifier}": there is no module at that path.`);
+    }
+    resolved = found;
   } else {
     try {
       resolved = resolvePackage(specifier, from);
     } catch {
       // `fmt/count.mjs` is as likely a path as a package, and a path does not
       // have to start with ./ to be one.
-      const asPath = path.resolve(cwd, specifier);
-      if (fs.existsSync(asPath)) {
+      const asPath = resolvePath(path.resolve(cwd, specifier));
+      if (asPath !== undefined) {
         return await importFormatter(asPath, specifier);
       }
       throw new Error(

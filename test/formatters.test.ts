@@ -192,6 +192,14 @@ test('loadFormatter takes a path that does not start with ./', async () => {
   assert.equal(await formatter(RESULTS), '2 findings in 2 files');
 });
 
+test('loadFormatter takes a path without its extension, or to a directory', async () => {
+  const extensionless = await loadFormatter('./test/formatters/count');
+  assert.equal(await extensionless(RESULTS), '2 findings in 2 files');
+  const directory = await loadFormatter('./test/formatters/package-dir');
+  assert.equal(await directory(RESULTS), 'package formatter saw 2 files');
+  await assert.rejects(() => loadFormatter('./test/formatters/nothing-here'), /Could not find the formatter/u);
+});
+
 test('loadFormatter accepts a CommonJS module exporting printResults', async () => {
   const formatter = await loadFormatter('./test/formatters/legacy.cjs');
   assert.match(capture(formatter as Formatter, RESULTS), /legacy formatter saw 2 files/u);

@@ -1,0 +1,1 @@
+{"name": "local-formatter", "type": "module", "exports": {".": {"import": "./main.mjs"}}}

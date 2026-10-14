@@ -104,3 +104,51 @@ export function resolvePackage(specifier: string, fromFile: string): string {
     return resolved;
   }
 }
+
+/**
+ * Resolves a path to a module as a package installed there would be: a file
+ * as it is, a directory by its package.json - `exports`, then `main` - or its
+ * index, and a name with no extension by the extensions `require` tries.
+ * Returns `undefined` when nothing is there.
+ *
+ * `import` of a directory, or of a file without its extension, fails with an
+ * error about the ESM resolver, though the same directory works once it is
+ * installed as a package.
+ */
+export function resolvePath(target: string): string | undefined {
+  const absolute = path.resolve(target);
+  let stats: fs.Stats | undefined;
+  try {
+    stats = fs.statSync(absolute);
+  } catch {
+    stats = undefined;
+  }
+  if (stats?.isFile() === true) {
+    return absolute;
+  }
+  if (stats?.isDirectory() === true) {
+    const manifest = path.join(absolute, 'package.json');
+    if (fs.existsSync(manifest)) {
+      try {
+        const {exports, main} = JSON.parse(fs.readFileSync(manifest, 'utf8')) as {
+          exports?: unknown;
+          main?: unknown;
+        };
+        const entry = exports === undefined ? undefined : exportFor(exports, '.');
+        if (entry !== undefined) return path.resolve(absolute, entry);
+        if (typeof main === 'string') return resolvePath(path.resolve(absolute, main));
+      } catch {
+        // An unreadable manifest is left to the index below.
+      }
+    }
+  }
+  try {
+    return createRequire(pathToFileURL(path.join(process.cwd(), 'noop.js'))).resolve(absolute);
+  } catch {
+    // require knows .js, .json and .node; a module of one's own is as often
+    // .mjs or .cjs.
+    return ['.mjs', '.cjs']
+      .map((extension) => `${absolute}${extension}`)
+      .find((candidate) => fs.existsSync(candidate));
+  }
+}
