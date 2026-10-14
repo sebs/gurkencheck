@@ -64,14 +64,25 @@ function reportsAcrossFiles(rules: RuleRegistry, configuration: Configuration): 
  * directive cannot hide the warning about itself.
  */
 function unknownRulesNamed(suppressions: Suppressions, rules: RuleRegistry): RuleError[] {
-  return suppressions.named
-    .filter(({rule}) => !rules.has(rule) && !(PARSER_RULES as readonly string[]).includes(rule))
-    .map(({rule, line}) => ({
-      message: `A directive names "${rule}", which is not a rule, so it switches nothing off`,
+  const findings: RuleError[] = [];
+  for (const {rule, line} of suppressions.named) {
+    // The always-on rules, a crash and this warning itself are reported
+    // whatever a directive says, so naming one switches nothing off either.
+    const unswitchable =
+      (PARSER_RULES as readonly string[]).includes(rule) || rule === UNKNOWN_RULE_IN_DIRECTIVE;
+    if (!unswitchable && rules.has(rule)) {
+      continue;
+    }
+    findings.push({
+      message: unswitchable
+        ? `A directive names "${rule}", which cannot be switched off, so it switches nothing off`
+        : `A directive names "${rule}", which is not a rule, so it switches nothing off`,
       rule: UNKNOWN_RULE_IN_DIRECTIVE,
       line,
-      severity: 'warning' as const,
-    }));
+      severity: 'warning',
+    });
+  }
+  return findings;
 }
 
 export async function* lintStream(

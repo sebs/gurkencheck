@@ -294,3 +294,22 @@ test('a single string given for the files is refused plainly', async () => {
     /Expected a list of files, not the string "test\/linter\/NoViolations\.feature"\. Put it in an array\./u,
   );
 });
+
+test('a directive naming something that cannot be switched off is warned about', async () => {
+  const file = path.join(os.tmpdir(), `gurkencheck-unswitchable-${process.pid}.feature`);
+  fs.writeFileSync(
+    file,
+    '# gurkencheck-disable unexpected-error, one-feature-per-file, unknown-rule-in-directive\nFeature: A\n  Scenario: B\n    Given c\n',
+  );
+  try {
+    const [result] = await lint([file], {}, await loadRules());
+    assert.deepEqual(
+      result!.errors.map((error) => error.message),
+      ['unexpected-error', 'one-feature-per-file', 'unknown-rule-in-directive'].map(
+        (name) => `A directive names "${name}", which cannot be switched off, so it switches nothing off`,
+      ),
+    );
+  } finally {
+    fs.rmSync(file, {force: true});
+  }
+});
