@@ -57,13 +57,22 @@ const TALLY_SIZE = 32;
  * than they are - and since the tally is used to rule pairs out, looking more
  * alike is the safe direction to be wrong in.
  */
-function tally(text: string): number[] {
+function tally(points: readonly number[]): number[] {
   const counts = new Array<number>(TALLY_SIZE).fill(0);
-  for (let index = 0; index < text.length; index++) {
-    const bucket = text.charCodeAt(index) % TALLY_SIZE;
+  for (const point of points) {
+    const bucket = point % TALLY_SIZE;
     counts[bucket] = (counts[bucket] ?? 0) + 1;
   }
   return counts;
+}
+
+/**
+ * The characters of a text, as code points. Edits are counted in characters,
+ * not in UTF-16 units: an emoji is two of those, and changing one for a
+ * letter counted as two edits where changing it for another emoji was one.
+ */
+function codePoints(text: string): number[] {
+  return Array.from(text, (character) => character.codePointAt(0)!);
 }
 
 /**
@@ -96,6 +105,11 @@ export function boundedEditDistance(left: string, right: string, limit: number):
   if (left === right) {
     return 0;
   }
+  return distance(codePoints(left), codePoints(right), limit);
+}
+
+/** boundedEditDistance, over code points. */
+function distance(left: readonly number[], right: readonly number[], limit: number): number {
   // A limit below 0 is 0: given -1, "past the limit" came back as 0, which
   // reads as equal for two strings that are not.
   if (!(limit >= 0)) {
@@ -112,11 +126,11 @@ export function boundedEditDistance(left: string, right: string, limit: number):
   for (let row = 1; row <= left.length; row++) {
     current[0] = row;
     let rowMinimum = row;
-    const leftCharacter = left.charCodeAt(row - 1);
+    const leftCharacter = left[row - 1];
 
     for (let column = 1; column <= width; column++) {
       const substitution =
-        (previous[column - 1] ?? 0) + (leftCharacter === right.charCodeAt(column - 1) ? 0 : 1);
+        (previous[column - 1] ?? 0) + (leftCharacter === right[column - 1] ? 0 : 1);
       const deletion = (previous[column] ?? 0) + 1;
       const insertion = (current[column - 1] ?? 0) + 1;
       const best = Math.min(substitution, deletion, insertion);
@@ -149,7 +163,25 @@ function allowedEdits(ratio: number, length: number): number {
 interface Candidate {
   index: number;
   text: string;
+  /** The text's characters, as code points. */
+  points: number[];
   tally: number[];
+}
+
+/**
+ * `length` of a candidate's characters from `start`, as text to look up by.
+ * Most texts hold no character beyond one UTF-16 unit, and are cut as they
+ * are; the rest are put together from their code points.
+ */
+function slice(candidate: Candidate, start: number, length: number): string {
+  if (candidate.points.length === candidate.text.length) {
+    return candidate.text.slice(start, start + length);
+  }
+  let text = '';
+  for (let index = start; index < start + length; index++) {
+    text += String.fromCodePoint(candidate.points[index]!);
+  }
+  return text;
 }
 
 /**
@@ -198,21 +230,24 @@ export function groupSimilar<T extends {text: string}>(
     return [];
   }
   const candidates: Candidate[] = entries
-    .map((entry, index) => ({index, text: entry.text, tally: tally(entry.text)}))
-    .filter((candidate) => candidate.text.length >= options.minLength);
+    .map((entry, index) => {
+      const points = codePoints(entry.text);
+      return {index, text: entry.text, points, tally: tally(points)};
+    })
+    .filter((candidate) => candidate.points.length >= options.minLength);
 
   /** `length:piece:text` -> the candidates of that length holding that piece. */
   const index = new Map<string, Candidate[]>();
   /** Candidates too short to cut into pieces, compared with every step. */
   const short: Candidate[] = [];
   for (const candidate of candidates) {
-    const {length} = candidate.text;
+    const {length} = candidate.points;
     if (length <= edits) {
       short.push(candidate);
       continue;
     }
     pieces(length, edits).forEach((piece, number) => {
-      const key = `${length}:${number}:${candidate.text.slice(piece.start, piece.start + piece.length)}`;
+      const key = `${length}:${number}:${slice(candidate, piece.start, piece.length)}`;
       const holding = index.get(key);
       if (holding === undefined) {
         index.set(key, [candidate]);
@@ -224,7 +259,7 @@ export function groupSimilar<T extends {text: string}>(
 
   /** The candidates that could be within the budget of `step`. */
   const nearby = (step: Candidate): Iterable<Candidate> => {
-    const length = step.text.length;
+    const length = step.points.length;
     if (length <= edits) {
       return candidates;
     }
@@ -234,7 +269,7 @@ export function groupSimilar<T extends {text: string}>(
         const from = Math.max(0, piece.start - edits);
         const to = Math.min(length - piece.length, piece.start + edits);
         for (let start = from; start <= to; start++) {
-          const key = `${other}:${number}:${step.text.slice(start, start + piece.length)}`;
+          const key = `${other}:${number}:${slice(step, start, piece.length)}`;
           for (const candidate of index.get(key) ?? []) {
             found.add(candidate);
           }
@@ -245,13 +280,13 @@ export function groupSimilar<T extends {text: string}>(
   };
 
   const close = (a: Candidate, b: Candidate): boolean => {
-    const [shorter, longer] = a.text.length <= b.text.length ? [a, b] : [b, a];
-    const limit = Math.min(edits, allowedEdits(options.ratio, longer.text.length));
+    const [shorter, longer] = a.points.length <= b.points.length ? [a, b] : [b, a];
+    const limit = Math.min(edits, allowedEdits(options.ratio, longer.points.length));
     return (
       limit >= 1 &&
-      longer.text.length - shorter.text.length <= limit &&
+      longer.points.length - shorter.points.length <= limit &&
       !tallyRulesOut(shorter.tally, longer.tally, limit) &&
-      boundedEditDistance(shorter.text, longer.text, limit) <= limit
+      distance(shorter.points, longer.points, limit) <= limit
     );
   };
 

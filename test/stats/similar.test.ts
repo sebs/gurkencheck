@@ -98,3 +98,10 @@ test('edit distance never calls two different strings equal, whatever the limit'
   assert.equal(boundedEditDistance('abc', 'abd', Number.NaN), 1);
   assert.equal(boundedEditDistance('abc', 'abc', -1), 0);
 });
+
+test('edits are counted in characters, not UTF-16 units', () => {
+  assert.equal(boundedEditDistance('my 🐱 is fed', 'my X is fed', 3), 1);
+  const groups = groupSimilar([{text: 'my 🐱 is fed'}, {text: 'my X is fed'}]);
+  assert.equal(groups.length, 1);
+  assert.deepEqual(groupSimilar([{text: '🐱🐱🐱🐱🐱🐱🐱'}, {text: '🐱🐱🐱🐱🐱🐱🐶'}]), [], 'seven characters are too short');
+});
