@@ -376,6 +376,12 @@ export function readIgnorePatterns(
 
   let contents: string;
   try {
+    // A FIFO is waited on for ever by a read; anything but a regular file
+    // (or a directory, which reports itself) is refused before it is read.
+    const stats = fs.statSync(ignoreFileName);
+    if (!stats.isFile() && !stats.isDirectory()) {
+      throw Object.assign(new Error('not a regular file'), {code: 'ENOTFILE'});
+    }
     contents = fs.readFileSync(ignoreFileName, 'utf8');
   } catch (thrown) {
     // No ignore file: the defaults alone. Reading it outright rather than
@@ -389,7 +395,13 @@ export function readIgnorePatterns(
     }
     throw new Error(
       `Could not read the ignore file "${path.relative(process.cwd(), ignoreFileName) || ignoreFileName}": ${
-        code === 'EACCES' || code === 'EPERM' ? 'permission denied' : code === 'EISDIR' ? 'it is a directory' : String(code)
+        code === 'EACCES' || code === 'EPERM'
+          ? 'permission denied'
+          : code === 'EISDIR'
+            ? 'it is a directory'
+            : code === 'ENOTFILE'
+              ? 'it is not a regular file'
+              : String(code)
       }.`,
     );
   }

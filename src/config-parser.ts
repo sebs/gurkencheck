@@ -142,8 +142,16 @@ function parseFile(filePath: string, found = false): Record<string, unknown> {
   // file you may not read is not a mistake in its JSON.
   let text: string;
   try {
+    // A FIFO, or a device, is waited on for ever by a read: only a regular
+    // file is read at all.
+    if (!fs.statSync(filePath).isFile() && !fs.statSync(filePath).isDirectory()) {
+      throw new ConfigurationError(`Could not read "${shown(filePath)}": it is not a regular file.`);
+    }
     text = fs.readFileSync(filePath, 'utf8');
   } catch (thrown) {
+    if (thrown instanceof ConfigurationError) {
+      throw thrown;
+    }
     throw new ConfigurationError(`Could not read "${shown(filePath)}": ${unreadableBecause(thrown, filePath)}.`);
   }
   // JSON.parse refuses a byte order mark, which some editors write.

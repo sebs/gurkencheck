@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -425,6 +426,20 @@ test('a configuration module whose default export is null is said to export none
     const result = await readConfiguration(path.join(directory, 'rc.json'), rules);
     assert.ok(!result.ok);
     assert.match(result.details[0]!, /does not export a configuration object; its default export is null/u);
+  } finally {
+    fs.rmSync(directory, {recursive: true, force: true});
+  }
+});
+
+test('a configuration that is not a regular file is refused, not waited on', async () => {
+  if (process.platform === 'win32') return;
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-fifo-config-'));
+  const fifo = path.join(directory, 'rc.json');
+  execFileSync('mkfifo', [fifo]);
+  try {
+    const result = await readConfiguration(fifo, rules);
+    assert.ok(!result.ok);
+    assert.match(result.details[0]!, /it is not a regular file/u);
   } finally {
     fs.rmSync(directory, {recursive: true, force: true});
   }
