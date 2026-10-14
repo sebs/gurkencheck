@@ -387,7 +387,7 @@ async function runStreaming(
   let failed = false;
   try {
     formatting = true;
-    const run = streaming();
+    const run = streaming({rules});
     formatting = false;
     write(await format('start', () => run.start?.()));
     for await (const result of lintStream(files, configuration, rules, {language})) {

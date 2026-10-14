@@ -642,3 +642,11 @@ test('a streaming hook handing back null writes nothing, from any hook', async (
     assert.equal(code, 1);
   });
 });
+
+test('a streaming formatter is handed the run s rules as well', async () => {
+  const formatter = path.resolve('test/formatters/context-streaming.mjs');
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    const {stdout} = await cli(['-f', formatter, '.'], cwd);
+    assert.match(stdout, /^rules: \d+\n$/u);
+  });
+});

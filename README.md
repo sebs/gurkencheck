@@ -400,7 +400,8 @@ function all work.
 
 A formatter like that is handed the whole run once it is over. One that should write as
 the files are checked, as `stylish` and `tap` do, also exports `startRun`. It is called
-once per run and returns the hooks for that run, each giving back the text to write, or a
+once per run, with `{rules}` as a whole-run formatter's second argument is, and returns the
+hooks for that run, each giving back the text to write, or a
 promise of it:
 
 ```js

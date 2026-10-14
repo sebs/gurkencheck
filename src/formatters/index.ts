@@ -72,7 +72,7 @@ export interface SyncFormatterRun extends FormatterRun {
  * A factory rather than an object, so counters and the like belong to a run
  * and two at once cannot tread on each other.
  */
-export type StreamingFormatter = () => FormatterRun;
+export type StreamingFormatter = (context?: FormatterContext) => FormatterRun;
 
 /**
  * The formats that can be written as the run goes on.
