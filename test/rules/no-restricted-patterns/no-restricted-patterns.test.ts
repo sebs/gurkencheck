@@ -1,6 +1,7 @@
+import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import rule from '../../../src/rules/no-restricted-patterns.ts';
-import {checkRule} from '../../helpers.ts';
+import {checkRule, runRule} from '../../helpers.ts';
 
 const GLOBAL = ['^a restricted global pattern$', 'a bad description'];
 
@@ -107,5 +108,13 @@ test('Global reaches Examples, data tables and doc strings too', async () => {
     matched('Step', 'doc string', 'a forbidden line', 'forbidden', 9),
     matched('Examples', 'name', 'Forbidden examples', 'forbidden', 12),
     matched('Examples', 'description', 'A forbidden description', 'forbidden', 13),
+    matched('Examples', 'table', 'forbidden value', 'forbidden', 16),
   ]);
+});
+
+test('places doc string and Examples table hits at their column', async () => {
+  const errors = await runRule(rule, 'no-restricted-patterns/EverywhereViolations.feature', {Global: ['forbidden']});
+  const columns = Object.fromEntries(errors.map((error) => [error.line, error.column]));
+  assert.equal(columns[9], 7);
+  assert.equal(columns[16], 9);
 });

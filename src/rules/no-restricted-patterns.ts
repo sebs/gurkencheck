@@ -167,16 +167,28 @@ const rule: LintRule = {
           const {content, location} = step.docString;
           content.split('\n').forEach((line, index) => {
             if (line.trim() !== '') {
-              report('Step', 'doc string', line.trim(), applicable, {line: location.line + 1 + index});
+              // The content keeps whatever it is indented by past the
+              // delimiter, so its first character is that far along.
+              const column = (location.column ?? 1) + [...line].length - [...line.trimStart()].length;
+              report('Step', 'doc string', line.trim(), applicable, {line: location.line + 1 + index, column});
             }
           });
         }
       }
 
-      // An outline's Examples belong to it, and take its patterns.
+      // An outline's Examples belong to it, and take its patterns - the
+      // cells of its table too, which become the text of its steps.
       for (const examples of 'examples' in node ? node.examples : []) {
         check(examples, 'name', examples.name, applicable);
         checkDescription(examples, applicable);
+        const rows = [...(examples.tableHeader === undefined ? [] : [examples.tableHeader]), ...examples.tableBody];
+        for (const row of rows) {
+          for (const cell of row.cells) {
+            if (cell.value.trim() !== '') {
+              report('Examples', 'table', cell.value.trim(), applicable, at(cell.location));
+            }
+          }
+        }
       }
     }
 

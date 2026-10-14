@@ -13,3 +13,4 @@ Feature: Everywhere
       A forbidden description
       | x |
       | 1 |
+      | forbidden value |
