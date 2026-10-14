@@ -316,3 +316,10 @@ test('the nearest ignore file above the working directory is used, relative to w
     process.chdir(workingDirectory);
   }
 });
+
+test('a file named in another case is reported as the disk spells it', () => {
+  // Only meaningful where the file system ignores case.
+  if (!fs.existsSync(`${FOUND}/A.feature`)) return;
+  assert.deepEqual(findFeatureFiles([`${FOUND}/A.feature`]).files, [`${FOUND}/a.feature`]);
+  assert.deepEqual(findFeatureFiles([`${FOUND.toUpperCase()}/A.FEATURE`]).files, [`${FOUND}/a.feature`]);
+});

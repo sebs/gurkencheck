@@ -44,6 +44,34 @@ export interface FeatureFileStream {
   ignoredFiles: string[];
 }
 
+/**
+ * A path that exists, spelled as the disk spells it: on a file system that
+ * ignores case, `features/LOGIN.feature` names `features/Login.feature`, and
+ * reported as typed, file-name would judge a name the file does not have.
+ * Only the case is put right; a symlink stays the name it was given.
+ */
+function onDiskSpelling(given: string): string {
+  const absolute = path.resolve(given);
+  const {root} = path.parse(absolute);
+  let spelled = root;
+  for (const segment of absolute.slice(root.length).split(path.sep).filter((part) => part !== '')) {
+    let entries: string[] = [];
+    try {
+      entries = fs.readdirSync(spelled);
+    } catch {
+      return given;
+    }
+    const match = entries.includes(segment)
+      ? segment
+      : entries.find((entry) => entry.toLowerCase() === segment.toLowerCase());
+    spelled = path.join(spelled, match ?? segment);
+  }
+  if (spelled === absolute) {
+    return given;
+  }
+  return path.isAbsolute(given) ? spelled : path.relative(process.cwd(), spelled) || '.';
+}
+
 /** The argument with forward slashes, whatever the platform writes. */
 function toSlashes(pattern: string): string {
   return pattern.split(path.sep).join('/');
@@ -76,10 +104,11 @@ function toFeatureGlobs(pattern: string): string[] | undefined {
     stats = undefined;
   }
   if (stats?.isDirectory() === true) {
-    return [`${escapeGlob(toSlashes(pattern)).replace(/\/+$/, '')}/**/*.feature`];
+    return [`${escapeGlob(toSlashes(onDiskSpelling(pattern))).replace(/\/+$/, '')}/**/*.feature`];
   }
   if (stats?.isFile() === true) {
-    return isFeatureFile(pattern) ? [escapeGlob(toSlashes(pattern))] : undefined;
+    const spelled = onDiskSpelling(pattern);
+    return isFeatureFile(spelled) ? [escapeGlob(toSlashes(spelled))] : undefined;
   }
 
   const glob = toSlashes(pattern).replace(/(?<=.)\/+$/, '');
