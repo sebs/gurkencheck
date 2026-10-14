@@ -119,7 +119,7 @@ export const RULE_DOCS: RuleDoc[] = [
     settings: [
       {
         name: 'maxScenarios',
-        type: 'number',
+        type: 'number of scenarios, or 0 for no limit',
         fallback: '10',
         description: 'How many scenarios a single file may contain.',
       },
@@ -313,7 +313,7 @@ export const RULE_DOCS: RuleDoc[] = [
         name: 'max',
         type: 'number of lines',
         fallback: '1',
-        description: 'How many blank lines may sit next to each other. Each blank line past this is reported.',
+        description: 'How many blank lines may sit next to each other. Each blank line past this is reported; 0 allows none.',
       },
     ],
     config: '{\n  "no-multiple-empty-lines": ["on", {"max": 2}]\n}',
@@ -559,13 +559,13 @@ export const RULE_DOCS: RuleDoc[] = [
     settings: [
       {
         name: 'steps-length.Background',
-        type: 'number of steps',
+        type: 'number of steps, or 0 for no limit',
         fallback: '15',
         description: 'Longest allowed Background.',
       },
       {
         name: 'steps-length.Scenario',
-        type: 'number of steps',
+        type: 'number of steps, or 0 for no limit',
         fallback: '15',
         description: 'Longest allowed Scenario. This applies to Scenario Outlines too.',
       },

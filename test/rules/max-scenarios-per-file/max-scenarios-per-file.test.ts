@@ -39,3 +39,7 @@ test('counts an outline once when countOutlineExamples is off', async () => {
     [tooMany(11)],
   );
 });
+
+test('a limit of 0 is no limit, as in name-length', async () => {
+  await checkRule(rule, 'max-scenarios-per-file/TooManyScenarios.feature', {maxScenarios: 0}, []);
+});

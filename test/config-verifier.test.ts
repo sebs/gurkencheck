@@ -111,17 +111,17 @@ test('reports a setting of the wrong type', () => {
     'Invalid rule configuration for "required-tags" - "tags" should be a list of strings, not "@ab"',
   ]);
   assert.deepEqual(verify({'max-scenarios-per-file': ['on', {maxScenarios: '0'}]}), [
-    'Invalid rule configuration for "max-scenarios-per-file" - "maxScenarios" should be a number, not "0"',
+    'Invalid rule configuration for "max-scenarios-per-file" - "maxScenarios" should be a whole number, 0 or more, not "0"',
   ]);
   assert.deepEqual(verify({indentation: ['on', {Step: 'two'}]}), [
-    'Invalid rule configuration for "indentation" - "Step" should be a number, not "two"',
+    'Invalid rule configuration for "indentation" - "Step" should be a whole number, 0 or more, not "two"',
   ]);
 });
 
 test('checks nested settings too', () => {
   assert.deepEqual(verify({'scenario-size': ['on', {'steps-length': {Scenario: 'ten', Outline: 3}}]}), [
     'Invalid rule configuration for "scenario-size" - "steps-length" has no setting called "Outline". Available settings: "Background", "Scenario"',
-    'Invalid rule configuration for "scenario-size" - "steps-length.Scenario" should be a number, not "ten"',
+    'Invalid rule configuration for "scenario-size" - "steps-length.Scenario" should be a whole number, 0 or more, not "ten"',
   ]);
 });
 
@@ -143,5 +143,12 @@ test('reports a value outside a fixed set of choices', () => {
 test('reports settings given to a built-in rule that has none', () => {
   assert.deepEqual(verify({'no-trailing-spaces': ['on', 'garbage']}), [
     'Invalid rule configuration for "no-trailing-spaces" - the rule has no settings, so the config should be "on", "warn" or "off"',
+  ]);
+});
+
+test('a count may not be negative or a fraction', () => {
+  assert.deepEqual(verify({'name-length': ['on', {Step: -1, Feature: 2.5, Scenario: 0}]}), [
+    'Invalid rule configuration for "name-length" - "Step" should be a whole number, 0 or more, not -1',
+    'Invalid rule configuration for "name-length" - "Feature" should be a whole number, 0 or more, not 2.5',
   ]);
 });

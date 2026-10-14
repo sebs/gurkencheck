@@ -23,3 +23,7 @@ test('reports blocks over the configured limit', async () => {
     ],
   );
 });
+
+test('a limit of 0 is no limit, as in name-length', async () => {
+  await checkRule(rule, 'scenario-size/ExampleFeature.feature', {'steps-length': {Scenario: 0, Background: 0}}, []);
+});

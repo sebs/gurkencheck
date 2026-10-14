@@ -32,7 +32,8 @@ const rule: LintRule = {
       }
     }
 
-    if (count <= config.maxScenarios) {
+    // 0 is no limit, as in name-length.
+    if (config.maxScenarios === 0 || count <= config.maxScenarios) {
       return [];
     }
     return [

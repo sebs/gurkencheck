@@ -23,7 +23,7 @@ function describeAllowed(availableConfigs: unknown): string {
 /** What a value should be, going by the default it would replace. */
 function describeType(fallback: unknown): string {
   if (Array.isArray(fallback)) return 'a list of strings';
-  if (typeof fallback === 'number') return 'a number';
+  if (typeof fallback === 'number') return 'a whole number, 0 or more';
   if (typeof fallback === 'boolean') return 'true or false';
   if (typeof fallback === 'string') return 'a string';
   return 'an object';
@@ -52,7 +52,10 @@ function verifyTypes(
     if (Array.isArray(fallback)) {
       fits = Array.isArray(value) && value.every((entry) => typeof entry === 'string');
     } else if (typeof fallback === 'number') {
-      fits = typeof value === 'number' && Number.isFinite(value);
+      // Every number a rule takes counts something - characters, steps,
+      // lines, spaces - so a fraction or a negative one has no meaning, and
+      // would only be compared as though it had one.
+      fits = typeof value === 'number' && Number.isInteger(value) && value >= 0;
     } else if (typeof fallback === 'object' && fallback !== null) {
       fits = typeof value === 'object' && value !== null && !Array.isArray(value);
       if (fits) {

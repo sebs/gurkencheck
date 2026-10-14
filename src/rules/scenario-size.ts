@@ -28,7 +28,9 @@ const rule: LintRule = {
     for (const {node} of stepContainersOf(feature)) {
       const key = 'examples' in node ? 'Scenario' : 'Background';
       const maximum = config['steps-length'][key];
-      if (typeof maximum === 'number' && node.steps.length > maximum) {
+      // 0 is no limit, as in name-length: a limit of no steps at all would
+      // only ever fail.
+      if (typeof maximum === 'number' && maximum > 0 && node.steps.length > maximum) {
         errors.push({
           message: `Element ${getNodeType(node, feature.language)} too long: actual ${node.steps.length}, expected ${maximum}`,
           rule: name,
