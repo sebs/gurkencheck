@@ -106,7 +106,9 @@ export async function* lintStream(
     }
 
     const fileResult: FileResult = {filePath: path.resolve(result.file.relativePath), errors};
-    byPath.set(result.file.relativePath, {result: fileResult, suppressions});
+    // Keyed by where the file is, so a finding at the end of the run names it
+    // however it spells the path - as given, or absolute.
+    byPath.set(path.resolve(result.file.relativePath), {result: fileResult, suppressions});
 
     if (held) {
       waiting.push(fileResult);
@@ -121,9 +123,18 @@ export async function* lintStream(
   // failed looking back over it - and goes against the first file so that it
   // is seen at all.
   for (const {filePath, ...error} of await finishRun(rules, configuration, run)) {
-    const target = filePath === undefined ? undefined : byPath.get(filePath);
-    if (target === undefined) {
+    if (filePath === undefined) {
       waiting[0]?.errors.push(error);
+      continue;
+    }
+    const target = byPath.get(path.resolve(filePath));
+    if (target === undefined) {
+      // A file this run did not check. Put on another file, it would carry
+      // that file's name with a line and column from this one, and slip past
+      // the directives of both - so it is reported under the file it names.
+      const result: FileResult = {filePath: path.resolve(filePath), errors: [error]};
+      byPath.set(result.filePath, {result, suppressions: EMPTY_SUPPRESSIONS});
+      waiting.push(result);
       continue;
     }
     if (!target.suppressions.isSuppressed(error)) {

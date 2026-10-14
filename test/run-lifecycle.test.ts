@@ -2,6 +2,7 @@
  * The run lifecycle: state that belongs to one run rather than to the module.
  */
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import {test} from 'node:test';
 import {lint} from '../src/linter.ts';
 import {beginRun, finishRun, newRunContext, runEnabledRules} from '../src/rules.ts';
@@ -183,4 +184,23 @@ test('runEnabledRules on its own starts a run of that one file', async () => {
 
   assert.equal(findings[0]?.message, 'saw 2');
   assert.ok(context, 'newRunContext is exported for testing a rule on its own');
+});
+
+test('a finding at the end of the run goes to the file it names, however it spells it', async () => {
+  const other = 'test/linter/MultipleViolations.feature';
+  const rule: LintRule = {
+    name: 'ending',
+    run: () => [],
+    onRunEnd: () => [
+      {message: 'absolute', rule: 'ending', line: 3, filePath: path.resolve(other)},
+      {message: 'elsewhere', rule: 'ending', line: 2, filePath: 'test/linter/NotInThisRun.feature'},
+    ],
+  };
+  const results = await lint([FILE, other], {ending: 'on'}, new Map([['ending', rule]]));
+  const byFile = Object.fromEntries(
+    results.map((result) => [path.relative(process.cwd(), result.filePath), result.errors.map((e) => e.message)]),
+  );
+  assert.deepEqual(byFile[FILE], []);
+  assert.ok(byFile[other]!.includes('absolute'));
+  assert.deepEqual(byFile['test/linter/NotInThisRun.feature'], ['elsewhere']);
 });
