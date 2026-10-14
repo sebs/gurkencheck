@@ -795,3 +795,17 @@ test('a run that could not search what it was asked writes no report', async () 
     }
   });
 });
+
+test('piped, one long message does not pad every other one to its length', async () => {
+  // use-and quotes the step it is about, so its message is as long as the step.
+  const long = `Given ${'a'.repeat(5000)}`;
+  const feature = `Feature: A\n\n  Scenario:\n    Given a\n    ${long}\n  Scenario:\n    Given b\n`;
+  await withProject(feature, '{"no-unnamed-scenarios": "on", "use-and": "on"}', async (cwd) => {
+    const {stdout} = await cli(['.'], cwd);
+    const short = stdout.split('\n').filter((line) => line.includes('Missing Scenario name'));
+    assert.ok(short.length > 0);
+    for (const line of short) {
+      assert.ok(line.length < 200, `padded to ${line.length}`);
+    }
+  });
+});

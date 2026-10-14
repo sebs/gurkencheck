@@ -90,8 +90,15 @@ function block(result: FileResult, consoleWidth: number): string {
   return `${lines.join('\n')}\n\n\n`;
 }
 
+/** The width to lay out for when the output is not a terminal. */
+const PIPED_WIDTH = 120;
+
 function widthOfConsole(): number {
-  return process.stdout.isTTY ? process.stdout.columns : Infinity;
+  // Piped, as in CI, there is no terminal to fit, but laid out as though as
+  // wide as anything, every message in a file was padded to the longest -
+  // one long step made a 113 KB feature file 100 MB of log. A pipe is laid
+  // out as a wide terminal would be.
+  return process.stdout.isTTY ? process.stdout.columns : PIPED_WIDTH;
 }
 
 /** Blocks written as each file is done rather than at the end of the run. */
