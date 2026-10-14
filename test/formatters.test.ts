@@ -632,3 +632,11 @@ test('sarif written a slice at a time is the same log as written in one go', () 
     assert.equal(written, JSON.stringify(toSarif(results, process.cwd()), null, 2));
   }
 });
+
+test('sarif escapes brackets in a message, so feature text cannot become an embedded link', () => {
+  const log = toSarif(
+    [{filePath: '/a.feature', errors: [{line: 1, message: 'Step "[click](https://evil.example) \\[x]"', rule: 'r'}]}],
+    '/',
+  ) as {runs: {results: {message: {text: string}}[]}[]};
+  assert.equal(log.runs[0]!.results[0]!.message.text, 'Step "\\[click\\](https://evil.example) \\\\\\[x\\]"');
+});

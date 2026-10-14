@@ -61,6 +61,17 @@ function uriFor(filePath: string, cwd: string): string {
   return relative.split(path.sep).map(encodeURIComponent).join('/');
 }
 
+/**
+ * A message as SARIF's plain text: a viewer reads `[label](target)` in it as
+ * an embedded link (SARIF 2.1.0, 3.11.6), and a message quotes the feature
+ * file, so a step could put a link of its author's choosing into an alert.
+ * Literal brackets are escaped, as the format asks, and so is a backslash
+ * that would otherwise escape one.
+ */
+function plainText(message: string): string {
+  return message.replace(/\\(?=[[\]])/gu, '\\\\').replace(/[[\]]/gu, '\\$&');
+}
+
 function toResult(result: FileResult, error: RuleError, cwd: string): unknown {
   const physicalLocation: Record<string, unknown> = {
     artifactLocation: {uri: uriFor(result.filePath, cwd)},
@@ -79,7 +90,7 @@ function toResult(result: FileResult, error: RuleError, cwd: string): unknown {
   return {
     ruleId: error.rule,
     level: levelOf(error),
-    message: {text: error.message},
+    message: {text: plainText(error.message)},
     locations: [{physicalLocation}],
   };
 }
