@@ -92,3 +92,9 @@ test('a ratio of 0.9 allows one edit on a ten-character step', () => {
   const groups = groupSimilar(steps('abcdefghij', 'abcdefghik'), {ratio: 0.9, minLength: 8, maxEdits: 3});
   assert.equal(groups.length, 1);
 });
+
+test('edit distance never calls two different strings equal, whatever the limit', () => {
+  assert.equal(boundedEditDistance('abc', 'abd', -1), 1);
+  assert.equal(boundedEditDistance('abc', 'abd', Number.NaN), 1);
+  assert.equal(boundedEditDistance('abc', 'abc', -1), 0);
+});

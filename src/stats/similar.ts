@@ -96,6 +96,11 @@ export function boundedEditDistance(left: string, right: string, limit: number):
   if (left === right) {
     return 0;
   }
+  // A limit below 0 is 0: given -1, "past the limit" came back as 0, which
+  // reads as equal for two strings that are not.
+  if (!(limit >= 0)) {
+    limit = 0;
+  }
   if (Math.abs(left.length - right.length) > limit) {
     return limit + 1;
   }
