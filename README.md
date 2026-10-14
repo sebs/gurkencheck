@@ -333,7 +333,7 @@ extends, and later entries in a list win over earlier ones.
 ```jsonc
 {
   "extends": "gurkencheck:recommended",
-  "indentation": ["on", {"Step": 4}],
+  "indentation": ["on", {"Scenario": 2, "Step": 4}],
   "no-dupe-scenario-names": ["on", "in-feature"]
 }
 ```

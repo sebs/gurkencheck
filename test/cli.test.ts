@@ -589,3 +589,14 @@ test('--watch carries on over a configuration it cannot read at the start', asyn
     }
   });
 });
+
+test('the README extends example accepts a conventionally laid out file', async () => {
+  const readme = fs.readFileSync('README.md', 'utf8');
+  const example = /```jsonc\n(\{\n {2}"extends": "gurkencheck:recommended",[\s\S]*?)```/u.exec(readme)?.[1];
+  assert.ok(example !== undefined, 'the README should hold the extends example');
+  await withProject(CLEAN_FEATURE, example, async (cwd) => {
+    const {code, stdout} = await cli(['.'], cwd);
+    assert.equal(stdout, '');
+    assert.equal(code, 0);
+  });
+});

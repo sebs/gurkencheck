@@ -363,7 +363,7 @@ exceptions.</p>
 over what it extends, and later entries in a list win over earlier ones.</p>
 ${codeBlock(`{
   "extends": "gurkencheck:recommended",
-  "indentation": ["on", {"Step": 4}],
+  "indentation": ["on", {"Scenario": 2, "Step": 4}],
   "no-dupe-scenario-names": ["on", "in-feature"]
 }`)}
 <p>An entry is one of three things:</p>
