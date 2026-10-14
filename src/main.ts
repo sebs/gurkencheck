@@ -276,7 +276,16 @@ export async function run(
       });
       return EXIT_USAGE;
     }
-    if (typeof output === 'string' && output !== '') {
+    // Anything else handed back would be dropped without a word, and the
+    // report you asked for would be missing from a run that passed.
+    if (output !== undefined && typeof output !== 'string') {
+      diagnostics.report({
+        level: 'error',
+        message: `The formatter failed: it returned ${output === null ? 'null' : typeof output} instead of a string. A formatter prints its output or returns it as a string.`,
+      });
+      return EXIT_USAGE;
+    }
+    if (output !== undefined && output !== '') {
       console.log(output);
     }
 

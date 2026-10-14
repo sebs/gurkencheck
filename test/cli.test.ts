@@ -547,3 +547,13 @@ test('stats given after an option says to put it first', async () => {
     assert.match(stderr, /To run the stats command, put stats first/u);
   });
 });
+
+test('a formatter returning something other than text is a failure, not silence', async () => {
+  const formatter = path.resolve('test/formatters/returns-number.mjs');
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    const {code, stdout, stderr} = await cli(['-f', formatter, '.'], cwd);
+    assert.equal(code, 2);
+    assert.equal(stdout, '');
+    assert.match(stderr, /The formatter failed: it returned number instead of a string/u);
+  });
+});
