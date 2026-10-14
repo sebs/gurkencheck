@@ -36,6 +36,7 @@ import type {Sequence} from './util/stream.ts';
 import {runStats} from './stats/command.ts';
 import {version} from './version.ts';
 import {stillWaitingFor, waitFor} from './util/waiting.ts';
+import {asText, reasonOf} from './util/thrown.ts';
 
 /** Directory names a watch takes no notice of, however deep they turn up. */
 const DEFAULT_IGNORED_NAMES = ['node_modules', '.git'];
@@ -135,7 +136,7 @@ export async function run(
   } catch (thrown) {
     diagnostics.report({
       level: 'error',
-      message: thrown instanceof Error ? thrown.message : String(thrown),
+      message: reasonOf(thrown),
     });
     return EXIT_USAGE;
   }
@@ -206,7 +207,7 @@ export async function run(
   try {
     initialSearch = findFeatureFileStream(positionals, ignore);
   } catch (thrown) {
-    diagnostics.report({level: 'error', message: thrown instanceof Error ? thrown.message : String(thrown)});
+    diagnostics.report({level: 'error', message: reasonOf(thrown)});
     return EXIT_USAGE;
   }
   const {invalidPatterns, ignoredFiles} = initialSearch;
@@ -252,7 +253,7 @@ export async function run(
   } catch (thrown) {
     diagnostics.report({
       level: 'error',
-      message: thrown instanceof Error ? thrown.message : String(thrown),
+      message: reasonOf(thrown),
     });
     return EXIT_USAGE;
   }
@@ -337,7 +338,7 @@ export async function run(
     } catch (thrown) {
       diagnostics.report({
         level: 'error',
-        message: `The run failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+        message: `The run failed: ${reasonOf(thrown)}`,
       });
       return EXIT_USAGE;
     }
@@ -359,7 +360,7 @@ export async function run(
     } catch (thrown) {
       diagnostics.report({
         level: 'error',
-        message: `The formatter failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+        message: `The formatter failed: ${reasonOf(thrown)}`,
       });
       return EXIT_USAGE;
     }
@@ -503,7 +504,7 @@ async function runStreaming(
       write(await format('end', () => run.end?.()));
     }
   } catch (thrown) {
-    const reason = thrown instanceof Error ? thrown.message : String(thrown);
+    const reason = reasonOf(thrown);
     diagnostics.report({
       level: 'error',
       message: formatting ? `The formatter failed: ${reason}` : `The run failed: ${reason}`,
@@ -552,7 +553,7 @@ async function main(argv: readonly string[]): Promise<number> {
     });
     TO_STDERR.report({
       level: 'detail',
-      message: thrown instanceof Error ? (thrown.stack ?? thrown.message) : String(thrown),
+      message: thrown instanceof Error ? (thrown.stack ?? thrown.message) : asText(thrown),
     });
     return EXIT_USAGE;
   }
@@ -586,7 +587,7 @@ function failOnStrayErrors(): void {
     TO_STDERR.report({
       level: 'error',
       message: `Something failed outside the run, most likely in a custom rule or formatter: ${
-        thrown instanceof Error ? thrown.message : safeText(thrown)
+        reasonOf(thrown)
       }`,
     });
     ended = true;
@@ -594,15 +595,6 @@ function failOnStrayErrors(): void {
   };
   process.on('unhandledRejection', fail);
   process.on('uncaughtException', fail);
-}
-
-/** A thrown value as text, even one that cannot be turned into a string. */
-function safeText(value: unknown): string {
-  try {
-    return String(value);
-  } catch {
-    return 'a value that cannot be shown as text';
-  }
 }
 
 /** True once the run has ended, one way or the other. */

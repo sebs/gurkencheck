@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {EXIT_OK} from './exit-codes.ts';
 import type {Diagnostics} from './diagnostics.ts';
+import {reasonOf} from './util/thrown.ts';
 
 /** How long changes are allowed to keep arriving before a pass starts. */
 export const DEFAULT_SETTLE_MS = 80;
@@ -185,7 +186,7 @@ export async function watch(
           // find out you had fixed the thing that broke it.
           diagnostics.report({
             level: 'error',
-            message: `The check failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+            message: `The check failed: ${reasonOf(thrown)}`,
           });
         }
       } while (againAfterThis);
@@ -284,7 +285,7 @@ export async function watch(
     } catch (thrown) {
       diagnostics.report({
         level: 'error',
-        message: `Could not watch "${root}": ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+        message: `Could not watch "${root}": ${reasonOf(thrown)}`,
       });
     }
   }

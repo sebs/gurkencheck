@@ -2,6 +2,7 @@
  * Saying what is wrong with the command line in gurkencheck's own words.
  */
 import fs from 'node:fs';
+import {reasonOf} from './thrown.ts';
 
 /**
  * The arguments before `--` that read as options but name a file or
@@ -41,7 +42,7 @@ export function optionThatIsFileMessage(argument: string, command: string): stri
  * the files you were trying to name.
  */
 export function describeArgumentError(thrown: unknown, usage = ''): string {
-  const message = thrown instanceof Error ? thrown.message : String(thrown);
+  const message = reasonOf(thrown);
   const code = (thrown as {code?: unknown} | undefined)?.code;
 
   // Node names what is missing `<value>`; the help calls it a <path>, a

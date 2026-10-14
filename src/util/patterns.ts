@@ -2,6 +2,7 @@
  * Checking settings that hold regular expressions, before any file is read.
  */
 import {quoteValue} from './json.ts';
+import {reasonOf} from './thrown.ts';
 
 /**
  * What is wrong with the patterns of one setting, one entry per pattern that
@@ -14,7 +15,7 @@ export function invalidPatterns(setting: string, patterns: unknown, flags = ''):
     try {
       compilePattern(String(pattern), flags);
     } catch (thrown) {
-      const reason = thrown instanceof Error ? thrown.message : String(thrown);
+      const reason = reasonOf(thrown);
       problems.push(`"${setting}" holds ${quoteValue(pattern)}, which is not a regular expression: ${reason}`);
     }
   }

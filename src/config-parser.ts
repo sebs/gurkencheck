@@ -10,6 +10,7 @@ import type {Configuration, RuleRegistry} from './types.ts';
 import {duplicateKeys, stripJsonComments, stripTrailingCommas} from './util/json.ts';
 import {installedPackageDirectory, resolvePackage} from './util/resolve.ts';
 import {closest} from './util/suggest.ts';
+import {asText, reasonOf} from './util/thrown.ts';
 
 /** The configuration file looked for when none is given on the command line. */
 export const DEFAULT_CONFIG_FILE_NAME = '.gurkencheckrc';
@@ -139,7 +140,7 @@ function unreadableBecause(thrown: unknown, filePath: string): string {
       ? `it is a symlink to ${fs.readlinkSync(filePath)}, which does not exist`
       : 'it does not exist';
   }
-  return thrown instanceof Error ? thrown.message : String(thrown);
+  return reasonOf(thrown);
 }
 
 /**
@@ -178,7 +179,7 @@ function parseFile(filePath: string, found = false): Record<string, unknown> {
     parsed = JSON.parse(stripTrailingCommas(json));
   } catch (thrown) {
     throw new ConfigurationError(
-      `Could not parse "${shown(filePath)}": ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+      `Could not parse "${shown(filePath)}": ${reasonOf(thrown)}`,
     );
   }
   // JSON.parse keeps the last of a key given twice; a second extends, or a
@@ -287,7 +288,7 @@ async function loadExtended(
     if (installed !== undefined) {
       throw new ConfigurationError(
         `The package "${specifier}", extended from "${shown(fromFile)}", is installed in "${shown(installed)}" but could not be loaded: ${
-          thrown instanceof Error ? thrown.message.split('\n')[0] : String(thrown)
+          thrown instanceof Error ? thrown.message.split('\n')[0] : asText(thrown)
         }`,
       );
     }
@@ -313,7 +314,7 @@ async function loadExtended(
     module = (await import(pathToFileURL(resolved).href)) as Record<string, unknown>;
   } catch (thrown) {
     throw new ConfigurationError(
-      `Could not load "${specifier}", extended from "${shown(fromFile)}": ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+      `Could not load "${specifier}", extended from "${shown(fromFile)}": ${reasonOf(thrown)}`,
     );
   }
   // A default export is the configuration, whatever it is: falling back to

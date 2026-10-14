@@ -27,6 +27,7 @@ import {
   STATS_FORMATTERS,
   getStatsFormatter,
 } from './format/index.ts';
+import {reasonOf} from '../util/thrown.ts';
 
 export function statsUsage(): string {
   return [
@@ -159,7 +160,7 @@ export async function runStats(
   try {
     search = findFeatureFileStream(positionals, ignore);
   } catch (thrown) {
-    diagnostics.report({level: 'error', message: thrown instanceof Error ? thrown.message : String(thrown)});
+    diagnostics.report({level: 'error', message: reasonOf(thrown)});
     return EXIT_USAGE;
   }
   const {files, invalidPatterns, unreadable, ignoredFiles} = search;

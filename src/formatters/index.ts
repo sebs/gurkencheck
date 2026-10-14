@@ -10,6 +10,7 @@ import {printResults as sarif} from './sarif.ts';
 import {printResults as stylish, startRun as streamStylish} from './stylish.ts';
 import {printResults as tap, startRun as streamTap} from './tap.ts';
 import {resolvePackage, resolvePath} from '../util/resolve.ts';
+import {reasonOf} from '../util/thrown.ts';
 
 /**
  * Turns results into output.
@@ -201,7 +202,7 @@ async function importFormatter(
     return (await import(pathToFileURL(resolved).href)) as Record<string, unknown>;
   } catch (thrown) {
     throw new Error(
-      `Could not load the formatter "${specifier}": ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+      `Could not load the formatter "${specifier}": ${reasonOf(thrown)}`,
     );
   }
 }

@@ -785,6 +785,21 @@ test('a rule or formatter whose promise never settles is named, and the run fail
   });
 });
 
+test('a rule or formatter throwing something that is not text is still named', async () => {
+  await withProject(DIRTY_FEATURE, '{"textless": "on", "no-unnamed-scenarios": "on"}', async (cwd) => {
+    const {code, stdout} = await cli(['--rulesdir', path.resolve('test/rulesdir/textless_rules'), '.'], cwd);
+    assert.equal(code, 1);
+    assert.match(stdout, /Rule "textless" failed: a value that cannot be shown as text/u);
+    assert.match(stdout, /no-unnamed-scenarios/u, 'the other findings are kept');
+  });
+  await withProject(CLEAN_FEATURE, CONFIG, async (cwd) => {
+    const {code, stderr} = await cli(['-f', path.resolve('test/formatters/throws-textless.mjs'), '.'], cwd);
+    assert.equal(code, 2);
+    assert.match(stderr, /The formatter failed: a value that cannot be shown as text/u);
+    assert.doesNotMatch(stderr, /stopped unexpectedly/u);
+  });
+});
+
 test('a formatter emptying the results it prints does not change the verdict', async () => {
   const formatter = path.resolve('test/formatters/emptying.mjs');
   await withProject(DIRTY_FEATURE, CONFIG, async (cwd) => {

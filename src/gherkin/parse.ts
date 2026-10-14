@@ -17,6 +17,7 @@ import type {Sequence} from '../util/stream.ts';
 import type {FeatureFile, RuleError} from '../types.ts';
 import type {Dialect} from './dialects.ts';
 import {DEFAULT_LANGUAGE, detectLanguage, getDialect, isKnownLanguage, languageHeader} from './dialects.ts';
+import {reasonOf} from '../util/thrown.ts';
 
 /**
  * Rules the parser enforces on every file. They cannot be turned off, but
@@ -69,7 +70,7 @@ function newParser(defaultLanguage: string): Parser<unknown> {
 }
 
 function toComplaint(error: unknown): ParserComplaint {
-  const raw = error instanceof Error ? error.message : String(error);
+  const raw = reasonOf(error);
   const location = (error as {location?: {line?: number; column?: number}}).location;
 
   const unexpectedToken = UNEXPECTED_TOKEN.exec(raw);
@@ -343,7 +344,7 @@ function unreadable(relativePath: string, lines: string[], thrown: unknown): Par
     feature: undefined,
     errors: [
       {
-        message: thrown instanceof Error ? thrown.message : String(thrown),
+        message: reasonOf(thrown),
         rule: 'unexpected-error',
         line: 0,
       },

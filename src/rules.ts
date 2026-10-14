@@ -21,6 +21,7 @@ import type {
 import type {Feature} from '@cucumber/messages';
 import {globSync} from './util/glob.ts';
 import {waitFor} from './util/waiting.ts';
+import {reasonOf} from './util/thrown.ts';
 
 /** Where a file really is, in the case the disk has it in. */
 function realPath(file: string): string {
@@ -114,7 +115,7 @@ async function loadRulesFrom(directory: string): Promise<{rule: LintRule; file: 
       module = (await import(pathToFileURL(absolute).href)) as Record<string, unknown>;
     } catch (thrown) {
       throw new Error(
-        `Could not load the rule "${absolute}": ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+        `Could not load the rule "${absolute}": ${reasonOf(thrown)}`,
       );
     }
     loaded.push({rule: extractRule(module, absolute), file: absolute});
@@ -391,7 +392,7 @@ export async function finishRun(
     } catch (thrown) {
       // No file to blame: what failed was the look back over all of them.
       findings.push({
-        message: `Rule "${rule.name}" failed at the end of the run: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+        message: `Rule "${rule.name}" failed at the end of the run: ${reasonOf(thrown)}`,
         rule: 'unexpected-error',
         line: 0,
         severity,
@@ -447,7 +448,7 @@ export async function runEnabledRules(
       // As loud as the rule is set to be: a rule set to warn does not fail
       // the run by crashing either.
       errors.push({
-        message: `Rule "${rule.name}" failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+        message: `Rule "${rule.name}" failed: ${reasonOf(thrown)}`,
         rule: 'unexpected-error',
         line: 0,
         severity,
