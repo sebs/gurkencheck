@@ -35,6 +35,6 @@
 
   <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="24" fill="#a2aab4">
     <text x="80" y="562">SARIF, JUnit, TAP and JSON output</text>
-    <text x="1120" y="562" text-anchor="end" fill="#7fc7a1">sebs.github.io/gurkencheck</text>
+    <text x="1120" y="562" text-anchor="end" fill="#7fc7a1">sebs.maschinenlesbar.org/gurkencheck</text>
   </g>
 </svg>

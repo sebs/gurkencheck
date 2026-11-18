@@ -11,11 +11,21 @@
  * pass is idempotent - a page that already names a canonical is left alone -
  * so it quietly becomes a no-op as those releases fall out of the list.
  *
+ * The site has also moved since some releases were tagged. Their generator
+ * wrote every absolute address - canonical, og:url, sitemap - against the old
+ * one, so those are pointed at where the site lives now before anything else.
+ *
  * Run it with `node scripts/canonicalise-docs.ts <directory> <version>`.
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import {SITE_NAME, canonical, inVersion} from '../site/site.ts';
+import {SITE_NAME, SITE_URL, canonical, inVersion} from '../site/site.ts';
+
+/** Where the site was published before, without a trailing slash. */
+const FORMER_SITE_URLS = ['https://sebs.github.io/gurkencheck'];
+
+/** The generated files that can carry an absolute address. */
+const TEXT_FILE = /\.(html|xml|txt|json)$/;
 
 /** Enough styling for the notice to look deliberate in either theme. */
 const NOTICE_STYLE =
@@ -25,15 +35,15 @@ const NOTICE_STYLE =
   '@media(prefers-color-scheme:dark){p.archived{background:#1d2a24;color:#7fc7a1;' +
   'border-bottom-color:#2c333a}}</style>';
 
-/** Every HTML file in a directory, however deep. */
-function htmlFilesIn(directory: string, prefix = ''): string[] {
+/** Every file in a directory whose name matches, however deep. */
+function filesIn(directory: string, pattern: RegExp, prefix = ''): string[] {
   const found: string[] = [];
 
   for (const entry of fs.readdirSync(directory, {withFileTypes: true})) {
     const relativePath = prefix === '' ? entry.name : `${prefix}/${entry.name}`;
     if (entry.isDirectory()) {
-      found.push(...htmlFilesIn(path.join(directory, entry.name), relativePath));
-    } else if (entry.name.endsWith('.html')) {
+      found.push(...filesIn(path.join(directory, entry.name), pattern, relativePath));
+    } else if (pattern.test(entry.name)) {
       found.push(relativePath);
     }
   }
@@ -42,13 +52,34 @@ function htmlFilesIn(directory: string, prefix = ''): string[] {
 }
 
 /**
+ * Moves every absolute address in one version's docs from wherever the site
+ * used to be to where it is now. Returns the files it changed.
+ */
+export function rehome(directory: string): string[] {
+  const changed: string[] = [];
+
+  for (const relativePath of filesIn(directory, TEXT_FILE)) {
+    const filePath = path.join(directory, relativePath);
+    const text = fs.readFileSync(filePath, 'utf8');
+    const updated = FORMER_SITE_URLS.reduce((current, former) => current.replaceAll(former, SITE_URL), text);
+
+    if (updated !== text) {
+      fs.writeFileSync(filePath, updated);
+      changed.push(relativePath);
+    }
+  }
+
+  return changed;
+}
+
+/**
  * Points every page in one version's docs at the copy of it at the site root,
  * and says so in the page as well. Returns the files it changed.
  */
 export function canonicalise(directory: string, version: string): string[] {
-  const changed: string[] = [];
+  const changed = new Set(rehome(directory));
 
-  for (const relativePath of htmlFilesIn(directory)) {
+  for (const relativePath of filesIn(directory, /\.html$/)) {
     const filePath = path.join(directory, relativePath);
     const html = fs.readFileSync(filePath, 'utf8');
     let updated = html;
@@ -79,10 +110,10 @@ export function canonicalise(directory: string, version: string): string[] {
     }
 
     fs.writeFileSync(filePath, updated);
-    changed.push(relativePath);
+    changed.add(relativePath);
   }
 
-  return changed;
+  return [...changed];
 }
 
 if (import.meta.filename === process.argv[1]) {
@@ -96,6 +127,6 @@ if (import.meta.filename === process.argv[1]) {
   console.log(
     changed.length === 0
       ? `${directory} needed nothing adding`
-      : `Filled in the version notice on ${changed.length} pages in ${directory}`,
+      : `Filled in the address or version notice on ${changed.length} files in ${directory}`,
   );
 }

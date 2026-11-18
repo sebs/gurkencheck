@@ -6,7 +6,7 @@
 A linter for Gherkin feature files. It reads your `.feature` files and tells you where
 they drift from the conventions your team has agreed on.
 
-**[Documentation](https://sebs.github.io/gurkencheck/)** — every rule has its own
+**[Documentation](https://sebs.maschinenlesbar.org/gurkencheck/)** — every rule has its own
 page with an example that passes and one that fails.
 
 ## Install
@@ -94,7 +94,7 @@ Commands:
 There are 36 rules you switch on, covering naming, tags, indentation, structure and size,
 plus five that are always on because Gherkin itself refuses to read a file that breaks
 them. Each one is documented at
-**[sebs.github.io/gurkencheck](https://sebs.github.io/gurkencheck/)** with a
+**[sebs.maschinenlesbar.org/gurkencheck](https://sebs.maschinenlesbar.org/gurkencheck/)** with a
 good and a bad example.
 
 The configuration file is JSON and may contain comments. A rule is either a state:

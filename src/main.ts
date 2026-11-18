@@ -67,7 +67,7 @@ function usage(): string {
     '                          rather than on what is wrong with them',
     '',
     'With no files given, the working directory is searched recursively.',
-    'Documentation: https://sebs.github.io/gurkencheck/',
+    'Documentation: https://sebs.maschinenlesbar.org/gurkencheck/',
   ].join('\n');
 }
 

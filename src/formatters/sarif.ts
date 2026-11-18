@@ -18,7 +18,7 @@ import {version} from '../version.ts';
 
 const SCHEMA = 'https://json.schemastore.org/sarif-2.1.0.json';
 const SARIF_VERSION = '2.1.0';
-const DOCUMENTATION = 'https://sebs.github.io/gurkencheck/';
+const DOCUMENTATION = 'https://sebs.maschinenlesbar.org/gurkencheck/';
 
 /**
  * True when the rule behind an id has a page on the documentation site: an

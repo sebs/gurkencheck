@@ -293,3 +293,30 @@ test('filling in a version notice leaves a page that already has one alone', () 
   // has to become a no-op rather than a duplicate as those fall out of view.
   assert.deepEqual(canonicalise(old.directory, '0.0.4'), []);
 });
+
+test('a release built while the site lived elsewhere is pointed at where it lives now', () => {
+  // Every release is rebuilt from its own tag, and the tags from before the
+  // move still name the old address in their package.json.
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurkencheck-moved-'));
+  const former = 'https://sebs.github.io/gurkencheck';
+  fs.mkdirSync(path.join(directory, 'rules'));
+  fs.writeFileSync(
+    path.join(directory, 'rules', 'indentation.html'),
+    `<html><head>\n<link rel="canonical" href="${former}/rules/indentation.html">\n` +
+      `<meta property="og:url" content="${former}/rules/indentation.html">\n</head><body>\n</body></html>`,
+  );
+  fs.writeFileSync(path.join(directory, 'sitemap.xml'), `<urlset><url><loc>${former}/</loc></url></urlset>`);
+
+  canonicalise(directory, '0.0.4');
+
+  const html = fs.readFileSync(path.join(directory, 'rules', 'indentation.html'), 'utf8');
+  assert.match(html, new RegExp(`<link rel="canonical" href="${SITE_URL}/rules/indentation.html">`));
+  assert.ok(!html.includes(former), 'a page still names the old address');
+  assert.ok(!fs.readFileSync(path.join(directory, 'sitemap.xml'), 'utf8').includes(former));
+});
+
+test('the latest docs name nothing but the address the site lives at', () => {
+  for (const [file, html] of pages) {
+    assert.ok(!html.includes('sebs.github.io'), `${file} still names the old address`);
+  }
+});

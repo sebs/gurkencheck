@@ -24,7 +24,7 @@ export const SITE_NAME = 'gurkencheck';
 export const TAGLINE = 'A linter for Gherkin feature files.';
 
 /** Where the site is published, without a trailing slash. */
-export const SITE_URL = (pkg.homepage ?? 'https://sebs.github.io/gurkencheck').replace(/\/+$/, '');
+export const SITE_URL = (pkg.homepage ?? 'https://sebs.maschinenlesbar.org/gurkencheck').replace(/\/+$/, '');
 
 export const REPO_URL =
   (pkg.repository?.url ?? '').replace(/^git\+/, '').replace(/\.git$/, '') ||

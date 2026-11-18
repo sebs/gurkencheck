@@ -3,9 +3,9 @@
 # Assembles everything that gets published: the latest docs at the root, and a
 # frozen copy of the docs for every release under its own version number.
 #
-#   https://sebs.github.io/gurkencheck/rules/no-restricted-tags.html
-#   https://sebs.github.io/gurkencheck/0.0.5/rules/no-restricted-tags.html
-#   https://sebs.github.io/gurkencheck/0.0.4/rules/no-restricted-tags.html
+#   https://sebs.maschinenlesbar.org/gurkencheck/rules/no-restricted-tags.html
+#   https://sebs.maschinenlesbar.org/gurkencheck/0.0.5/rules/no-restricted-tags.html
+#   https://sebs.maschinenlesbar.org/gurkencheck/0.0.4/rules/no-restricted-tags.html
 #
 # A GitHub Pages deployment replaces the whole site rather than adding to it,
 # so every deployment has to produce every version. Each release is built from
