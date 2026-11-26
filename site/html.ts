@@ -12,8 +12,11 @@ import {
   TAGLINE,
   absolute,
   LICENCE,
+  MIGRATING_PAGE,
   NPM_URL,
+  ORIGIN_SECTION,
   REPO_URL,
+  UPSTREAM_URL,
 } from './site.ts';
 
 /** Escapes text so it can be dropped into HTML content or an attribute. */
@@ -259,6 +262,8 @@ ${archivedNotice(path, target)}${body}
 <p><a href="${REPO_URL}">Source on GitHub</a> &middot;
 <a href="${REPO_URL}/issues">Report an issue</a> &middot;
 <a href="${NPM_URL}">Package on npm</a></p>
+<p>A fork of <a href="${UPSTREAM_URL}">gherkin-lint</a> &middot;
+<a href="${root}/${MIGRATING_PAGE}#${ORIGIN_SECTION}">Where it comes from</a></p>
 </footer>
 </body>
 </html>

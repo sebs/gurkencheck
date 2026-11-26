@@ -13,6 +13,7 @@ import path from 'node:path';
 import {test} from 'node:test';
 import {build} from '../site/build.ts';
 import {RULE_DOCS} from '../site/content.ts';
+import {RECOMMENDED} from '../src/presets.ts';
 import {SITE_URL, SOCIAL_CARD} from '../site/site.ts';
 import {canonicalise} from '../scripts/canonicalise-docs.ts';
 
@@ -181,6 +182,43 @@ test('every page offers the way to the stats page', () => {
       html.includes(`href="${root}/stats.html"`),
       `${file} does not link to the stats page`,
     );
+  }
+});
+
+test('every page says it is a fork, and links to where it comes from', () => {
+  for (const [file, html] of pages) {
+    const root = file === '404.html' ? SITE_URL : path.dirname(file) === '.' ? '.' : '..';
+    assert.ok(html.includes('href="https://github.com/gherkin-lint/gherkin-lint"'), `${file} does not name the upstream`);
+    assert.ok(
+      html.includes(`href="${root}/migrating.html#where-gurkencheck-comes-from"`),
+      `${file} does not link to where it comes from`,
+    );
+  }
+});
+
+test('the migration page credits the original without republishing anybody', () => {
+  const html = pages.get('migrating.html') ?? '';
+  assert.match(html, /<h1>Migrating from gherkin-lint<\/h1>/);
+  assert.match(html, /<h2 id="where-gurkencheck-comes-from">/);
+  // The original author is named once, as LICENSE names them.
+  const licence = fs.readFileSync(path.join(import.meta.dirname, '..', 'LICENSE'), 'utf8');
+  const author = /Copyright \(c\) \d{4}, (.+)/.exec(licence)?.[1] ?? '';
+  assert.ok(author !== '' && html.includes(author), 'the original author is not named');
+  // Everybody else is linked to, not listed.
+  assert.ok(html.includes('https://github.com/gherkin-lint/gherkin-lint/graphs/contributors'));
+  for (const [file, page] of pages) {
+    assert.doesNotMatch(page, /[\w.+-]+@[\w-]+\.[\w.]+/, `${file} carries an email address`);
+  }
+});
+
+test('the recommended badge is on exactly the recommended rules', () => {
+  for (const rule of RULE_DOCS) {
+    const html = pages.get(`rules/${rule.name}.html`) ?? '';
+    const marked = html.includes('<span class="badge">Recommended</span>');
+    assert.equal(marked, Object.hasOwn(RECOMMENDED, rule.name), `${rule.name} is marked wrongly`);
+  }
+  for (const name of Object.keys(RECOMMENDED)) {
+    assert.ok(RULE_DOCS.some((rule) => rule.name === name), `${name} is recommended but undocumented`);
   }
 });
 

@@ -31,6 +31,15 @@ export const REPO_URL =
   'https://github.com/sebs/gurkencheck';
 
 export const NPM_URL = `https://www.npmjs.com/package/${SITE_NAME}`;
+
+/** The project gurkencheck was forked from. */
+export const UPSTREAM_URL = 'https://github.com/gherkin-lint/gherkin-lint';
+
+/** The page for people coming from gherkin-lint, which also says where the fork came from. */
+export const MIGRATING_PAGE = 'migrating.html';
+
+/** The section of that page that credits the original project. */
+export const ORIGIN_SECTION = 'where-gurkencheck-comes-from';
 export const LICENCE = pkg.license ?? 'ISC';
 export const AUTHOR = pkg.author ?? '';
 

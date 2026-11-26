@@ -7,7 +7,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {DEFAULT_CONFIG_FILE_NAME} from '../src/config-parser.ts';
 import {DEFAULT_IGNORE_FILE_NAME} from '../src/feature-finder.ts';
+import {RECOMMENDED} from '../src/presets.ts';
 import {RULE_DOCS} from './content.ts';
+import {renderMarkdown} from './markdown.ts';
 import {
   anchorFor,
   anchorHeadings,
@@ -23,8 +25,11 @@ import {
 import type {Crumb} from './html.ts';
 import {version} from '../src/version.ts';
 import {
+  MIGRATING_PAGE,
   NPM_URL,
+  ORIGIN_SECTION,
   REPO_URL,
+  UPSTREAM_URL,
   SITE_NAME,
   SITE_URL,
   SOCIAL_CARD,
@@ -77,6 +82,19 @@ const configurable = RULE_DOCS.filter((rule) => rule.alwaysOn !== true);
 const alwaysOn = RULE_DOCS.filter((rule) => rule.alwaysOn === true);
 
 /**
+ * Whether a rule runs with no configuration file. Read from the preset itself,
+ * so the badge cannot claim a rule the linter does not actually run.
+ */
+function isRecommended(rule: RuleDoc): boolean {
+  return Object.hasOwn(RECOMMENDED, rule.name);
+}
+
+const RECOMMENDED_BADGE = '<span class="badge">Recommended</span>';
+
+/** Where the migration guide is read from: the copy GitHub shows, so the two never differ. */
+const MIGRATING_SOURCE = path.join(import.meta.dirname, '..', 'MIGRATING.md');
+
+/**
  * `picker` is the version picker, and is empty on the pages that do without
  * one. It is offered with the rules, because a rule is the thing that
  * differs between releases: a setting that arrived in one, a message that
@@ -90,6 +108,7 @@ function header(root: string, picker = ''): string {
 ${picker}
 <a href="${root}/${RULES_INDEX}">Rules</a>
 <a href="${root}/${STATS_PAGE}">Stats</a>
+<a href="${root}/${MIGRATING_PAGE}">Migrating</a>
 <a href="${NPM_URL}">npm</a>
 <a href="${REPO_URL}">${GITHUB_MARK}GitHub</a>
 </nav>
@@ -168,7 +187,18 @@ ${rows}
 }
 
 function rulePage(rule: RuleDoc, target: Target): string {
-  const badge = rule.alwaysOn === true ? ' <span class="badge">Always on</span>' : '';
+  const badge =
+    rule.alwaysOn === true
+      ? ' <span class="badge">Always on</span>'
+      : isRecommended(rule)
+        ? ` ${RECOMMENDED_BADGE}`
+        : '';
+  const recommendedNote = isRecommended(rule)
+    ? `<p>It is one of the <a href="../index.html#get-started">recommended</a> rules, so it
+already runs when there is no configuration file. A configuration file of your own replaces
+that set, so name it there, or start the file with
+<code>"extends": "gurkencheck:recommended"</code>.</p>\n`
+    : '';
   const filePath = pageFor(rule.name);
   const url = canonical(filePath);
   const trail: Crumb[] = [
@@ -180,7 +210,7 @@ function rulePage(rule: RuleDoc, target: Target): string {
 <p>${escapeHtml(rule.explanation)}</p>
 
 <h2>Turning it on</h2>
-<p>Add this to your <code>${DEFAULT_CONFIG_FILE_NAME}</code>:</p>
+${recommendedNote}<p>Add this to your <code>${DEFAULT_CONFIG_FILE_NAME}</code>:</p>
 ${codeBlock(rule.config)}
 
 <h2>Settings</h2>
@@ -259,7 +289,8 @@ switch it on, what you can set, and an example that passes next to one that fail
 ${
     anchorHeadings(`<h2>Rules you switch on</h2>
 <p>Off unless a configuration file names them, or unless you are using the recommended
-set.</p>
+set: the ${Object.keys(RECOMMENDED).length} marked <em>Recommended</em>, which also run when
+there is no configuration file at all.</p>
 ${ruleList('..', configurable)}
 
 <h2>Always on</h2>
@@ -305,7 +336,7 @@ function ruleList(root: string, rules: RuleDoc[]): string {
   return `<ul class="rule-list">${rules
     .map(
       (rule) => `<li>
-<a href="${root}/${pageFor(rule.name)}"><code>${escapeHtml(rule.name)}</code></a>
+<a href="${root}/${pageFor(rule.name)}"><code>${escapeHtml(rule.name)}</code></a>${isRecommended(rule) ? ` ${RECOMMENDED_BADGE}` : ''}
 <p>${escapeHtml(rule.summary)}</p>
 </li>`,
     )
@@ -387,6 +418,7 @@ ${codeBlock(`{
 <tr><td><code>-i, --ignore</code></td><td>Comma separated globs to skip. Overrides <code>${DEFAULT_IGNORE_FILE_NAME}</code>.</td></tr>
 <tr><td><code>-r, --rulesdir</code></td><td>A directory holding your own rules. May be given more than once.</td></tr>
 <tr><td><code>-l, --language</code></td><td>The dialect to read files in when they carry no <code>#&nbsp;language:</code> header.</td></tr>
+<tr><td><code>-w, --watch</code></td><td>Keep running, and check again whenever a feature file or the configuration changes. See <a href="#watching-for-changes">Watching for changes</a>.</td></tr>
 <tr><td><code>-h, --help</code></td><td>Show the options.</td></tr>
 <tr><td><code>-v, --version</code></td><td>Show the version number.</td></tr>
 </tbody>
@@ -403,6 +435,44 @@ whole file or a whole line &mdash; a missing new line at the end of the file, sa
 the line on its own. The <code>json</code> format carries the same <code>line</code> and
 <code>column</code> fields, in the same shape eslint's JSON formatter uses, so tools built
 around that already understand it.</p>
+
+<h2>Machine-readable output</h2>
+<p><code>--format json</code> writes eslint's shape, so tools built around eslint's JSON read
+it as they are: one entry per file, with the findings under <code>messages</code>, and a
+severity of <code>2</code> for an error and <code>1</code> for a warning.</p>
+${codeBlock(`[
+  {
+    "filePath": "/work/features/login.feature",
+    "messages": [
+      {"ruleId": "no-unnamed-scenarios", "severity": 2, "message": "Missing Scenario name", "line": 4, "column": 3}
+    ],
+    "errorCount": 1,
+    "warningCount": 0
+  }
+]`)}
+<p><code>column</code> is left out of a finding that has none, and a finding about the whole
+file has <code>line</code> 0.</p>
+<div class="wide"><table>
+<thead><tr><th>Format</th><th>What reads it</th></tr></thead>
+<tbody>
+<tr><td><code>json</code></td><td>Anything built around eslint's JSON: report viewers, annotation actions, dashboards.</td></tr>
+<tr><td><code>junit</code></td><td>CI servers that show test results. Each finding is a test case of its own, in one suite per file, so a build shows one failing test per problem. A warning is a passing test case with its message in <code>&lt;system-out&gt;</code>.</td></tr>
+<tr><td><code>sarif</code></td><td>GitHub code scanning, and other tools that read SARIF 2.1.0. See <a href="#reporting-to-github-code-scanning">Reporting to GitHub code scanning</a>.</td></tr>
+<tr><td><code>tap</code></td><td>Anything that reads the Test Anything Protocol.</td></tr>
+</tbody>
+</table></div>
+
+<h2>Watching for changes</h2>
+<p><code>--watch</code> checks once, then again whenever a feature file or your configuration
+changes, until you stop it with Ctrl-C.</p>
+${codeBlock('npx gurkencheck --watch features')}
+<p>Every pass is a whole run rather than an update of the last one. Rules that look across
+files &mdash; two files sharing a name, a scenario name used twice &mdash; have to see every
+file to know what they have found, so there is little to reuse between passes, and keeping
+every parsed file in memory between keystrokes costs more than reading them again.</p>
+<p>Directories are watched rather than the files found at startup, so a feature file created
+after it started is picked up too. <code>node_modules</code> and <code>.git</code> are
+skipped.</p>
 
 <h2>Counting what is in your files</h2>
 <p>The same files answer a different question. Before a team agrees a convention it helps to
@@ -467,7 +537,9 @@ covers all of them. Comments inside a doc string are text and are left alone.</p
 one of them cannot be read at all, so hiding the message would leave nothing in its place.</p>
 
 <h2>Rules you switch on</h2>
-<p>These are all off by default. Each page shows an example that passes and one that fails.</p>
+<p>A configuration file names the ones it wants. With no configuration file, the
+${Object.keys(RECOMMENDED).length} marked <em>Recommended</em> run and the rest stay off. Each
+page shows an example that passes and one that fails.</p>
 ${ruleList('.', configurable)}
 
 <h2>Always on</h2>
@@ -513,7 +585,40 @@ to wait for something &mdash; reading a file, or asking an issue tracker whether
 refers to a real ticket. Files are checked one after another, so rules see a predictable
 order.</p>
 <p>Then switch it on by name, the same as any built-in rule:</p>
-${codeBlock('npx gurkencheck --rulesdir ./rules')}`;
+${codeBlock('npx gurkencheck --rulesdir ./rules')}
+
+<h2>Using it as a library</h2>
+<p>Everything the command line does is exported, for a build script or an editor plugin that
+wants the findings rather than the printed report.</p>
+${codeBlock(`import {findFeatureFiles, lint, loadRules, readConfiguration} from 'gurkencheck';
+
+const rules = await loadRules();
+// No path: the nearest .gurkencheckrc, or the recommended rules, as on the command line.
+const config = await readConfiguration(undefined, rules);
+
+if (config.ok) {
+  const {files} = findFeatureFiles(['features']);
+  const results = await lint(files, config.configuration, rules);
+}`)}
+<p>Given a path, <code>readConfiguration</code> reads that file and reports it missing if it
+is not there, as <code>--config</code> does.</p>
+<p>Each error carries <code>message</code>, <code>rule</code>, <code>line</code> and, where the
+rule knows one, <code>column</code> &mdash; both 1-based, so an editor can underline exactly
+the right text. Errors about a whole file or a whole line, such as a missing new line at the
+end of the file, have no <code>column</code>.</p>
+<p>Nothing in the library exits the process, and the parts that lint, read configuration or
+find files never write to the console; that is the command line's job. The exceptions are the
+ones whose job is printing: each formatter's <code>printResults</code>, the functions in
+<code>FORMATTERS</code>, and <code>runStats</code>, which runs the <code>stats</code> command
+and writes its report to stdout. To get the text instead, use <code>toJson</code>,
+<code>toSarif</code>, or <code>getStatsFormatter</code>.</p>
+
+<h2>Coming from gherkin-lint</h2>
+<p>gurkencheck is a fork of <a href="${UPSTREAM_URL}">gherkin-lint</a>, rewritten in
+TypeScript. The rules and their messages are almost all unchanged; the package, the command
+and the file names are not. <a href="./${MIGRATING_PAGE}">Migrating from gherkin-lint</a> lists
+everything you have to change and everything you might notice, and
+<a href="./${MIGRATING_PAGE}#${ORIGIN_SECTION}">says where the project comes from</a>.</p>`;
 
   const {html, headings} = anchorHeadings(sections);
   const description = summarise(
@@ -836,6 +941,88 @@ ${html}
 }
 
 /**
+ * Where the project comes from.
+ *
+ * It names one person: the original author, who is named in the copyright
+ * line of LICENSE already and whom the ISC licence requires to stay named.
+ * Everybody else who worked on gherkin-lint is reached through a link to its
+ * contributors page, rather than through a list copied out of the commit
+ * history. That page is theirs to keep, and shows only what each of them made
+ * public on GitHub; a list here would put names, and with them addresses one
+ * search away, on a site none of them agreed to be on, and would go stale the
+ * day it was written. No email address from the history appears anywhere.
+ */
+function originSection(): string {
+  return `<h2>Where gurkencheck comes from</h2>
+<p>gurkencheck is a fork of <a href="${UPSTREAM_URL}">gherkin-lint</a>. Vasiliki Siakka started
+gherkin-lint in 2016, and its contributors kept it going for years after. The rules, their
+names and most of their messages come from it. gurkencheck rewrites it in TypeScript and is
+maintained separately: it is not a release of gherkin-lint, so a problem with it belongs in
+<a href="${REPO_URL}/issues">gurkencheck's issue tracker</a>, not theirs.</p>
+<p>The fork keeps gherkin-lint's git history, so every change made before the fork is still
+credited to whoever made it, and the original copyright notice stays in the
+<a href="${REPO_URL}/blob/master/LICENSE">LICENSE</a> file, as the ISC licence asks.</p>
+<p>The people who built gherkin-lint are listed on its
+<a href="${UPSTREAM_URL}/graphs/contributors">contributors page</a>. That list is linked rather
+than copied here: it stays theirs to keep, it shows only what each of them chose to make public
+on GitHub, and no name or address is taken from the commit history and published again on
+this site.</p>`;
+}
+
+/**
+ * The migration guide, read from MIGRATING.md rather than written out again.
+ *
+ * Like the stats page it has no version picker: it is about where gurkencheck
+ * came from, which does not change between releases.
+ */
+function migratingPage(target: Target): string {
+  const url = canonical(MIGRATING_PAGE);
+  const trail: Crumb[] = [{name: SITE_NAME, path: ''}];
+  const guide = renderMarkdown(fs.readFileSync(MIGRATING_SOURCE, 'utf8'));
+  const description = summarise(
+    `Moving from gherkin-lint to ${SITE_NAME}: what you have to change, what you might notice,`,
+    'and the bugs that were fixed on the way.',
+  );
+
+  const {html, headings} = anchorHeadings(`${guide.body}\n\n${originSection()}`);
+
+  const body = `${header('.')}
+<div class="layout single">
+<main id="main">
+${breadcrumbs('.', trail, 'Migrating')}
+<h1>${escapeHtml(guide.title)}</h1>
+${guide.intro.replace(/^<p>/, '<p class="lede">')}
+${tableOfContents(headings)}
+${html}
+</main>
+</div>`;
+
+  return page({
+    title: `${guide.title} – ${SITE_NAME}`,
+    description,
+    path: MIGRATING_PAGE,
+    target,
+    root: '.',
+    kind: 'article',
+    jsonLd: [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'TechArticle',
+        headline: guide.title,
+        name: guide.title,
+        description,
+        url,
+        inLanguage: 'en',
+        isPartOf: websiteBlock(),
+        about: {'@type': 'SoftwareApplication', name: SITE_NAME, url: absolute('')},
+      },
+      breadcrumbBlock([...trail, {name: 'Migrating', path: MIGRATING_PAGE}]),
+    ],
+    body,
+  });
+}
+
+/**
  * The page GitHub Pages serves for an address that is not there.
  *
  * It is served from any depth, so everything it points at is absolute rather
@@ -934,6 +1121,7 @@ export function build(outputDirectory: string = OUTPUT, target: Target = latestT
   write('index.html', indexPage(target));
   write(RULES_INDEX, rulesIndexPage(target));
   write(STATS_PAGE, statsPage(target));
+  write(MIGRATING_PAGE, migratingPage(target));
   write('404.html', notFoundPage(target));
   // Tells GitHub Pages not to run the files through Jekyll.
   write('.nojekyll', '');
@@ -945,7 +1133,13 @@ export function build(outputDirectory: string = OUTPUT, target: Target = latestT
   // Everything a reader can land on, which is every page bar the 404.
   write(
     'sitemap.xml',
-    sitemap(['index.html', RULES_INDEX, STATS_PAGE, ...RULE_DOCS.map((r) => pageFor(r.name))]),
+    sitemap([
+      'index.html',
+      RULES_INDEX,
+      STATS_PAGE,
+      MIGRATING_PAGE,
+      ...RULE_DOCS.map((r) => pageFor(r.name)),
+    ]),
   );
   write('robots.txt', robots());
 
