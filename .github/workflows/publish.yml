@@ -30,7 +30,7 @@ name: Publish
 #      repo:sebs@55102/gurkencheck@1346275103:environment:marketplace
 #      (`gh api repos/sebs/gurkencheck/actions/oidc/customization/sub`).
 #   3. That app added as a member of the `maschinenlesbar` publisher, with
-#      the Contributor role, at
+#      the Contributor role, by the ID the "Show the ID" step prints, at
 #      https://marketplace.visualstudio.com/manage/publishers/maschinenlesbar
 #   4. Secrets AZURE_CLIENT_ID and AZURE_TENANT_ID, from the app, in the
 #      repository or in the `marketplace` environment.
@@ -93,7 +93,19 @@ jobs:
         # A global install cannot come out of the lockfile, hence the ignore.
         run: npm install -g npm@12.0.2 # zizmor: ignore[adhoc-packages]
 
+      # So a run can be repeated when only the Marketplace half failed.
+      - name: Check whether npm already has this version
+        id: npm
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if npm view "gurkencheck@${VERSION}" version > /dev/null 2>&1; then
+            echo "::notice::gurkencheck ${VERSION} is already on npm, so it is not published again."
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Download the tarball from the release
+        if: steps.npm.outputs.published != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -103,6 +115,7 @@ jobs:
       # No NPM_TOKEN: OIDC supplies the credential and provenance is generated
       # from this run.
       - name: Publish to npm
+        if: steps.npm.outputs.published != 'true'
         env:
           VERSION: ${{ inputs.version }}
         run: npm publish "./gurkencheck-${VERSION}.tgz" --provenance --access public
@@ -142,7 +155,16 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           allow-no-subscriptions: true
 
+      # The publisher's member list wants this ID, which is neither the app's
+      # client ID nor its object ID, and only the identity itself can look up.
+      - name: Show the ID the Marketplace knows this identity by
+        run: |
+          id="$(az rest -u https://app.vssps.visualstudio.com/_apis/profile/profiles/me \
+            --resource 499b84ac-1321-427f-aa17-267ca6975798 --query id -o tsv)"
+          echo "::notice::Marketplace member ID: ${id} - it needs the Contributor role on the maschinenlesbar publisher."
+
+      # --skip-duplicate: a repeated run passes over a version already there.
       - name: Publish to the VS Code Marketplace
         env:
           VERSION: ${{ inputs.version }}
-        run: vsce publish --packagePath "./gurkencheck-${VERSION}.vsix" --azure-credential
+        run: vsce publish --packagePath "./gurkencheck-${VERSION}.vsix" --azure-credential --skip-duplicate
