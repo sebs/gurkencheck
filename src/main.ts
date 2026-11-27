@@ -36,6 +36,7 @@ import type {StreamingFormatter} from './formatters/index.ts';
 import type {Configuration, RuleRegistry} from './types.ts';
 import type {Sequence} from './util/stream.ts';
 import {runStats} from './stats/command.ts';
+import {runLsp} from './lsp/command.ts';
 import {version} from './version.ts';
 import {stillWaitingFor, waitFor} from './util/waiting.ts';
 import {asText, reasonOf} from './util/thrown.ts';
@@ -65,6 +66,7 @@ function usage(): string {
     'Commands:',
     '  stats [paths]           report on the shape of your feature files,',
     '                          rather than on what is wrong with them',
+    '  lsp [options]           run as a language server, for an editor',
     '',
     'With no files given, the working directory is searched recursively.',
     'Documentation: https://sebs.maschinenlesbar.org/gurkencheck/',
@@ -87,6 +89,9 @@ export async function run(
   // A directory really called `stats` is still lintable, as `./stats`.
   if (argv[0] === 'stats') {
     return runStats(argv.slice(1), diagnostics);
+  }
+  if (argv[0] === 'lsp') {
+    return runLsp(argv.slice(1), diagnostics);
   }
 
   const filesAsOptions = optionsThatAreFiles(argv);

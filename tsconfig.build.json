@@ -6,5 +6,5 @@
     "sourceMap": false,
     "declarationMap": false
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.cts"]
 }

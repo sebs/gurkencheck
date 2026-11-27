@@ -26,7 +26,7 @@ const DOCUMENTATION = 'https://sebs.maschinenlesbar.org/gurkencheck/';
  * one's name to replace it, whose findings the built-in page does not
  * describe.
  */
-function isDocumented(id: string, rules: RuleRegistry | undefined): boolean {
+export function isDocumented(id: string, rules: RuleRegistry | undefined): boolean {
   if ((ALWAYS_ON_RULES as readonly string[]).includes(id) || (DIRECTIVE_CHECKS as readonly string[]).includes(id)) {
     return true;
   }

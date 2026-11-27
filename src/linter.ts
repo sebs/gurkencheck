@@ -25,6 +25,12 @@ export interface LintOptions {
    * sensible default is used; there is rarely a reason to set it.
    */
   readAhead?: number;
+  /**
+   * Text to check in place of what is on disk, keyed by absolute path - an
+   * editor's unsaved buffers. Only the files given are checked: naming a
+   * path here does not add it to the run.
+   */
+  contents?: ReadonlyMap<string, string>;
 }
 
 /** True when a rule that only reports once every file has been seen is on. */
@@ -148,6 +154,7 @@ export async function* lintStream(
   for await (const result of readAndParseFiles(files, {
     language: options.language,
     readAhead: options.readAhead,
+    contents: options.contents,
   })) {
     // Parse errors are not suppressible: the file could not be read, so
     // hiding the message would leave nothing in its place.

@@ -87,6 +87,7 @@ gurkencheck [options] <feature-files>
 Commands:
   stats [paths]           report on the shape of your feature files,
                           rather than on what is wrong with them
+  lsp [options]           run as a language server, for an editor
 ```
 
 ## Rules
@@ -244,6 +245,53 @@ than reading them again.
 
 Directories are watched rather than the files found at startup, so a feature file
 created after it started is picked up too. `node_modules` and `.git` are skipped.
+
+## In your editor
+
+The package is also a VS Code extension, and a language server any other editor can start.
+Either way you see the findings as you type, unsaved changes included. Every feature file in
+the workspace shows up in the Problems panel, open or not, and quick fixes are on offer:
+
+- remove trailing spaces
+- add or remove the new line at the end of the file
+- switch a rule off for one line or for the whole file, with the directives described
+  under [Switching a rule off for one place](#switching-a-rule-off-for-one-place)
+
+Each finding links to the page for its rule.
+
+The configuration, the ignore file and the feature files are found from the workspace folder
+just as the command line finds them from the directory it runs in, so the editor and the
+build agree. A change to `.gurkencheckrc` or `.gurkencheckignore` takes effect at once.
+
+Rules that look across files, such as two features sharing a name, need every file to know
+what they have found. They are checked again when you save, and once you stop typing for
+a moment. While you type, the file you are editing is checked on its own, and their
+findings from the last whole run stay where they were.
+
+### VS Code
+
+Install the extension. It needs no Node of its own: the server runs on the one VS Code
+ships with. VS Code starts one server per workspace folder. **gurkencheck: Restart the
+language server**, from the command palette, picks up a change to a custom rule.
+
+The extension checks files ending in `.feature` whatever language mode they are in, so it
+works next to the Cucumber extension or any Gherkin syntax highlighter.
+
+### Other editors
+
+Start `gurkencheck lsp --stdio` from the project. It takes the command line's `--config`,
+`--ignore`, `--rulesdir` and `--language`. In Neovim 0.11 or later:
+
+```lua
+vim.lsp.config('gurkencheck', {
+  cmd = {'npx', 'gurkencheck', 'lsp', '--stdio'},
+  filetypes = {'cucumber'},
+  root_markers = {'.gurkencheckrc', 'package.json', '.git'},
+})
+vim.lsp.enable('gurkencheck')
+```
+
+A server serves one folder: the root the editor names when it starts it.
 
 ## Machine-readable output
 
@@ -528,7 +576,8 @@ stdout. To get the text instead, use `toJson`, `toSarif`, or `getStatsFormatter`
 The project is TypeScript with two runtime dependencies:
 [`@cucumber/gherkin`](https://github.com/cucumber/gherkin) and its own `@cucumber/messages`.
 Everything else — argument parsing, globbing, JSON-with-comments, XML output, the
-collection helpers — is plain TypeScript in `src/util`. Tests run on node's built-in test
+collection helpers — is plain TypeScript in `src/util`, and the language server's JSON-RPC
+is plain TypeScript in `src/lsp`. Tests run on node's built-in test
 runner, straight off the sources using node's type stripping, so there is no build step
 to run before testing.
 
@@ -539,7 +588,17 @@ npm run typecheck     # tsc over src, test, site and scripts
 npm run build         # compile src into dist
 npm run docs          # regenerate the documentation site into docs/
 npm run demo          # lint the deliberately broken files in examples/
+npm run package:vscode  # build, then pack the VS Code extension into a .vsix
 ```
+
+The VS Code extension is this package: `main` in `package.json` is the extension's entry
+point (`dist/vscode/extension.cjs`), while `exports` is what `import 'gurkencheck'` and
+`require('gurkencheck')` load. `src/vscode/client.ts` is the language client, and
+`gurkencheck lsp` is the server it starts. To try a change, open the repository in VS Code
+and run the extension with **Run > Start Debugging** after `npm run build`, or install the
+`.vsix` with **Extensions: Install from VSIX…**. Use `@vscode/vsce`, as the script does: the
+old `vsce` package only accepts an entry point ending in `.js`, and reports
+`extension.cjs` as missing.
 
 ### Releasing
 

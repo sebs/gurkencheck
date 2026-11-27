@@ -474,6 +474,42 @@ every parsed file in memory between keystrokes costs more than reading them agai
 after it started is picked up too. <code>node_modules</code> and <code>.git</code> are
 skipped.</p>
 
+<h2>In your editor</h2>
+<p>The package is also a VS Code extension, and a language server any other editor can start.
+Either way you see the findings as you type, unsaved changes included. Every feature file in
+the workspace shows up in the Problems panel, open or not, and quick fixes are on offer:</p>
+<ul>
+<li>remove trailing spaces</li>
+<li>add or remove the new line at the end of the file</li>
+<li>switch a rule off for one line or for the whole file, with the
+<a href="#switching-a-rule-off-for-one-place">directives</a></li>
+</ul>
+<p>Each finding links to the page for its rule.</p>
+<p>The configuration, the ignore file and the feature files are found from the workspace folder
+just as the command line finds them from the directory it runs in, so the editor and the
+build agree. A change to <code>${DEFAULT_CONFIG_FILE_NAME}</code> or
+<code>${DEFAULT_IGNORE_FILE_NAME}</code> takes effect at once.</p>
+<p>Rules that look across files, such as two features sharing a name, need every file to know
+what they have found. They are checked again when you save, and once you stop typing for
+a moment. While you type, the file you are editing is checked on its own, and their
+findings from the last whole run stay where they were.</p>
+<p><strong>VS Code.</strong> Install the extension. It needs no Node of its own: the server
+runs on the one VS Code ships with. VS Code starts one server per workspace folder.
+<em>gurkencheck: Restart the language server</em>, from the command palette, picks up a
+change to a custom rule. The extension checks files ending in <code>.feature</code> whatever
+language mode they are in, so it works next to the Cucumber extension or any Gherkin syntax
+highlighter.</p>
+<p><strong>Other editors.</strong> Start <code>gurkencheck lsp --stdio</code> from the
+project. It takes the command line's <code>--config</code>, <code>--ignore</code>,
+<code>--rulesdir</code> and <code>--language</code>. In Neovim 0.11 or later:</p>
+${codeBlock(`vim.lsp.config('gurkencheck', {
+  cmd = {'npx', 'gurkencheck', 'lsp', '--stdio'},
+  filetypes = {'cucumber'},
+  root_markers = {'.gurkencheckrc', 'package.json', '.git'},
+})
+vim.lsp.enable('gurkencheck')`)}
+<p>A server serves one folder: the root the editor names when it starts it.</p>
+
 <h2>Counting what is in your files</h2>
 <p>The same files answer a different question. Before a team agrees a convention it helps to
 know what it already has: how many test cases will really run, how much of the step vocabulary

@@ -12,6 +12,7 @@ import {AstBuilder, GherkinClassicTokenMatcher, Parser} from '@cucumber/gherkin'
 import {IdGenerator} from '@cucumber/messages';
 import type {Feature} from '@cucumber/messages';
 import {readFile} from 'node:fs/promises';
+import path from 'node:path';
 import {mapWithWindow} from '../util/stream.ts';
 import type {Sequence} from '../util/stream.ts';
 import type {FeatureFile, RuleError} from '../types.ts';
@@ -402,6 +403,22 @@ export interface ReadOptions {
   language?: string;
   /** How many files to keep reading ahead of the one handed over. */
   readAhead?: number;
+  /**
+   * Text to check in place of what is on disk, keyed by absolute path: an
+   * editor's unsaved buffers. A file named here is not read at all, so one
+   * that has not been saved yet - or has been deleted since it was opened -
+   * is checked as it stands in the editor.
+   */
+  contents?: ReadonlyMap<string, string>;
+}
+
+/** Parses text that did not come from disk, as readAndParseFile parses a file. */
+function parseGiven(relativePath: string, source: string, defaultLanguage?: string): ParseResult {
+  try {
+    return parseFeature(relativePath, source, defaultLanguage);
+  } catch (thrown) {
+    return unreadable(relativePath, toLines(source), thrown);
+  }
 }
 
 /**
@@ -419,7 +436,11 @@ export function readAndParseFiles(
   files: Sequence<string>,
   options: ReadOptions = {},
 ): AsyncGenerator<ParseResult> {
-  return mapWithWindow(files, options.readAhead ?? DEFAULT_READ_AHEAD, (file) =>
-    readAndParseFile(file, options.language),
-  );
+  const {contents} = options;
+  return mapWithWindow(files, options.readAhead ?? DEFAULT_READ_AHEAD, (file) => {
+    const given = contents?.get(path.resolve(file));
+    return given === undefined
+      ? readAndParseFile(file, options.language)
+      : Promise.resolve(parseGiven(file, given, options.language));
+  });
 }
