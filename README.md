@@ -613,13 +613,16 @@ Pushing the tag runs two workflows:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| **Release** | the tag | Checks the tag matches `package.json`, runs the tests, builds, and creates the GitHub release with the npm tarball attached |
+| **Release** | the tag | Checks the tag matches `package.json`, runs the tests, builds, and creates the GitHub release with the npm tarball and the VS Code extension (`.vsix`) attached |
 | **Pages** | the tag | Builds the documentation site from that version and deploys it |
 
-Publishing to npm is deliberately a separate step, so a release can be looked at before it
-goes out. Run the **Publish** workflow by hand and give it the version — it checks out that
-tag, re-runs the tests, and publishes with provenance. There is no `NPM_TOKEN` in the
-repository: npm Trusted Publishing mints a short-lived credential for the run.
+Publishing is deliberately a separate step, so a release can be looked at before it goes
+out. Run the **Publish** workflow by hand and give it the version. It builds nothing: it
+checks that the release holds both files, then publishes those exact files at the same time,
+the tarball to npm with provenance and the `.vsix` to the VS Code Marketplace. There is no
+token in the repository for either: npm Trusted Publishing and Microsoft Entra workload
+identity federation each mint a short-lived credential for the run. The one-time setup for
+both is at the top of `publish.yml`.
 
 The site is not committed. `docs/` is generated during the Pages run, so the published site
 always matches the version it was built from. Run the Pages workflow by hand with a version

@@ -1,15 +1,31 @@
 name: Publish
 
-# Publishes an already-released version to npm. Run it by hand, after the
-# release.yml run for that tag has gone green.
+# Publishes an already-released version to npm and to the VS Code Marketplace.
+# Run it by hand, after the release.yml run for that tag has gone green.
 #
-# Authentication is npm Trusted Publishing (OIDC): GitHub mints a short-lived
-# token for this run and npm checks it against the trusted publisher configured
-# for the package, so there is no long-lived NPM_TOKEN in the repository.
+# Nothing is built here. The release holds the two files - the npm tarball and
+# the .vsix - that release.yml built and tested from the tag, and those exact
+# files are what go out. Both are checked to be on the release before either
+# is published, then they go out side by side.
 #
-# One-time setup on npmjs.com: package `gurkencheck` -> Settings ->
+# Neither side has a long-lived token in the repository.
+#
+# npm: Trusted Publishing (OIDC). GitHub mints a short-lived token for this
+# run and npm checks it against the trusted publisher configured for the
+# package. One-time setup on npmjs.com: package `gurkencheck` -> Settings ->
 # Trusted Publisher -> GitHub Actions, repository `sebs/gurkencheck`,
 # workflow `publish.yml`.
+#
+# VS Code Marketplace: Microsoft Entra workload identity federation (OIDC).
+# azure/login exchanges this run's GitHub token for an Entra one, and vsce
+# publishes with it. One-time setup:
+#   1. An app registration in Entra ID, with a federated credential for
+#      GitHub Actions: organization `sebs`, repository `gurkencheck`, entity
+#      type Branch, branch `master` - the branch this workflow is run from.
+#   2. That app added as a member of the `maschinenlesbar` publisher, with
+#      the Contributor role, at
+#      https://marketplace.visualstudio.com/manage/publishers/maschinenlesbar
+#   3. Repository secrets AZURE_CLIENT_ID and AZURE_TENANT_ID, from the app.
 on:
   workflow_dispatch:
     inputs:
@@ -18,34 +34,48 @@ on:
         required: true
         type: string
 
-# OIDC needs an id-token; provenance is attached from this workflow run.
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: publish-${{ inputs.version }}
   cancel-in-progress: false
 
 jobs:
-  publish:
+  # Both files or neither: a version that reached one place and not the other
+  # because its file was missing is what this check is for.
+  check:
     runs-on: ubuntu-latest
-
     steps:
-      # Publish exactly the tagged source, not whatever the branch has moved on
-      # to. Actions are pinned to a commit hash; the tag in the comment is what
-      # dependabot reads when it moves the hash forward.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: v${{ inputs.version }}
-          # npm authenticates over OIDC, so nothing here needs the git
-          # credential to outlive the checkout.
-          persist-credentials: false
+      - name: Check the release holds both files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          assets="$(gh release view "v${VERSION}" --repo "$REPO" --json assets --jq '.assets[].name')"
+          missing=0
+          for file in "gurkencheck-${VERSION}.tgz" "gurkencheck-${VERSION}.vsix"; do
+            if ! grep -qxF "$file" <<< "$assets"; then
+              echo "::error::The release v${VERSION} has no ${file}."
+              missing=1
+            fi
+          done
+          exit "$missing"
 
+  npm:
+    needs: check
+    runs-on: ubuntu-latest
+    # OIDC needs an id-token; provenance is attached from this workflow run.
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # No checkout, so no lockfile to cache against.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24.x
-          cache: npm
+          package-manager-cache: false
           registry-url: https://registry.npmjs.org
 
       # Trusted publishing needs npm 11.5.1 or newer, which is ahead of the
@@ -55,25 +85,53 @@ jobs:
         # A global install cannot come out of the lockfile, hence the ignore.
         run: npm install -g npm@12.0.2 # zizmor: ignore[adhoc-packages]
 
-      - name: Check package.json matches the requested version
+      - name: Download the tarball from the release
         env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
           VERSION: ${{ inputs.version }}
-        run: |
-          pkg="$(node -p "require('./package.json').version")"
-          if [ "$pkg" != "$VERSION" ]; then
-            echo "::error::package.json is '$pkg', not the requested '$VERSION'."
-            exit 1
-          fi
-
-      - run: npm ci
-
-      - name: Test
-        run: npm test
-
-      - name: Build
-        run: npm run build
+        run: gh release download "v${VERSION}" --repo "$REPO" --pattern "gurkencheck-${VERSION}.tgz"
 
       # No NPM_TOKEN: OIDC supplies the credential and provenance is generated
       # from this run.
       - name: Publish to npm
-        run: npm publish --provenance --access public
+        env:
+          VERSION: ${{ inputs.version }}
+        run: npm publish "./gurkencheck-${VERSION}.tgz" --provenance --access public
+
+  vscode:
+    needs: check
+    runs-on: ubuntu-latest
+    # For azure/login to exchange this run's token for an Entra one.
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24.x
+          package-manager-cache: false
+
+      # Pinned rather than @latest so a run is reproducible. A global install
+      # cannot come out of the lockfile, hence the ignore.
+      - name: Install vsce
+        run: npm install -g @vscode/vsce@4.1.1 # zizmor: ignore[adhoc-packages]
+
+      - name: Download the extension from the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+        run: gh release download "v${VERSION}" --repo "$REPO" --pattern "gurkencheck-${VERSION}.vsix"
+
+      # The Marketplace needs no Azure subscription, only the identity.
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
+      - name: Publish to the VS Code Marketplace
+        env:
+          VERSION: ${{ inputs.version }}
+        run: vsce publish --packagePath "./gurkencheck-${VERSION}.vsix" --azure-credential

@@ -6,8 +6,8 @@ name: Release
 #   git push --follow-tags
 #
 # This builds the tag, checks it, and creates the GitHub release with the npm
-# tarball attached. Publishing that release to npm is a separate, manual step:
-# see publish.yml.
+# tarball and the VS Code extension attached. Publishing those two files to npm
+# and the VS Code Marketplace is a separate, manual step: see publish.yml.
 on:
   push:
     tags:
@@ -70,6 +70,18 @@ jobs:
         run: |
           mkdir -p release-artifacts
           npm pack --pack-destination release-artifacts
+
+      # The same build as the VS Code extension. Pinned rather than @latest so
+      # a run is reproducible; a global install cannot come out of the
+      # lockfile, hence the ignore.
+      - name: Install vsce
+        run: npm install -g @vscode/vsce@4.1.1 # zizmor: ignore[adhoc-packages]
+
+      - name: Pack the VS Code extension
+        env:
+          PKG_VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          vsce package --out "release-artifacts/gurkencheck-${PKG_VERSION}.vsix"
           ls -la release-artifacts
 
       # `gh` ships with the runner, so this needs no third-party action.
@@ -79,4 +91,5 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" \
             --generate-notes \
-            release-artifacts/*.tgz
+            release-artifacts/*.tgz \
+            release-artifacts/*.vsix
