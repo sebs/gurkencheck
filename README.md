@@ -617,7 +617,8 @@ Pushing the tag runs two workflows:
 | **Pages** | the tag | Builds the documentation site from that version and deploys it |
 
 Publishing is deliberately a separate step, so a release can be looked at before it goes
-out. Run the **Publish** workflow by hand and give it the version. It builds nothing: it
+out. Run the **Publish** workflow by hand, from the release's tag or from `master`, and give
+it the version. It builds nothing: it
 checks that the release holds both files, then publishes those exact files at the same time,
 the tarball to npm with provenance and the `.vsix` to the VS Code Marketplace. There is no
 token in the repository for either: npm Trusted Publishing and Microsoft Entra workload

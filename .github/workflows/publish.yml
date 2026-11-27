@@ -19,13 +19,21 @@ name: Publish
 # VS Code Marketplace: Microsoft Entra workload identity federation (OIDC).
 # azure/login exchanges this run's GitHub token for an Entra one, and vsce
 # publishes with it. One-time setup:
-#   1. An app registration in Entra ID, with a federated credential for
+#   1. A GitHub environment `marketplace` (Settings -> Environments), with
+#      deployment branches and tags limited to the tag rule `v*` and the
+#      branch `master`. Only runs from those refs can enter it, so Publish
+#      can be started from the release's tag or from master.
+#   2. An app registration in Entra ID, with a federated credential for
 #      GitHub Actions: organization `sebs`, repository `gurkencheck`, entity
-#      type Branch, branch `master` - the branch this workflow is run from.
-#   2. That app added as a member of the `maschinenlesbar` publisher, with
+#      type Environment, environment `marketplace`. The repository sends the
+#      immutable subject, so the credential's subject must read
+#      repo:sebs@55102/gurkencheck@1346275103:environment:marketplace
+#      (`gh api repos/sebs/gurkencheck/actions/oidc/customization/sub`).
+#   3. That app added as a member of the `maschinenlesbar` publisher, with
 #      the Contributor role, at
 #      https://marketplace.visualstudio.com/manage/publishers/maschinenlesbar
-#   3. Repository secrets AZURE_CLIENT_ID and AZURE_TENANT_ID, from the app.
+#   4. Secrets AZURE_CLIENT_ID and AZURE_TENANT_ID, from the app, in the
+#      repository or in the `marketplace` environment.
 on:
   workflow_dispatch:
     inputs:
@@ -102,6 +110,9 @@ jobs:
   vscode:
     needs: check
     runs-on: ubuntu-latest
+    # The federated credential trusts this environment, not a branch, so the
+    # job's token is accepted from whichever allowed ref it was started on.
+    environment: marketplace
     # For azure/login to exchange this run's token for an Entra one.
     permissions:
       contents: read
